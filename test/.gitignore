@@ -1,0 +1,7 @@
+# These files are artifacts from building and running the tests.
+*.d
+*.dtest
+*.testout
+*.testmd5
+*.test
+*.o
