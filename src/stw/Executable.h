@@ -35,8 +35,13 @@
 #ifndef _STW_EXECUTABLE_H_
 #define _STW_EXECUTABLE_H_
 
+class Destructable {
+ public:
+  virtual ~Destructable() = default;
+};
+
 /// Base class for registering work in the executor.
-class Executable {
+class Executable : public Destructable {
  public:
   /// Called exactly once by the Executor, during or after Arduino's begin()
   /// method, but before the first time the loop() method below is invoked.

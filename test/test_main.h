@@ -41,6 +41,10 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+using ::testing::StrictMock;
+using ::testing::NiceMock;
+using ::testing::InSequence;
+using ::testing::Mock;
 
 int main(int argc, char *argv[])
 {

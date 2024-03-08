@@ -1,5 +1,65 @@
-
 #include "stw/Executor.h"
-
 #include "test_main.h"
 
+class MockExecutable : public Executable {
+ public:
+  MOCK_METHOD0(begin, void());
+  MOCK_METHOD0(loop, void());
+};
+
+class ExecutorTest : public ::testing::Test {
+ protected:
+  Executor ex_;
+  StrictMock<MockExecutable> exec1_, exec2_;
+};
+
+TEST_F(ExecutorTest, create) {}
+
+TEST_F(ExecutorTest, add_begin_loop) {
+  ex_.add(&exec1_);
+  ex_.add(&exec2_);
+  InSequence seq;
+  EXPECT_CALL(exec1_, begin());
+  EXPECT_CALL(exec2_, begin());
+  ex_.begin();
+
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_CALL(exec1_, loop());
+    EXPECT_CALL(exec2_, loop());
+    ex_.loop();
+    Mock::VerifyAndClear(&exec1_);
+    Mock::VerifyAndClear(&exec2_);
+  }
+}
+
+TEST_F(ExecutorTest, late_add) {
+  ex_.add(&exec1_);
+  InSequence seq;
+  EXPECT_CALL(exec1_, begin());
+  ex_.begin();
+
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_CALL(exec1_, loop());
+    ex_.loop();
+    Mock::VerifyAndClear(&exec1_);
+    Mock::VerifyAndClear(&exec2_);
+  }
+
+  ex_.add(&exec2_);
+
+  {
+    InSequence seq;
+    EXPECT_CALL(exec2_, begin());
+    EXPECT_CALL(exec1_, loop());
+    EXPECT_CALL(exec2_, loop());
+    ex_.loop();
+  }    
+  
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_CALL(exec1_, loop());
+    EXPECT_CALL(exec2_, loop());
+    ex_.loop();
+    Mock::VerifyAndClear(&exec1_);
+    Mock::VerifyAndClear(&exec2_);
+  }
+}
