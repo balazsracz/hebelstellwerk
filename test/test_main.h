@@ -41,6 +41,8 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h"
 
+#include "utils/Executor.h"
+
 using ::testing::StrictMock;
 using ::testing::NiceMock;
 using ::testing::InSequence;
@@ -49,6 +51,11 @@ using ::testing::Mock;
 #ifndef GTEST
 #error must have GTEST defined.
 #endif
+
+class TestBase : public ::testing::Test {
+ protected:
+  Executor ex_;
+};
 
 int main(int argc, char *argv[])
 {

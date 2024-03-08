@@ -1,0 +1,148 @@
+#include "test_main.h"
+#include "utils/Timer.h"
+
+class TimerTest : public TestBase {
+ protected:
+  Timer tm_;
+};
+
+TEST_F(TimerTest, create) {}
+
+TEST_F(TimerTest, empty_constructor) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(1000000000);
+  EXPECT_FALSE(tm_.check());
+}
+
+TEST_F(TimerTest, oneshot) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_oneshot(10);
+  EXPECT_TRUE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  usleep(25000);
+  EXPECT_TRUE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  ex_.advance(9);
+  EXPECT_TRUE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  ex_.advance(1);
+  // Now it will expire.
+  EXPECT_TRUE(tm_.is_running());
+  EXPECT_TRUE(tm_.check());
+  EXPECT_FALSE(tm_.check());  // just once!
+
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_FALSE(tm_.is_running());
+    EXPECT_FALSE(tm_.check());
+    ex_.advance(1);
+  }
+}
+
+TEST_F(TimerTest, periodic) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_periodic(10);
+
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_TRUE(tm_.is_running());
+    EXPECT_FALSE(tm_.check());
+
+    ex_.advance(1);
+
+    EXPECT_TRUE(tm_.is_running());
+    if (i % 10 == 9) {
+      EXPECT_TRUE(tm_.check());
+      EXPECT_FALSE(tm_.check());
+    }
+  }
+}
+
+TEST_F(TimerTest, periodic_nondrift) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_periodic(10);
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(25);
+  EXPECT_TRUE(tm_.check());
+  EXPECT_TRUE(tm_.check());
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(4);
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(1);
+  EXPECT_TRUE(tm_.check());
+  EXPECT_FALSE(tm_.check());
+}
+
+TEST_F(TimerTest, drifting_accurate) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_drifting(10);
+
+  // When we see every msec, the timer is accurate.
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_TRUE(tm_.is_running());
+    EXPECT_FALSE(tm_.check());
+
+    ex_.advance(1);
+
+    EXPECT_TRUE(tm_.is_running());
+    if (i % 10 == 9) {
+      EXPECT_TRUE(tm_.check());
+      EXPECT_FALSE(tm_.check());
+    }
+  }
+}
+
+TEST_F(TimerTest, drifting_slow) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_drifting(10);
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(25);
+  EXPECT_TRUE(tm_.check());  // only once
+  EXPECT_FALSE(tm_.check());
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(4);
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(1);
+  EXPECT_FALSE(tm_.check());  // won't reach the timeout
+
+  ex_.advance(4);
+  EXPECT_FALSE(tm_.check());
+  ex_.advance(1);
+  EXPECT_TRUE(tm_.check());  // just later
+}
+
+TEST_F(TimerTest, drifting_systematic) {
+  EXPECT_FALSE(tm_.is_running());
+  EXPECT_FALSE(tm_.check());
+
+  tm_.start_drifting(10);
+
+  // When we see every 9th msec, the timer will run at 18 msec period really.
+  for (unsigned i = 0; i < 100; ++i) {
+    EXPECT_TRUE(tm_.is_running());
+    EXPECT_FALSE(tm_.check());
+
+    ex_.advance(9);
+
+    EXPECT_TRUE(tm_.is_running());
+    if (i % 2 == 1) {
+      EXPECT_TRUE(tm_.check());
+      EXPECT_FALSE(tm_.check());
+    }
+  }
+}

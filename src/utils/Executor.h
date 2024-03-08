@@ -112,6 +112,7 @@ class Executor : private Atomic, public Singleton<Executor> {
 
   millis_t millis() { return mockTimeMillis_; }
 
+  /// Mock time that can be advanced by unit tests.
   uint32_t mockTimeMillis_{0};
 
   /// Advances the mock time by a given number of milliseconds.
