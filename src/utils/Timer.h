@@ -38,6 +38,39 @@
 #include "utils/Executor.h"
 #include "utils/Types.h"
 
+/// Helper class to keep track of time or perform a timed action.
+///
+/// Usage:
+///
+/// - Start the timer either with the constructor
+///
+/// `Timer tm(Timer::OneShot{350});`
+///
+/// or with the `tm.start_oneshot(350);` call.
+///
+/// - In the loop(), add the following code:
+///
+/// ```
+///   if (tm.check()) {
+///     // perform action upon timeout here
+///   }
+/// ```
+///
+/// Timer comes in three varieties:
+///
+/// - Oneshot timer invokes the code exactly once. Then it needs to be started
+///   again.
+///
+/// - Periodic timer tried to invoke the code in exactly the given period, and
+///   compensates for any drift of the loop being slow. This means that if one
+///   period got longer due to loop not calling check, the next period will be
+///   shortened. This can go to extremes when after a longer hiccup multiple
+///   back to back loop functions will execute the timer body. This is good for
+///   keeping track of time.
+///
+/// - Drifting timer, which always delays at least the given amount of time
+///   (but possibly more) between two expiries. This is good for polling for
+///   changes on I/O.
 class Timer {
  public:
   /// Constructor creating a stopped timer.
