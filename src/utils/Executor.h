@@ -44,6 +44,25 @@
 #include "utils/Singleton.h"
 #include "utils/Types.h"
 
+/// The Executor class manages the main loop of an Arduino binary.
+///
+/// Usage:
+///
+/// - Create a single global instance of the Executor in the arduino .INO
+///   program:
+///
+///   ```
+///   Executor ex;
+///   ```
+///
+/// - in Arduino's begin(), call `ex.begin();`
+///
+/// - in Arduino's loop(), call `ex.loop();`
+///
+/// - All other software components can be derived classes of Executable, and
+///   call `Executor::instance()->register(this);` to participate in the
+///   begin() and loop() invocations.
+///
 class Executor : private Atomic, public Singleton<Executor> {
  public:
   /// Registers an executable. It will first get a begin() call, then
