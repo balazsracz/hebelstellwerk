@@ -1,4 +1,3 @@
-
 /** \copyright
  * Copyright (c) 2024, Balazs Racz
  * All rights reserved.
@@ -27,16 +26,94 @@
  *
  * \file Executor.h
  *
- * Class to control execution of tasks that get pulled of an input queue.  This
- * is based off of work started by Balazs on 5 August 2013.
+ * Class to control execution in the polling loop.
  *
  * @author Balazs Racz
  * @date 7 Mar 2024
  */
 
-#ifndef _STW_EXECUTOR_HXX_
-#define _STW_EXECUTOR_HXX_
+#ifndef _STW_EXECUTOR_H_
+#define _STW_EXECUTOR_H_
 
+#include <vector>
+#include <algorithm>
 
+#include "stw/Atomic.h"
+#include "stw/Executable.h"
+#include "stw/Macros.h"
+#include "stw/Types.h"
 
-#endif // _STW_EXECUTOR_HXX_
+class Executor : private Atomic {
+ public:
+  /// Registers an executable. It will first get a begin() call, then
+  /// periodically the loop() call, until it is unregistered.
+  void add(Executable* e) {
+    AtomicHolder h(this);
+    pendingStart_.push_back(e);
+  }
+
+  /// Unregisters an executable. It will not be called from any future loop()
+  /// invocations.
+  void remove(Executable* e) {
+    AtomicHolder h(this);
+    for (uint16_t i = 0; i < entries_.size(); ++i) {
+      if (entries_[i] == e) {
+        entries_[i] = nullptr;
+      }
+    }
+  }
+  
+  void begin() {
+    {
+      AtomicHolder h(this);
+      ASSERT(entries_.empty());
+      std::swap(pendingStart_, entries_);
+    }
+    // Calls the registered handlers' begin().
+    for (uint16_t i = 0; i < entries_.size(); ++i) {
+      entries_[i]->begin();
+    }
+  }
+
+  void loop() {
+    Executable* new_entry = nullptr;
+    {
+      // Checks for new registered handlers.
+      AtomicHolder h(this);
+      if (!pendingStart_.empty()) {
+        new_entry = pendingStart_.back();
+        pendingStart_.pop_back();
+      }
+    }
+    if (new_entry) {
+      new_entry->begin();
+      entries_.push_back(new_entry);
+    }
+    bool found_empty = false;
+    // Calls the registered handlers' loop().
+    for (uint16_t i = 0; i < entries_.size(); ++i) {
+      Executable* e = entries_[i];
+      if (e) {
+        e->loop();
+      } else {
+        found_empty = true;
+      }
+    }
+    if (found_empty) {
+      // cleanup
+      AtomicHolder h(this);
+      entries_.erase(std::remove(entries_.begin(), entries_.end(), nullptr),
+                     entries_.end());
+    }
+  }
+
+  millis_t millis() { return 0;}
+
+ private:
+  /// Executables that didn't yet have their begin() invoked.
+  std::vector<Executable*> pendingStart_;
+  /// Executables to call during a loop.
+  std::vector<Executable*> entries_;
+};  // class Executor
+
+#endif  // _STW_EXECUTOR_H_
