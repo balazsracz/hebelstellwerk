@@ -35,15 +35,16 @@
 #ifndef _STW_EXECUTOR_H_
 #define _STW_EXECUTOR_H_
 
-#include <vector>
 #include <algorithm>
+#include <vector>
 
 #include "utils/Atomic.h"
 #include "utils/Executable.h"
 #include "utils/Macros.h"
+#include "utils/Singleton.h"
 #include "utils/Types.h"
 
-class Executor : private Atomic {
+class Executor : private Atomic, public Singleton<Executor> {
  public:
   /// Registers an executable. It will first get a begin() call, then
   /// periodically the loop() call, until it is unregistered.
@@ -62,7 +63,7 @@ class Executor : private Atomic {
       }
     }
   }
-  
+
   void begin() {
     {
       AtomicHolder h(this);
@@ -115,15 +116,13 @@ class Executor : private Atomic {
 
   /// Advances the mock time by a given number of milliseconds.
   /// @param millis how many msec to advance time.
-  void advance(uint32_t millis) {
-    mockTimeMillis_ += millis;
-  }
-  
-#else  
+  void advance(uint32_t millis) { mockTimeMillis_ += millis; }
+
+#else
   /// @return the current time in milliseconds since some arbitrary starting
   /// time.
   millis_t millis() { return ::millis(); }
-#endif  
+#endif
 
  private:
   /// Executables that didn't yet have their begin() invoked.
