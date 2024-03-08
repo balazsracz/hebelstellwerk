@@ -46,6 +46,10 @@ using ::testing::NiceMock;
 using ::testing::InSequence;
 using ::testing::Mock;
 
+#ifndef GTEST
+#error must have GTEST defined.
+#endif
+
 int main(int argc, char *argv[])
 {
     testing::InitGoogleMock(&argc, argv);

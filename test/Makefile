@@ -23,7 +23,7 @@ INCLUDES += -I$(GTESTPATH)/include -I$(GMOCKPATH)/include -I$(GMOCKPATH) \
 
 ARCHOPTIMIZATION = -g -fdata-sections -ffunction-sections -fPIC
 
-CSHAREDFLAGS = -c $(ARCHOPTIMIZATION) -Wall -Werror -Wno-unknown-pragmas -MD -MP -fno-stack-protector -D_GNU_SOURCE $(INCLUDES)
+CSHAREDFLAGS = -c $(ARCHOPTIMIZATION) -Wall -Werror -Wno-unknown-pragmas -MD -MP -fno-stack-protector -D_GNU_SOURCE $(INCLUDES) -DGTEST=1
 
 CFLAGS = $(CSHAREDFLAGS) -std=gnu99 \
          $(CFLAGSENV) $(CFLAGSEXTRA) \
@@ -44,7 +44,7 @@ gmock-all.o : %.o : $(GMOCKPATH)/src/%.cc
 $(TESTBINS): %.test$(EXTENTION) : %.test.o $(TESTOBJSEXTRA)
 	$(LD) -o $@ $(LDFLAGS) $< $(TESTOBJSEXTRA) $(SYSLIBRARIES) 
 
-$(TESTOBJS): %.test.o : $(SRCDIR)/%.cxxtest
+$(TESTOBJS): %.test.o : $(SRCDIR)/%.cxxtest Makefile
 	$(CXX) $(CXXFLAGS) -MMD -MF $*.dtest -MT $@ -x c++ $< -o $@
 
 # This target takes the test binary output and compares the md5sum against the
