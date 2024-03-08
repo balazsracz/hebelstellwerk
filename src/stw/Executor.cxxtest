@@ -63,3 +63,25 @@ TEST_F(ExecutorTest, late_add) {
     Mock::VerifyAndClear(&exec2_);
   }
 }
+
+TEST_F(ExecutorTest, mock_time) {
+  EXPECT_EQ(0u, ex_.millis());
+  EXPECT_EQ(0u, ex_.millis());
+  EXPECT_EQ(0u, ex_.millis());
+  EXPECT_EQ(0u, ex_.millis());
+  usleep(20000);
+  EXPECT_EQ(0u, ex_.millis());
+
+  ex_.advance(13);
+  EXPECT_EQ(13u, ex_.millis());
+  EXPECT_EQ(13u, ex_.millis());
+  EXPECT_EQ(13u, ex_.millis());
+
+  ex_.advance(1);
+  EXPECT_EQ(14u, ex_.millis());
+  ex_.advance(1);
+  EXPECT_EQ(15u, ex_.millis());
+
+  ex_.advance(1000000);
+  EXPECT_EQ(1000015u, ex_.millis());
+}

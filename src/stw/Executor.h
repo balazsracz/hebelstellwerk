@@ -107,7 +107,23 @@ class Executor : private Atomic {
     }
   }
 
-  millis_t millis() { return 0;}
+#ifdef GTEST
+
+  millis_t millis() { return mockTimeMillis_; }
+
+  uint32_t mockTimeMillis_{0};
+
+  /// Advances the mock time by a given number of milliseconds.
+  /// @param millis how many msec to advance time.
+  void advance(uint32_t millis) {
+    mockTimeMillis_ += millis;
+  }
+  
+#else  
+  /// @return the current time in milliseconds since some arbitrary starting
+  /// time.
+  millis_t millis() { return ::millis(); }
+#endif  
 
  private:
   /// Executables that didn't yet have their begin() invoked.
