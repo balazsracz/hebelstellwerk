@@ -38,10 +38,10 @@
 #include <vector>
 #include <algorithm>
 
-#include "stw/Atomic.h"
-#include "stw/Executable.h"
-#include "stw/Macros.h"
-#include "stw/Types.h"
+#include "utils/Atomic.h"
+#include "utils/Executable.h"
+#include "utils/Macros.h"
+#include "utils/Types.h"
 
 class Executor : private Atomic {
  public:

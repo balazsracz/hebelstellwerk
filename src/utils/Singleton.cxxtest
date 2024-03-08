@@ -1,4 +1,4 @@
-#include "stw/Singleton.h"
+#include "utils/Singleton.h"
 
 #include "test_main.h"
 

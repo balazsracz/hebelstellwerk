@@ -36,7 +36,7 @@
 #ifndef _UTILS_SINGLETON_HXX_
 #define _UTILS_SINGLETON_HXX_
 
-#include "stw/Macros.h"
+#include "utils/Macros.h"
 
 /** Singleton class.
 
