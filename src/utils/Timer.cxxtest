@@ -74,7 +74,7 @@ TEST_F(TimerTest, periodic_nondrift) {
   tm_.start_periodic(10);
   EXPECT_FALSE(tm_.check());
   ex_.advance(25);
-  EXPECT_TRUE(tm_.check());
+  EXPECT_TRUE(tm_.check()); // twice (backlog)
   EXPECT_TRUE(tm_.check());
   EXPECT_FALSE(tm_.check());
   ex_.advance(4);
