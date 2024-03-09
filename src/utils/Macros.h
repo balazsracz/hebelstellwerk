@@ -39,4 +39,10 @@
 
 #define ASSERT(x) assert((x))
 
+#ifdef NDEBUG
+#define DIE(x) do { int can_not_compile_die_with_NDEBUG[-1]; } while(0)
+#else
+#define DIE(x) assert(false && x)
+#endif
+
 #endif // _STW_MACROS_H_
