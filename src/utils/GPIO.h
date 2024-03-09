@@ -24,26 +24,52 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Executor.h
+ * \file Gpio.h
  *
- * Class to control execution of tasks that get pulled of an input queue.  This
- * is based off of work started by Balazs on 5 August 2013.
+ * Class to perform periodic actions in polling loops.
  *
  * @author Balazs Racz
- * @date 7 Mar 2024
+ * @date 8 Mar 2024
  */
 
-#ifndef _STW_TYPES_H_
-#define _STW_TYPES_H_
+#ifndef _UTILS_GPIO_H_
+#define _UTILS_GPIO_H_
 
-#include <stdint.h>
+/// A nonexistent GPIO pin. Will be translated to a dummy GPIO object by the
+/// GPIO registry.
+static constexpr gpio_pin_t NO_PIN = -1;
 
-/// This type is used to represent a number of milliseconds since the start of
-/// the program. It is prone to overflow (after 46 days of run time).
-typedef uint32_t millis_t;
+class Gpio {
+ public:
+  /// Sets a GPIO output to a given value.
+  /// @param pin the GPIO pin number. This is a global number, not specific to
+  /// the GPIO object.
+  /// @param value true for setting the output to high, false for setting the
+  /// output to low.
+  virtual void write(gpio_pin_t pin, bool value) const = 0;
 
-/// Denotes a GPIO pin, which may be physical (e.g. an Arduino pin), or virtual
-/// (a software component) or on a GPIO extender.
-typedef int16_t gpio_pin_t;
+  /// Return the current value of a GPIO object.
+  /// @param pin the GPIO pin number. This is a global number, not specific to
+  /// the GPIO object.
+  /// @return true for high, false for low.
+  virtual bool read(gpio_pin_t pin) const = 0;
 
-#endif // _STW_TYPES_H_
+  /// Sets the GPIO pin to output. Sufficient to call this once.
+  virtual void set_output(gpio_pin_t pin) const {
+    DIE("GPIO output not supported");
+  }
+
+  /// Sets the GPIO pin to input. Sufficient to call this once.
+  virtual void set_input(gpio_pin_t pin) const {
+    DIE("GPIO input not supported");
+  }
+};  // Class Gpio
+
+class DummyGpio : public Gpio {
+  void write(gpio_pin_t pin, bool value) {}
+  bool read(gpio_pin_t pin) { return false; }
+  void set_output(gpio_pin_t pin) {}
+  void set_input(gpio_pin_t pin) {}
+};
+
+#endif  // _UTILS_GPIO_H_
