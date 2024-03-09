@@ -1,0 +1,5 @@
+#include "utils/Gpio.h"
+
+#include "test_main.h"
+
+// There are not tests here, this just tests that the code compiles correctly.

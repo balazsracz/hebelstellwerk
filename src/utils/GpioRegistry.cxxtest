@@ -1,0 +1,66 @@
+#include "test_main.h"
+#include "utils/GpioRegistry.h"
+
+class RegistryTest : public TestBase {
+ protected:
+  RegistryTest() {
+    reg_.register_gpio(&ga_, 10, 20);
+    reg_.register_gpio(&gb_, 30, 40);
+    reg_.register_gpio(&gc_, 20, 29);
+  }
+
+  std::vector<gpio_pin_t> xrange(gpio_pin_t start, gpio_pin_t end) {
+    std::vector<gpio_pin_t> ret;
+    for (gpio_pin_t i = start; i < end; ++i) {
+      ret.push_back(i);
+    }
+    return ret;
+  }
+
+  DummyGpio ga_, gb_, gc_;
+
+  GpioRegistry reg_;
+};
+
+TEST_F(RegistryTest, create) {}
+
+TEST_F(RegistryTest, query_correct) {
+  for (auto i : xrange(10, 20)) {
+    EXPECT_EQ(&ga_, reg_.get(i));
+  }
+  for (auto i : xrange(20, 29)) {
+    EXPECT_EQ(&gc_, reg_.get(i));
+  }
+  for (auto i : xrange(30, 40)) {
+    EXPECT_EQ(&gb_, reg_.get(i));
+  }
+}
+
+TEST_F(RegistryTest, query_incorrect) {
+  EXPECT_EQ(nullptr, reg_.get_or_null(29));
+  EXPECT_EQ(nullptr, reg_.get_or_null(9));
+  EXPECT_EQ(nullptr, reg_.get_or_null(40));
+  EXPECT_EQ(nullptr, reg_.get_or_null(41));
+  for (auto i : xrange(0, 10)) {
+    EXPECT_EQ(nullptr, reg_.get_or_null(i));
+  }
+}
+
+TEST_F(RegistryTest, get_incorrect) {
+  EXPECT_DEATH({ reg_.get(29); }, "Requested GPIO not found");
+  EXPECT_DEATH({ reg_.get(9); }, "Requested GPIO not found");
+  EXPECT_DEATH({ reg_.get(40); }, "Requested GPIO not found");
+}
+
+TEST_F(RegistryTest, overlap_register) {
+  EXPECT_DEATH(
+      {  //
+        reg_.register_gpio(&ga_, 10, 11);
+      },
+      "Overlapping GPIO");
+  EXPECT_DEATH(
+      {  //
+        reg_.register_gpio(&ga_, 11, 40);
+      },
+      "Overlapping GPIO");
+}

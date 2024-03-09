@@ -35,6 +35,9 @@
 #ifndef _UTILS_GPIO_H_
 #define _UTILS_GPIO_H_
 
+#include "utils/Macros.h"
+#include "utils/Types.h"
+
 /// A nonexistent GPIO pin. Will be translated to a dummy GPIO object by the
 /// GPIO registry.
 static constexpr gpio_pin_t NO_PIN = -1;
@@ -66,10 +69,21 @@ class Gpio {
 };  // Class Gpio
 
 class DummyGpio : public Gpio {
-  void write(gpio_pin_t pin, bool value) {}
-  bool read(gpio_pin_t pin) { return false; }
-  void set_output(gpio_pin_t pin) {}
-  void set_input(gpio_pin_t pin) {}
+  void write(gpio_pin_t pin, bool value) const override {}
+  bool read(gpio_pin_t pin) const override { return false; }
+  void set_output(gpio_pin_t pin) const override {}
+  void set_input(gpio_pin_t pin) const override {}
 };
+
+template <typename T>
+class Instance {
+ public:
+  static const T* get() { return &instance_; }
+
+  static const T instance_;
+};
+
+template <typename T>
+const T Instance<T>::instance_;
 
 #endif  // _UTILS_GPIO_H_
