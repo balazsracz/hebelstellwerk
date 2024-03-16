@@ -1,0 +1,35 @@
+{
+    "name":"Hebelstellwerk",
+    "description":"Software implementation of a model railroad control point based on mechanical levers and a FREMO I2C-Block, aimed at the operating the products of RST_Modellbau.",
+    "keywords":"FREMO,Stellwerk,Modellbahn",
+    "authors": [
+        {
+            "name":"Balazs Racz",
+            "email": "balazs.racz@gmail.com",
+            "maintainer": true
+        },
+        {
+            "name":"Stuart Baker"
+        }
+    ],
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/balazsracz/hebelstellwerk"
+    },
+    "version": "1.0.0",
+    "license": "BSD-2-Clause",
+    "frameworks": "arduino",
+    "platforms": "avr,stm32,espressif32,esp32,sam,samd",
+    "build": {
+        "srcFilter" : [
+            "-<.git/>",
+            "-<examples/>",
+            "+<*>",
+            "+<utils/*>",
+            "+<stw/*>",
+        ],
+        "libArchive" : true,
+        "libLDFMode" : "chain+"
+    }
+  }
+  
