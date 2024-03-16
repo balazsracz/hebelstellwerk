@@ -43,6 +43,9 @@
 
 class ArduinoGpio : public Gpio {
  public:
+  ArduinoGpio() {
+    GpioRegistry::instance()->register_gpio(this, 0, NUM_DIGITAL_PINS);
+  }
   void write(gpio_pin_t pin, bool value) const override {
     digitalWrite((int)pin, value ? HIGH : LOW);
   }
