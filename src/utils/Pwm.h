@@ -54,13 +54,15 @@ class Pwm {
   /// Update the output pulse width.
   /// @param pin the output pin to act upon.
   /// @param count_high how many counts of the period should the output be high.
-  virtual void write(pwm_pin_t pin, tick_t count_high) = 0;
+  virtual void write(pwm_pin_t pin, tick_t count_high) const = 0;
 };
-
 
 /// Empty implementation of a PWM pin.
 class DummyPwm : public Pwm {
-
+ public:  
+  tick_t tick_per_msec() const override { return 1000; }
+  tick_t tick_per_period() const override { return 4096; }
+  void write(pwm_pin_t pin, tick_t count_high) const override {}
 };
 
-#endif // _UTILS_PWM_H_
+#endif  // _UTILS_PWM_H_

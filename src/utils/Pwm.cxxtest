@@ -1,0 +1,11 @@
+#include "utils/Pwm.h"
+
+#include "test_main.h"
+#include "utils/Instance.h"
+
+TEST(DummyPwmTest, simple) {
+  auto* pwm = Instance<DummyPwm>::get();
+  EXPECT_EQ(1000, pwm->tick_per_msec());
+  EXPECT_EQ(4096, pwm->tick_per_period());
+  pwm->write(25, 3200);
+}
