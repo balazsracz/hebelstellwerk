@@ -39,10 +39,32 @@
 
 #define ASSERT(x) assert((x))
 
-#ifdef NDEBUG
+#if defined(ARDUINO) && defined(LED_BUILTIN)
+
+#define DIE(x)                         \
+  Serial.println(x);                   \
+  do {                                 \
+    pinMode(LED_BUILTIN, OUTPUT);      \
+    while (1) {                        \
+      digitalWrite(LED_BUILTIN, HIGH); \
+      delay(125);                      \
+      digitalWrite(LED_BUILTIN, LOW);  \
+      delay(125);                      \
+    }                                  \
+  } while (0)
+
+#elif defined(NDEBUG)
+
+#warning bad DIE because NDEBUG
+
 #define DIE(x) do { int can_not_compile_die_with_NDEBUG[-1]; } while(0)
-#else
+
+#else // NDEBUG is not defined, use assert to die
+
+#warning assert DIE
+
 #define DIE(x) assert(false && x)
-#endif
+
+#endif // NDEBUG is not defined, use assert
 
 #endif // _STW_MACROS_H_
