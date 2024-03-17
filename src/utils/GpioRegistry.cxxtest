@@ -64,3 +64,12 @@ TEST_F(RegistryTest, overlap_register) {
       },
       "Overlapping registrations");
 }
+
+TEST_F(RegistryTest, get_no_pin) {
+  auto* ptr = reg_.get(NO_PIN);
+  EXPECT_NE(ptr, nullptr);
+  ptr->set_input(NO_PIN);
+  ptr->set_output(NO_PIN);
+  ptr->write(NO_PIN, false);
+  ptr->read(NO_PIN);
+}

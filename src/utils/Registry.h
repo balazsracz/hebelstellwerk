@@ -77,6 +77,9 @@ class AbstractRegistry : private Atomic {
   /// @return the object that was registered for this pin number, or
   /// nullptr if the number is not known.
   const Obj* get_or_null(reg_num_t pin) {
+    if (pin == (reg_num_t)-1) {
+      return Instance<DefaultObj>::get();
+    }
     auto it = std::upper_bound(entries_.begin(), entries_.end(), pin, Comp());
     if (it != entries_.begin()) --it;
     if (it == entries_.end()) {
