@@ -26,7 +26,7 @@
  *
  * \file Gpio.h
  *
- * Class to perform periodic actions in polling loops.
+ * Abstract class for dealing with digital I/O pins.
  *
  * @author Balazs Racz
  * @date 8 Mar 2024
