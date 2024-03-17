@@ -43,7 +43,8 @@
 #include "utils/Singleton.h"
 #include "utils/Types.h"
 
-class GpioRegistry : public Singleton<GpioRegistry>, private Atomic {
+template<typename reg_num_t, class Obj, class DefaultObj>
+class AbstractRegistry : private Atomic {
  public:
   /// Registers a Gpio object for a given range of pin number.
   ///
@@ -51,7 +52,7 @@ class GpioRegistry : public Singleton<GpioRegistry>, private Atomic {
   /// @param start first pin number that should be registered to this object.
   /// @param end (exclusive) last of the range to register.
   ///
-  void register_gpio(const Gpio* obj, gpio_pin_t start, gpio_pin_t end) {
+  void register_gpio(const Obj* obj, reg_num_t start, reg_num_t end) {
     // entries_.emplace_back({.start_ = start, .end_ = end, .obj_ = obj});
     AtomicHolder h(this);
     entries_.push_back(Entry{start, end, obj});
@@ -65,21 +66,21 @@ class GpioRegistry : public Singleton<GpioRegistry>, private Atomic {
 
   /// Retrieves a registered GPIO object.
   /// @param pin the pin number. (It should be registered.)
-  /// @return the Gpio object that was registered for this pin number.
-  const Gpio* get(gpio_pin_t pin) {
+  /// @return the Obj object that was registered for this pin number.
+  const Obj* get(reg_num_t pin) {
     auto* p = get_or_null(pin);
     if (!p) {
       DIE("Requested GPIO not found");
-      p = Instance<DummyGpio>::get();
+      p = Instance<DefaultObj>::get();
     }
     return p;
   }
 
   /// Retrieves a registered GPIO object, if the pin number is known.
   /// @param pin the pin number.
-  /// @return the Gpio object that was registered for this pin number, or
+  /// @return the Obj object that was registered for this pin number, or
   /// nullptr if it is not known.
-  const Gpio* get_or_null(gpio_pin_t pin) {
+  const Obj* get_or_null(reg_num_t pin) {
     auto it = std::upper_bound(entries_.begin(), entries_.end(), pin, Comp());
     if (it != entries_.begin()) --it;
     if (it == entries_.end()) {
@@ -92,17 +93,17 @@ class GpioRegistry : public Singleton<GpioRegistry>, private Atomic {
   }
   
  private:
-  /// This structure keeps a registry entry for a Gpio object.
+  /// This structure keeps a registry entry for a Obj object.
   struct Entry {
-    gpio_pin_t start_;
-    gpio_pin_t end_;
-    const Gpio* obj_;
+    reg_num_t start_;
+    reg_num_t end_;
+    const Obj* obj_;
     bool operator<(const Entry& o) { return start_ < o.start_; }
   };
 
   /// Comparison object for std::lower_bound.
   struct Comp {
-    bool operator()(gpio_pin_t a, const GpioRegistry::Entry& e) {
+    bool operator()(reg_num_t a, const Entry& e) {
       return a < e.start_;
     }
   };
@@ -110,5 +111,8 @@ class GpioRegistry : public Singleton<GpioRegistry>, private Atomic {
   /// Sorted vector of registered GPIOs.
   std::vector<Entry> entries_;
 };
+
+class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
+                     public Singleton<GpioRegistry> {};
 
 #endif  // _UTILS_GPIOREGISTRY_H_
