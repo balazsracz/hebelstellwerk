@@ -3,7 +3,7 @@
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are  permitted provided that the following conditions are met:
  *
  *  - Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
@@ -24,24 +24,48 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Hebelstellwerk.h
+ * \file Blink.ino
  *
- * Main include file for the Hebelstellwerk library.
+ * Example Arduino sketch for the Hebelstellwerk library showing how to blink a
+ * LED using the executors and GPIO.
  *
  * @author Balazs Racz
- * @date 9 Mar 2024
+ * @date 16 March 2024
  */
 
-#include "utils/GpioRegistry.h"
-#include "utils/Gpio.h"
-#include "utils/Executor.h"
-#include "utils/Timer.h"
+#include <Arduino.h>
+#include <Hebelstellwerk.h>
 
-GpioRegistry g_gpio_registry;
-Executor ex;
+class Blinker : public Executable {
+ public:
+  Blinker(gpio_pin_t gpio) : output_(gpio) { ex.add(this); }
 
-#ifdef ARDUINO
-#include "utils/ArduinoGpio.h"
+  void begin() override {}
 
-ArduinoGpio g_arduino_gpio;
-#endif
+  void loop() override {
+    if (tm_.check()) {
+      gpio_->write(output_, state_);
+      state_ = !state_;
+    }
+  }
+
+ private:
+  gpio_pin_t output_;
+  const Gpio* gpio_{GpioRegistry::instance()->get(output_)};
+  bool state_{true};
+  Timer tm_{Timer::Periodic{600}};
+};
+
+Blinker blinker{LED_BUILTIN};
+
+/// Arduino setup routine.
+void setup() {
+  // Calls the executor to do begin for all registered objects.
+  ex.begin();
+}
+
+/// Arduino loop routine.
+void loop() {
+  // Calls the executor to do loop for all registered objects.
+  ex.loop();
+}
