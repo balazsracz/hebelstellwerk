@@ -24,62 +24,58 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file GpioRegistry.h
+ * \file Registry.h
  *
- * Singleton class to keep track of instances of Gpio objects.
+ * Abstract Singleton class to keep track of instances of some objects.
  *
  * @author Balazs Racz
  * @date 9 Mar 2024
  */
 
-#ifndef _UTILS_GPIOREGISTRY_H_
-#define _UTILS_GPIOREGISTRY_H_
+#ifndef _UTILS_REGISTRY_H_
+#define _UTILS_REGISTRY_H_
 
 #include <algorithm>
 #include <vector>
 
 #include "utils/Atomic.h"
-#include "utils/Gpio.h"
-#include "utils/Singleton.h"
-#include "utils/Types.h"
 
 template<typename reg_num_t, class Obj, class DefaultObj>
 class AbstractRegistry : private Atomic {
  public:
-  /// Registers a Gpio object for a given range of pin number.
+  /// Registers an object for a given range of pin number.
   ///
-  /// @param obj GPIO object that implements the given I/O.
-  /// @param start first pin number that should be registered to this object.
+  /// @param obj object that implements the given I/O.
+  /// @param start first number that should be registered to this object.
   /// @param end (exclusive) last of the range to register.
   ///
   void register_gpio(const Obj* obj, reg_num_t start, reg_num_t end) {
-    // entries_.emplace_back({.start_ = start, .end_ = end, .obj_ = obj});
     AtomicHolder h(this);
     entries_.push_back(Entry{start, end, obj});
     std::sort(entries_.begin(), entries_.end());
     for (uint16_t i = 0; i < entries_.size() - 1; ++i) {
       if (entries_[i].end_ > entries_[i + 1].start_) {
-        DIE("Overlapping GPIO registrations.");
+        DIE("Overlapping registrations.");
       }
     }
   }
 
-  /// Retrieves a registered GPIO object.
+  /// Retrieves a registered object.
   /// @param pin the pin number. (It should be registered.)
-  /// @return the Obj object that was registered for this pin number.
+  /// @return the object that was registered for this pin number.
   const Obj* get(reg_num_t pin) {
     auto* p = get_or_null(pin);
     if (!p) {
-      DIE("Requested GPIO not found");
+      DIE("Requested object not found");
       p = Instance<DefaultObj>::get();
     }
     return p;
   }
 
-  /// Retrieves a registered GPIO object, if the pin number is known.
+  /// Retrieves a registered object, if the pin number is known.
   /// @param pin the pin number.
-  /// @return the Obj object that was registered for this pin number, or
-  /// nullptr if it is not known.
+  /// @return the object that was registered for this pin number, or
+  /// nullptr if the number is not known.
   const Obj* get_or_null(reg_num_t pin) {
     auto it = std::upper_bound(entries_.begin(), entries_.end(), pin, Comp());
     if (it != entries_.begin()) --it;
@@ -108,11 +104,8 @@ class AbstractRegistry : private Atomic {
     }
   };
 
-  /// Sorted vector of registered GPIOs.
+  /// Sorted vector of registered objects.
   std::vector<Entry> entries_;
 };
 
-class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
-                     public Singleton<GpioRegistry> {};
-
-#endif  // _UTILS_GPIOREGISTRY_H_
+#endif  // _UTILS_REGISTRY_H_

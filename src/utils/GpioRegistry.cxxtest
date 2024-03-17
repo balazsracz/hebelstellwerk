@@ -47,9 +47,9 @@ TEST_F(RegistryTest, query_incorrect) {
 }
 
 TEST_F(RegistryTest, get_incorrect) {
-  EXPECT_DEATH({ reg_.get(29); }, "Requested GPIO not found");
-  EXPECT_DEATH({ reg_.get(9); }, "Requested GPIO not found");
-  EXPECT_DEATH({ reg_.get(40); }, "Requested GPIO not found");
+  EXPECT_DEATH({ reg_.get(29); }, "Requested object not found");
+  EXPECT_DEATH({ reg_.get(9); }, "Requested object not found");
+  EXPECT_DEATH({ reg_.get(40); }, "Requested object not found");
 }
 
 TEST_F(RegistryTest, overlap_register) {
@@ -57,10 +57,10 @@ TEST_F(RegistryTest, overlap_register) {
       {  //
         reg_.register_gpio(&ga_, 10, 11);
       },
-      "Overlapping GPIO");
+      "Overlapping registrations");
   EXPECT_DEATH(
       {  //
         reg_.register_gpio(&ga_, 11, 40);
       },
-      "Overlapping GPIO");
+      "Overlapping registrations");
 }
