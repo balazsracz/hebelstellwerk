@@ -61,7 +61,6 @@
 
 #else // NDEBUG is not defined, use assert to die
 
-#warning assert DIE
 
 #define DIE(x) assert(false && x)
 
