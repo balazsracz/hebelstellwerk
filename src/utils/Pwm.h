@@ -24,33 +24,43 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Executor.h
+ * \file Pwm.h
  *
- * Class to control execution of tasks that get pulled of an input queue.  This
- * is based off of work started by Balazs on 5 August 2013.
+ * Abstract class for output pins that can do PWM output.
  *
  * @author Balazs Racz
- * @date 7 Mar 2024
+ * @date 17 Mar 2024
  */
 
-#ifndef _STW_TYPES_H_
-#define _STW_TYPES_H_
+#ifndef _UTILS_PWM_H_
+#define _UTILS_PWM_H_
 
-#include <stdint.h>
+#include "utils/Types.h"
 
-/// This type is used to represent a number of milliseconds since the start of
-/// the program. It is prone to overflow (after 46 days of run time).
-typedef uint32_t millis_t;
+/// A nonexistent PWM pin. Will be translated to a dummy PWM object by the
+/// registry.
+static constexpr pwm_pin_t NO_PWM_PIN = -1;
 
-/// Denotes a GPIO pin, which may be physical (e.g. an Arduino pin), or virtual
-/// (a software component) or on a GPIO extender.
-typedef int16_t gpio_pin_t;
+class Pwm {
+ public:
+  typedef uint16_t tick_t;
 
-/// Denotes a PWM pin, which may be physical (e.g. an Arduino pin), or on a
-/// PWM extender chip.
-typedef int16_t pwm_pin_t;
+  /// @return how many ticks this object has for a one millisecond pulse width.
+  virtual tick_t tick_per_msec() const = 0;
 
-/// Denotes a Servo output.
-typedef int16_t servo_pin_t;
+  /// @return period length in tick count.
+  virtual tick_t tick_per_period() const = 0;
 
-#endif // _STW_TYPES_H_
+  /// Update the output pulse width.
+  /// @param pin the output pin to act upon.
+  /// @param count_high how many counts of the period should the output be high.
+  virtual void write(pwm_pin_t pin, tick_t count_high) = 0;
+};
+
+
+/// Empty implementation of a PWM pin.
+class DummyPwm : public Pwm {
+
+};
+
+#endif // _UTILS_PWM_H_
