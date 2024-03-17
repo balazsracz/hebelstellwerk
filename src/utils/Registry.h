@@ -39,6 +39,7 @@
 #include <vector>
 
 #include "utils/Atomic.h"
+#include "utils/Instance.h"
 
 template<typename reg_num_t, class Obj, class DefaultObj>
 class AbstractRegistry : private Atomic {
@@ -49,7 +50,7 @@ class AbstractRegistry : private Atomic {
   /// @param start first number that should be registered to this object.
   /// @param end (exclusive) last of the range to register.
   ///
-  void register_gpio(const Obj* obj, reg_num_t start, reg_num_t end) {
+  void register_gpio(Obj* obj, reg_num_t start, reg_num_t end) {
     AtomicHolder h(this);
     entries_.push_back(Entry{start, end, obj});
     std::sort(entries_.begin(), entries_.end());
@@ -63,7 +64,7 @@ class AbstractRegistry : private Atomic {
   /// Retrieves a registered object.
   /// @param pin the pin number. (It should be registered.)
   /// @return the object that was registered for this pin number.
-  const Obj* get(reg_num_t pin) {
+  Obj* get(reg_num_t pin) {
     auto* p = get_or_null(pin);
     if (!p) {
       DIE("Requested object not found");
@@ -76,7 +77,7 @@ class AbstractRegistry : private Atomic {
   /// @param pin the pin number.
   /// @return the object that was registered for this pin number, or
   /// nullptr if the number is not known.
-  const Obj* get_or_null(reg_num_t pin) {
+  Obj* get_or_null(reg_num_t pin) {
     if (pin == (reg_num_t)-1) {
       return Instance<DefaultObj>::get();
     }
@@ -96,7 +97,7 @@ class AbstractRegistry : private Atomic {
   struct Entry {
     reg_num_t start_;
     reg_num_t end_;
-    const Obj* obj_;
+    Obj* obj_;
     bool operator<(const Entry& o) { return start_ < o.start_; }
   };
 

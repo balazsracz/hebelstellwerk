@@ -75,15 +75,4 @@ class DummyGpio : public Gpio {
   void set_input(gpio_pin_t pin) const override {}
 };
 
-template <typename T>
-class Instance {
- public:
-  static const T* get() { return &instance_; }
-
-  static const T instance_;
-};
-
-template <typename T>
-const T Instance<T>::instance_;
-
 #endif  // _UTILS_GPIO_H_
