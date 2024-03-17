@@ -7,6 +7,9 @@ SUBDIRS= utils
 
 GTESTPATH=$(APP_PATH)/test/deps/googletest/googletest
 GMOCKPATH=$(APP_PATH)/test/deps/googletest/googlemock
+ifndef ARDUINOCLIPATH
+ARDUINOCLIPATH=~/prg/arduino/cli
+endif
 TESTOBJSEXTRA += gtest-all.o gmock-all.o
 LD=g++
 
@@ -69,4 +72,8 @@ clean veryclean: clean-gtest
 
 run-tests: $(TESTOUTPUTS) $(TESTMD5)
 
-tests: run-tests
+build-examples:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/Blink
+
+tests: run-tests build-examples
+
