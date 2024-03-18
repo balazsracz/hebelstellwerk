@@ -37,6 +37,8 @@
 
 #include "utils/Macros.h"
 #include "utils/Types.h"
+#include "utils/Registry.h"
+#include "utils/Singleton.h"
 
 /// A nonexistent GPIO pin. Will be translated to a dummy GPIO object by the
 /// GPIO registry.
@@ -74,5 +76,8 @@ class DummyGpio : public Gpio {
   void set_output(gpio_pin_t pin) const override {}
   void set_input(gpio_pin_t pin) const override {}
 };
+
+class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
+                     public Singleton<GpioRegistry> {};
 
 #endif  // _UTILS_GPIO_H_

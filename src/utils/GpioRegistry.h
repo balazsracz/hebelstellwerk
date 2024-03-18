@@ -35,15 +35,6 @@
 #ifndef _UTILS_GPIOREGISTRY_H_
 #define _UTILS_GPIOREGISTRY_H_
 
-#include <algorithm>
-#include <vector>
-
 #include "utils/Gpio.h"
-#include "utils/Singleton.h"
-#include "utils/Types.h"
-#include "utils/Registry.h"
-
-class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
-                     public Singleton<GpioRegistry> {};
 
 #endif  // _UTILS_GPIOREGISTRY_H_

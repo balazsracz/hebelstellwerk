@@ -38,6 +38,7 @@
 #include <algorithm>
 #include <vector>
 
+#include "utils/Macros.h"
 #include "utils/Atomic.h"
 #include "utils/Instance.h"
 
@@ -50,7 +51,7 @@ class AbstractRegistry : private Atomic {
   /// @param start first number that should be registered to this object.
   /// @param end (exclusive) last of the range to register.
   ///
-  void register_gpio(Obj* obj, reg_num_t start, reg_num_t end) {
+  void register_obj(Obj* obj, reg_num_t start, reg_num_t end) {
     AtomicHolder h(this);
     entries_.push_back(Entry{start, end, obj});
     std::sort(entries_.begin(), entries_.end());
@@ -82,7 +83,7 @@ class AbstractRegistry : private Atomic {
       return Instance<DefaultObj>::get();
     }
     auto it = std::upper_bound(entries_.begin(), entries_.end(), pin, Comp());
-    if (it != entries_.begin()) --it;
+    if (it != entries_.begin())--it;
     if (it == entries_.end()) {
       return nullptr;
     }

@@ -36,6 +36,8 @@
 #define _UTILS_PWM_H_
 
 #include "utils/Types.h"
+#include "utils/Registry.h"
+#include "utils/Singleton.h"
 
 /// A nonexistent PWM pin. Will be translated to a dummy PWM object by the
 /// registry.
@@ -64,5 +66,8 @@ class DummyPwm : public Pwm {
   tick_t tick_per_period() const override { return 4096; }
   void write(pwm_pin_t pin, tick_t count_high) const override {}
 };
+
+class PwmRegistry : public AbstractRegistry<pwm_pin_t, const Pwm, DummyPwm>,
+                     public Singleton<PwmRegistry> {};
 
 #endif  // _UTILS_PWM_H_
