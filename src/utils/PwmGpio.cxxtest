@@ -1,11 +1,74 @@
-#include "utils/PwmGpio.h"
-
 #include "test_main.h"
 #include "utils/MockPin.h"
+#include "utils/PwmGpio.h"
 
-class PwmGpioTest : public ::testing::Test {
+class PwmTestBase : public ::testing::Test {
  protected:
+  PwmTestBase() { PwmRegistry::instance()->register_obj(&pwm_, 13, 14); }
 
   StrictMock<MockPwm> pwm_;
-
+  PwmRegistry pwm_reg_;
+  GpioRegistry gpio_reg_;
 };
+
+TEST_F(PwmTestBase, create) {}
+
+class PwmGpioTest : public PwmTestBase {
+ protected:
+  PwmGpio pwm_gpio_{55, 13, 25, 80};
+};
+
+TEST_F(PwmGpioTest, create) {}
+
+TEST_F(PwmGpioTest, set_output) {  //
+  pwm_gpio_.set_output(55);
+}
+
+TEST_F(PwmGpioTest, set_input) {
+  EXPECT_DEATH(
+      {  //
+        pwm_gpio_.set_input(55);
+      },
+      "input not supported");
+}
+
+TEST_F(PwmGpioTest, set_on_off) {
+  EXPECT_CALL(pwm_, tick_per_period()).WillOnce(Return(1000));
+  EXPECT_CALL(pwm_, write(13, 800));
+  pwm_gpio_.write(55, true);
+  Mock::VerifyAndClear(&pwm_);
+
+  // Second call will not do anything.
+  pwm_gpio_.write(55, true);
+  pwm_gpio_.write(55, true);
+  pwm_gpio_.write(55, true);
+  Mock::VerifyAndClear(&pwm_);
+
+  EXPECT_CALL(pwm_, tick_per_period()).WillOnce(Return(1000));
+  EXPECT_CALL(pwm_, write(13, 250));
+  pwm_gpio_.write(55, false);
+  Mock::VerifyAndClear(&pwm_);
+
+  pwm_gpio_.write(55, false);
+  pwm_gpio_.write(55, false);
+  pwm_gpio_.write(55, false);
+  pwm_gpio_.write(55, false);
+  Mock::VerifyAndClear(&pwm_);
+}
+
+TEST_F(PwmGpioTest, registered) {
+  auto* gpio = GpioRegistry::instance()->get(55);
+  EXPECT_EQ(&pwm_gpio_, gpio);
+}
+
+TEST_F(PwmGpioTest, tick_rate_100) {
+  EXPECT_CALL(pwm_, tick_per_period()).WillOnce(Return(100));
+  EXPECT_CALL(pwm_, write(13, 80));
+  pwm_gpio_.write(55, true);
+}
+
+TEST_F(PwmGpioTest, tick_rate_400) {
+  EXPECT_CALL(pwm_, tick_per_period()).WillOnce(Return(400));
+  EXPECT_CALL(pwm_, write(13, 320));
+  pwm_gpio_.write(55, true);
+}

@@ -47,6 +47,7 @@ using ::testing::StrictMock;
 using ::testing::NiceMock;
 using ::testing::InSequence;
 using ::testing::Mock;
+using ::testing::Return;
 
 #ifndef GTEST
 #error must have GTEST defined.
