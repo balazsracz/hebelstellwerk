@@ -1,0 +1,11 @@
+#include "utils/PwmGpio.h"
+
+#include "test_main.h"
+#include "utils/MockPin.h"
+
+class PwmGpioTest : public ::testing::Test {
+ protected:
+
+  StrictMock<MockPwm> pwm_;
+
+};
