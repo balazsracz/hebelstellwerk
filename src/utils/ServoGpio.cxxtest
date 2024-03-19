@@ -1,0 +1,213 @@
+#include "utils/ServoGpio.h"
+
+//
+
+#include "test_main.h"
+#include "utils/MockPin.h"
+
+TEST(InterpolateTest, endpoints) {
+  EXPECT_EQ(155, ServoGpio::interpolate(0, 155, 180, 390, 0));
+  EXPECT_EQ(390, ServoGpio::interpolate(0, 155, 180, 390, 180));
+}
+
+TEST(InterpolateTest, middle) {
+  EXPECT_EQ(1500, ServoGpio::interpolate(0, 1000, 180, 2000, 90));
+}
+
+TEST(InterpolateTest, outside) {
+  EXPECT_EQ(500, ServoGpio::interpolate(0, 1000, 180, 2000, -90));
+  EXPECT_EQ(2500, ServoGpio::interpolate(0, 1000, 180, 2000, 270));
+}
+
+TEST(InterpolateTest, monotonic) {
+  int32_t last = 0;
+  for (int i = -90; i < 270; i++) {
+    int32_t next = ServoGpio::interpolate(0, 1000, 180, 2000, i);
+    EXPECT_LT(last, next);
+    last = next;
+  }
+}
+
+TEST(InterpolateTest, inside) {
+  EXPECT_EQ(1000, ServoGpio::interpolate(0, 1000, 180, 2000, 0));
+  EXPECT_EQ(1250, ServoGpio::interpolate(0, 1000, 180, 2000, 45));
+  EXPECT_EQ(1500, ServoGpio::interpolate(0, 1000, 180, 2000, 90));
+  EXPECT_EQ(1750, ServoGpio::interpolate(0, 1000, 180, 2000, 135));
+  EXPECT_EQ(2000, ServoGpio::interpolate(0, 1000, 180, 2000, 180));
+}
+
+TEST(InterpolateTest, inside2) {
+  EXPECT_EQ(1875, ServoGpio::interpolate(0, 2000, 100, 1750, 50));
+}
+
+class ServoTestBase : public TestBase {
+ protected:
+  ServoTestBase() {
+    PwmRegistry::instance()->register_obj(&pwm_a_, 1, 2);
+    PwmRegistry::instance()->register_obj(&pwm_b_, 2, 3);
+  }
+
+  PwmRegistry pwm_reg_;
+  GpioRegistry gpio_reg_;
+  StrictMock<MockPwm> pwm_a_;
+  StrictMock<MockPwm> pwm_b_;
+};
+
+class ServoGpioTest : public ServoTestBase {
+ protected:
+  ServoGpioTest() {
+    ON_CALL(pwm_a_, tick_per_msec()).WillByDefault(Return(1000));
+    EXPECT_CALL(pwm_a_, tick_per_msec()).Times(AtLeast(0));
+    ON_CALL(pwm_b_, tick_per_msec()).WillByDefault(Return(1000));
+    EXPECT_CALL(pwm_b_, tick_per_msec()).Times(AtLeast(0));
+  }
+
+  void begin() {
+    EXPECT_CALL(pwm_a_, write(1, 1250));
+    EXPECT_CALL(pwm_b_, write(2, 1250));
+    ex_.begin();
+  }
+
+  // gpio 13, pwm 1, from 45* to 135*, travel time 250 msec
+  ServoGpio a_{13, 1, 45, 135, 250};
+
+  // gpio 14, pwm 2, from 45* to 135*, travel time 250 msec, overrotate -45 +45
+  // at 100 msec
+  ServoGpio b_{14, 2, 45, 135, 250, false, -45, 45, 100};
+};
+
+TEST_F(ServoGpioTest, create) {}
+
+TEST_F(ServoGpioTest, registered) {
+  EXPECT_EQ(&a_, GpioRegistry::instance()->get(13));
+  EXPECT_EQ(&b_, GpioRegistry::instance()->get(14));
+}
+
+TEST_F(ServoGpioTest, begin) { begin(); }
+
+TEST_F(ServoGpioTest, noop_false) {
+  begin();
+
+  a_.write(13, false);
+  ex_.loop();
+  ex_.loop();
+  ex_.loop();
+  ex_.loop();
+}
+
+TEST_F(ServoGpioTest, regular_move) {
+  begin();
+
+  a_.write(13, true);
+  ex_.loop();
+  ex_.loop();
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) / 5));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * 2 / 5));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * 3 / 5));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * 4 / 5));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(49);
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(1);
+  EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * 5 / 5));
+  ex_.loop();
+  ex_.loop();
+}
+
+TEST_F(ServoGpioTest, skipped_time_move) {
+  begin();
+
+  a_.write(13, true);
+  ex_.advance(250);
+  EXPECT_CALL(pwm_a_, write(1, 1750));
+  ex_.loop();
+  ex_.loop();
+}
+
+TEST_F(ServoGpioTest, reverse_move) {
+  begin();
+
+  a_.write(13, true);
+  ex_.advance(250);
+  EXPECT_CALL(pwm_a_, write(1, 1750));
+  ex_.loop();
+  ex_.loop();
+
+  a_.write(13, false);
+  for (int i = 4; i >= 0; --i) {
+    ex_.advance(50);
+    EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * i / 5));
+    ex_.loop();
+    ex_.loop();
+  }
+}
+
+TEST_F(ServoGpioTest, overrotate) {
+  begin();
+
+  b_.write(13, true);
+
+  for (int i = 1; i <= 5; ++i) {
+    ex_.advance(50);
+    EXPECT_CALL(pwm_b_, write(2, 1250 + (2000 - 1250) * i / 5));
+    ex_.loop();
+    ex_.loop();
+  }
+
+  Mock::VerifyAndClear(&pwm_b_);
+  ON_CALL(pwm_b_, tick_per_msec()).WillByDefault(Return(1000));
+  EXPECT_CALL(pwm_b_, tick_per_msec()).Times(AtLeast(0));
+
+  // There is a bit of rounding error here, because internally we are computing
+  // with degrees.
+  ex_.advance(50);
+  EXPECT_CALL(pwm_b_, write(2, 1877));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_b_, write(2, 1750));
+  ex_.loop();
+  ex_.loop();
+
+
+  b_.write(13, false);
+
+  for (int i = 1; i <= 5; ++i) {
+    ex_.advance(50);
+    EXPECT_CALL(pwm_b_, write(2, 1750 + (1000 - 1750) * i / 5));
+    ex_.loop();
+    ex_.loop();
+  }
+
+  // Rotates back to the target.
+  ex_.advance(50);
+  EXPECT_CALL(pwm_b_, write(2, 1122));
+  ex_.loop();
+  ex_.loop();
+
+  ex_.advance(50);
+  EXPECT_CALL(pwm_b_, write(2, 1250));
+  ex_.loop();
+  ex_.loop();
+}
