@@ -53,6 +53,7 @@ class TurnoutLever : private Executable {
         lock_output_(lock_output) {
     input_ = GpioRegistry::instance()->get(lever_input_);
     lock_ = GpioRegistry::instance()->get(lock_output_);
+    Executor::instance()->add(this);
   }
 
   enum Direction { PLUS, MINUS };
