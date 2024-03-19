@@ -36,9 +36,9 @@
 #define _STW_TURNOUTLEVER_H_
 
 #include "utils/Executor.h"
-#include "utils/Types.h"
 #include "utils/Gpio.h"
 #include "utils/Logging.h"
+#include "utils/Types.h"
 
 enum TurnoutId : uint8_t;
 
@@ -56,8 +56,15 @@ class TurnoutLever : private Executable {
     Executor::instance()->add(this);
   }
 
-  enum Direction { PLUS, MINUS };
+  /// Defines turnout directions.
+  enum Direction {
+    /// Default state (normal), usually closed.
+    PLUS,
+    /// Reversed state, usually thrown.
+    MINUS
+  };
 
+  /// @return which direction the turnout is currently set to.
   Direction get_direction() {
     switch (state_) {
       case State::PLUS:
@@ -67,8 +74,10 @@ class TurnoutLever : private Executable {
       case State::MINUS_LOCKED:
         return MINUS;
     }
+    return PLUS;
   }
 
+  /// @return true if the turnout is currently locked.
   bool is_locked() {
     switch (state_) {
       case State::PLUS_LOCKED:
@@ -78,8 +87,14 @@ class TurnoutLever : private Executable {
       case State::MINUS:
         return false;
     }
+    return false;
   }
 
+  /// To be called by a Route lever state machine. Adds a lock to this
+  /// turnout. It is possible for multiple route levers to lock a given
+  /// turnout, provided that they are all aligned on which state the turnout
+  /// has to be locked in. The caller has to first verify that the curent
+  /// direction of the turnout is appropriate for their route to be set.
   void add_lock() {
     if (0 == lock_count_) {
       LOG(LEVEL_INFO, "Locking Turnout %d", (int)id_);
@@ -97,6 +112,8 @@ class TurnoutLever : private Executable {
     ++lock_count_;
   }
 
+  /// Removes a lock. Called by a route lever state machine, when the lever is
+  /// returned to the neutral position.
   void remove_lock() {
     if (!lock_count_) {
       LOG(LEVEL_ERROR, "Removing lock when count == 0. Turnout %d", (int)id_);
@@ -118,13 +135,15 @@ class TurnoutLever : private Executable {
     }
   }
 
-  void begin() override {}
+  void begin() override {
+    bool input_is_plus = get_lever_is_plus();
+    state_ = input_is_plus ? State::PLUS : State::MINUS;
+  }
 
   void loop() override {
     lock_->write(lock_output_, is_locked() ? !output_invert_ : output_invert_);
     if (!is_locked()) {
-      bool input_is_plus = input_->read(lever_input_);
-      if (input_invert_) input_is_plus = !input_is_plus;
+      bool input_is_plus = get_lever_is_plus();
       if ((get_direction() == PLUS) != input_is_plus) {
         // change input
         state_ = input_is_plus ? State::PLUS : State::MINUS;
@@ -135,6 +154,12 @@ class TurnoutLever : private Executable {
   }
 
  private:
+  bool get_lever_is_plus() {
+    bool input_is_plus = input_->read(lever_input_);
+    if (input_invert_) input_is_plus = !input_is_plus;
+    return input_is_plus;
+  }
+
   enum class State { PLUS, PLUS_LOCKED, MINUS, MINUS_LOCKED };
 
   TurnoutId id_;

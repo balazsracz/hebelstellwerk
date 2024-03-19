@@ -3,3 +3,145 @@
 //
 
 #include "test_main.h"
+#include "utils/MockPin.h"
+
+class TurnoutTestBase : public TestBase {
+ protected:
+  TurnoutTestBase() {
+    gpio_reg_.register_obj(&lever_, 13, 14);
+    gpio_reg_.register_obj(&lock_, 14, 15);
+  }
+
+  GpioRegistry gpio_reg_;
+  StrictMock<MockGpio> lever_;
+  StrictMock<MockGpio> lock_;
+};
+
+enum TurnoutId : uint8_t { TO_1, TO_2a, TO_2b };
+
+class TurnoutLeverTest : public TurnoutTestBase {
+ protected:
+  TurnoutLeverTest() {}
+
+  void begin() {
+    EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+    ex_.begin();
+  }
+
+  TurnoutLever tol_{TO_2a, 13, false, 14, false};
+};
+
+TEST_F(TurnoutLeverTest, create) {}
+
+TEST_F(TurnoutLeverTest, lock_unlock) {
+  begin();
+
+  for (int i = 0; i < 20; ++i) {
+    EXPECT_FALSE(tol_.is_locked());
+    tol_.add_lock();
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_TRUE(tol_.is_locked());
+    tol_.add_lock();
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_TRUE(tol_.is_locked());
+    tol_.remove_lock();
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_TRUE(tol_.is_locked());
+    tol_.remove_lock();
+    EXPECT_FALSE(tol_.is_locked());
+    EXPECT_FALSE(tol_.is_locked());
+  }
+}
+
+TEST_F(TurnoutLeverTest, lock_gpio) {
+  begin();
+
+  EXPECT_CALL(lever_, read(13)).WillRepeatedly(Return(false));
+
+  for (int i = 0; i < 20; ++i) {
+    EXPECT_FALSE(tol_.is_locked());
+    EXPECT_CALL(lock_, write(14, false));
+    ex_.loop();
+
+    tol_.add_lock();
+
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_CALL(lock_, write(14, true));
+    ex_.loop();
+
+    tol_.add_lock();
+
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_CALL(lock_, write(14, true));
+    ex_.loop();
+
+    tol_.remove_lock();
+
+    EXPECT_TRUE(tol_.is_locked());
+    EXPECT_CALL(lock_, write(14, true));
+    ex_.loop();
+
+    tol_.remove_lock();
+
+    EXPECT_FALSE(tol_.is_locked());
+    EXPECT_CALL(lock_, write(14, false));
+    ex_.loop();
+  }
+}
+
+TEST_F(TurnoutLeverTest, plus_minus) {
+  begin();
+
+  EXPECT_CALL(lock_, write(14, false)).Times(5);
+
+  EXPECT_EQ(TurnoutLever::MINUS, tol_.get_direction());
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::MINUS, tol_.get_direction());
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::MINUS, tol_.get_direction());
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::PLUS, tol_.get_direction());
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::PLUS, tol_.get_direction());
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::MINUS, tol_.get_direction());
+}
+
+TEST_F(TurnoutLeverTest, lock_not_move) {
+  begin();
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::PLUS, tol_.get_direction());
+  EXPECT_FALSE(tol_.is_locked());
+
+  tol_.add_lock();
+
+  for (int i = 0; i < 5; ++i) {
+    EXPECT_CALL(lock_, write(14, true));
+    EXPECT_CALL(lever_, read(13)).Times(0);
+    ex_.loop();
+    EXPECT_EQ(TurnoutLever::PLUS, tol_.get_direction());
+    EXPECT_TRUE(tol_.is_locked());
+  }
+
+  // Changing the lever will not change the state because we are locked.
+
+  tol_.remove_lock();
+
+  // Now the lever will be queried and the state will change.
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(TurnoutLever::MINUS, tol_.get_direction());
+  EXPECT_FALSE(tol_.is_locked());
+}
