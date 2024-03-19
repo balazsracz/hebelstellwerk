@@ -3,7 +3,7 @@ APP_PATH:=$(realpath $(dir $(lastword $(MAKEFILE_LIST)))/..)
 all: tests
 
 SRCDIR=$(APP_PATH)/src
-SUBDIRS= utils
+SUBDIRS= utils stw
 
 GTESTPATH=$(APP_PATH)/test/deps/googletest/googletest
 GMOCKPATH=$(APP_PATH)/test/deps/googletest/googlemock
