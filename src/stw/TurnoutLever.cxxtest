@@ -28,10 +28,15 @@ class TurnoutLeverTest : public TurnoutTestBase {
     ex_.begin();
   }
 
+  TurnoutRegistry t_reg_;
   TurnoutLever tol_{TO_2a, 13, false, 14, false};
 };
 
 TEST_F(TurnoutLeverTest, create) {}
+
+TEST_F(TurnoutLeverTest, registered) {
+  EXPECT_EQ(&tol_, TurnoutRegistry::instance()->get(TO_2a));
+}
 
 TEST_F(TurnoutLeverTest, lock_unlock) {
   begin();

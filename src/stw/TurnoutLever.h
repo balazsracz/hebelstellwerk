@@ -38,9 +38,23 @@
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
 #include "utils/Logging.h"
+#include "utils/Registry.h"
 #include "utils/Types.h"
 
 enum TurnoutId : uint8_t;
+
+class TurnoutLever;
+
+/// Partial template specialization to not have to specify a default turnout to
+/// the registry.
+template<> class Instance<TurnoutLever> {
+ public:
+  static TurnoutLever* get() { return nullptr; }
+};
+
+class TurnoutRegistry
+    : public AbstractRegistry<TurnoutId, TurnoutLever, TurnoutLever>,
+      public Singleton<TurnoutRegistry> {};
 
 class TurnoutLever : private Executable {
  public:
@@ -54,6 +68,8 @@ class TurnoutLever : private Executable {
     input_ = GpioRegistry::instance()->get(lever_input_);
     lock_ = GpioRegistry::instance()->get(lock_output_);
     Executor::instance()->add(this);
+    TurnoutRegistry::instance()->register_obj(this, turnout,
+                                              (TurnoutId)(turnout + 1));
   }
 
   /// Defines turnout directions.
