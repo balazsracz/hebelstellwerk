@@ -1,0 +1,40 @@
+#include "stw/SignalLever.h"
+
+//
+
+#include "test_main.h"
+#include "utils/MockPin.h"
+
+
+class SignalTestBase : public TestBase {
+ protected:
+  SignalTestBase() {
+    gpio_reg_.register_obj(&lever_, 13, 14);
+    gpio_reg_.register_obj(&lock_, 14, 15);
+  }
+
+  GpioRegistry gpio_reg_;
+  StrictMock<MockGpio> lever_;
+  StrictMock<MockGpio> lock_;
+};
+
+enum SignalId : uint8_t { SIG_A, SIG_B, SIG_C };
+
+class SignalLeverTest : public SignalTestBase {
+ protected:
+  SignalLeverTest() {}
+
+  void begin() {
+    EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+    ex_.begin();
+  }
+
+  SignalRegistry t_reg_;
+  SignalLever sgl_{SIG_B, HP2, 13, false, 14, false};
+};
+
+TEST_F(SignalLeverTest, create) {}
+
+TEST_F(SignalLeverTest, registered) {
+  EXPECT_EQ(&sgl_, SignalRegistry::instance()->get(signal_registry_idx(SIG_B, HP2)));
+}
