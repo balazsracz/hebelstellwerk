@@ -190,7 +190,7 @@ class TurnoutLever : private Executable {
   /// Gpio pin for the input from the turnout lever.
   gpio_pin_t lever_input_;
 
-  /// Gpio pin for the input from the turnout lever.
+  /// Gpio pin for the output controlling the lock.
   gpio_pin_t lock_output_;
 
   /// Internal turnout state.
