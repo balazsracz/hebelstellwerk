@@ -38,3 +38,11 @@ TEST_F(SignalLeverTest, create) {}
 TEST_F(SignalLeverTest, registered) {
   EXPECT_EQ(&sgl_, SignalRegistry::instance()->get(signal_registry_idx(SIG_B, HP2)));
 }
+
+TEST_F(SignalLeverTest, locked_unlocked) {
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  sgl_.unlock();
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+}
