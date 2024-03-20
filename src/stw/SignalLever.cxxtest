@@ -40,9 +40,67 @@ TEST_F(SignalLeverTest, registered) {
 }
 
 TEST_F(SignalLeverTest, locked_unlocked) {
+  begin();
   EXPECT_TRUE(sgl_.is_locked());
   EXPECT_EQ(HP0, sgl_.current_aspect());
   sgl_.unlock();
   EXPECT_FALSE(sgl_.is_locked());
   EXPECT_EQ(HP0, sgl_.current_aspect());
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  EXPECT_FALSE(sgl_.is_locked());
+}
+
+TEST_F(SignalLeverTest, locked_no_read) {
+  begin();
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+
+  // input never read
+  EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  EXPECT_FALSE(sgl_.is_proceed());
+}
+
+TEST_F(SignalLeverTest, proceed) {
+  begin();
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  sgl_.unlock();
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  // Enable the signal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+
+  EXPECT_EQ(HP2, sgl_.current_aspect());
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_TRUE(sgl_.is_proceed());
+
+  // return to normal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  // lock at the next loop
+  EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
 }

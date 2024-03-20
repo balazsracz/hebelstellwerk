@@ -62,7 +62,7 @@ class TurnoutLever : private Executable {
                gpio_pin_t lock_output, bool lock_invert)
       : id_(turnout),
         input_invert_(lever_invert),
-        output_invert_(lever_invert),
+        output_invert_(lock_invert),
         lever_input_(lever_input),
         lock_output_(lock_output) {
     input_ = GpioRegistry::instance()->get(lever_input_);

@@ -85,7 +85,7 @@ class SignalLever : private Executable {
       : id_(signal),
         aspect_(aspect),
         input_invert_(lever_invert),
-        output_invert_(lever_invert),
+        output_invert_(lock_invert),
         lever_input_(lever_input),
         lock_output_(lock_output) {
     input_ = GpioRegistry::instance()->get(lever_input_);
@@ -138,14 +138,17 @@ class SignalLever : private Executable {
   }
   
   void loop() override {
+    LOG(LEVEL_INFO, "state %d locked %d output_invert %d", (int)state_, is_locked(), output_invert_);
     lock_->write(lock_output_, is_locked() ? !output_invert_ : output_invert_);
-    bool input_is_proceed = get_lever_is_proceed();
-    if (state_ == State::STOP && input_is_proceed) {
-      LOG(LEVEL_INFO, "Signal %d/Hp%d is proceed", id_, aspect_);
-      state_ = State::PROCEED;
-    } else if (state_ == State::PROCEED && !input_is_proceed) {
-      LOG(LEVEL_INFO, "Signal %d/Hp%d is stop+lock", id_, aspect_);
-      state_ = State::STOP_LOCKED;
+    if (!is_locked()) {
+      bool input_is_proceed = get_lever_is_proceed();
+      if (state_ == State::STOP && input_is_proceed) {
+        LOG(LEVEL_INFO, "Signal %d/Hp%d is proceed", id_, aspect_);
+        state_ = State::PROCEED;
+      } else if (state_ == State::PROCEED && !input_is_proceed) {
+        LOG(LEVEL_INFO, "Signal %d/Hp%d is stop+lock", id_, aspect_);
+        state_ = State::STOP_LOCKED;
+      }
     }
   }
 
