@@ -67,6 +67,25 @@ TEST_F(SignalLeverTest, locked_no_read) {
   EXPECT_FALSE(sgl_.is_proceed());
 }
 
+TEST_F(SignalLeverTest, lock_invert) {
+  ex_.~Executor();
+  new(&ex_)Executor();
+  new(&sgl_)SignalLever{SIG_B, HP1, 13, false, 14, true};
+  
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.begin();
+
+  EXPECT_CALL(lock_, write(14, false));
+  ex_.loop();
+
+  sgl_.unlock();
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
+}
+
+
 TEST_F(SignalLeverTest, proceed) {
   begin();
   EXPECT_FALSE(sgl_.is_proceed());
@@ -101,6 +120,39 @@ TEST_F(SignalLeverTest, proceed) {
   EXPECT_FALSE(sgl_.is_proceed());
 
   // lock at the next loop
+  EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
+}
+
+TEST_F(SignalLeverTest, lever_invert) {
+  ex_.~Executor();
+  new(&ex_)Executor();
+  new(&sgl_)SignalLever{SIG_B, HP1, 13, true, 14, false};
+  
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.begin();
+
+  EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
+
+  sgl_.unlock();
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  EXPECT_CALL(lock_, write(14, false));
+  ex_.loop();
+
+  EXPECT_TRUE(sgl_.is_proceed());
+  EXPECT_EQ(HP1, sgl_.current_aspect());
+
+  // Lever closed again
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  EXPECT_CALL(lock_, write(14, false));
+  ex_.loop();
+
+  EXPECT_FALSE(sgl_.is_proceed());
+  EXPECT_EQ(HP0, sgl_.current_aspect());
+  EXPECT_TRUE(sgl_.is_locked());
+  
   EXPECT_CALL(lock_, write(14, true));
   ex_.loop();
 }
