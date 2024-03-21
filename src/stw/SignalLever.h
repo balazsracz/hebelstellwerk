@@ -41,8 +41,7 @@
 #include "utils/Registry.h"
 #include "utils/Singleton.h"
 #include "utils/Types.h"
-
-enum SignalId : uint8_t;
+#include "stw/Types.h"
 
 enum SignalAspect : uint8_t {
   HP0 = 0,

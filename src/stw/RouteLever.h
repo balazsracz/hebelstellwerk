@@ -35,7 +35,8 @@
 #ifndef _STW_ROUTELEVER_H_
 #define _STW_ROUTELEVER_H_
 
-enum RouteId : uint8_t;
+#include "stw/Types.h"
+#include "stw/LockTable.h"
 
 class RouteLever;
 
@@ -142,6 +143,17 @@ class RouteLever : private Executable {
 
   /// Gpio for the lock. HIGH means the lever is locked.
   GpioAccessor lock_;
+
+  /// First entry in the lock table for the upwards route. This is after the
+  /// ROUTE declaration.
+  const LockTableEntry* locktable_up_;
+  /// Number of entries in the lock table row for the upwards route.
+  uint16_t locktable_up_size_;
+  /// First entry in the lock table for the dnwards route. This is after the
+  /// ROUTE declaration.
+  const LockTableEntry* locktable_dn_;
+  /// Number of entries in the lock table row for the dnwards route.
+  uint16_t locktable_dn_size_;
   
   /// Internal route state.
   State state_;

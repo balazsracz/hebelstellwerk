@@ -40,8 +40,7 @@
 #include "utils/Logging.h"
 #include "utils/Registry.h"
 #include "utils/Types.h"
-
-enum TurnoutId : uint8_t;
+#include "stw/Types.h"
 
 class TurnoutLever;
 

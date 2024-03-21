@@ -24,33 +24,26 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Executor.h
+ * \file stw/Types.h
  *
- * Class to control execution of tasks that get pulled of an input queue.  This
- * is based off of work started by Balazs on 5 August 2013.
+ * Forward declarations of enums of various objects.
  *
  * @author Balazs Racz
- * @date 7 Mar 2024
+ * @date 21 Mar 2024
  */
 
-#ifndef _UTILS_TYPES_H_
-#define _UTILS_TYPES_H_
+#ifndef _STW_TYPES_H_
+#define _STW_TYPES_H_
 
-#include <stdint.h>
+#include <cstdint>
 
-/// This type is used to represent a number of milliseconds since the start of
-/// the program. It is prone to overflow (after 46 days of run time).
-typedef uint32_t millis_t;
+/// This enum lists the routes (Fahrstrassen).
+enum RouteId : uint8_t;
 
-/// Denotes a GPIO pin, which may be physical (e.g. an Arduino pin), or virtual
-/// (a software component) or on a GPIO extender.
-typedef int16_t gpio_pin_t;
+/// This enum lists the signals (Signale).
+enum SignalId : uint8_t;
 
-/// Denotes a PWM pin, which may be physical (e.g. an Arduino pin), or on a
-/// PWM extender chip.
-typedef int16_t pwm_pin_t;
+/// This enum lists the turnouts (Weichen).
+enum TurnoutId : uint8_t;
 
-/// Denotes a Servo output.
-typedef int16_t servo_pin_t;
-
-#endif // _UTILS_TYPES_H_
+#endif // _STW_TYPES_H_
