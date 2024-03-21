@@ -35,15 +35,16 @@
 #ifndef _STW_LOCKTABLE_H_
 #define _STW_LOCKTABLE_H_
 
-#include <initializer_list>
 #include <cstddef>
+#include <initializer_list>
 #include <utility>
 
 #include "stw/Types.h"
 #include "utils/Singleton.h"
 
+/// All the different symbols we can have in a lock table.
 enum LockTableEntryType : uint8_t {
-  EOF,
+  NONE,
   ROUTE_ROW,
   TURNOUT_PLUS,
   TURNOUT_MINUS,
@@ -56,6 +57,7 @@ enum LockTableEntryType : uint8_t {
   BLOCK_IN,
 };
 
+/// We keep entries of this type in the lock table.
 struct LockTableEntry {
   constexpr LockTableEntry(LockTableEntryType type, uint8_t arg)
       : type_(type), arg_(arg) {}
@@ -66,6 +68,9 @@ struct LockTableEntry {
     return type_ != o.type_ || arg_ != o.arg_;
   }
 };
+
+static_assert(sizeof(LockTableEntry) == 2,
+              "lock table entry should be optimal");
 
 static constexpr LockTableEntry lock_table_helper(LockTableEntryType type,
                                                   uint8_t value) {
@@ -110,29 +115,38 @@ static constexpr LockTableEntry Hp2(SignalId id) {
 /// });
 class LockTable : public Singleton<LockTable> {
  public:
-  LockTable(std::initializer_list<LockTableEntry> entries)
-      : ar_(entries) {}
+  LockTable(std::initializer_list<LockTableEntry> entries) : ar_(entries) {}
 
-  const LockTableEntry* begin() {
-    return ar_.begin();
-  }
+  const LockTableEntry* begin() { return ar_.begin(); }
 
-  const LockTableEntry* end() {
-    return ar_.end();
-  }
+  const LockTableEntry* end() { return ar_.end(); }
 
-  std::pair<const LockTableEntry*, size_t> find_route(RouteId id) {
+  /// Data structure representing a row in the lock table.
+  struct Row {
+    /// Points to the first entry in the row; may be nullptr if size == 0.
     const LockTableEntry* ptr;
-    for (ptr = begin(); ptr != end() && *ptr != Route(id); ++ptr);
+    /// Number of entries in the row.
+    ptrdiff_t size;
+
+    const LockTableEntry* begin() const { return ptr; }
+    const LockTableEntry* end() const { return ptr + size; }
+  };
+
+  /// Finds a given row in the lock table, and returns it.
+  Row find_route(RouteId id) {
+    const LockTableEntry* ptr;
+    for (ptr = begin(); ptr != end() && *ptr != Route(id); ++ptr)
+      ;
     if (ptr == end()) {
       return {nullptr, 0};
     }
     ++ptr;
     const LockTableEntry* eptr;
-    for (eptr = ptr; eptr != end() && eptr->type_ != ROUTE_ROW; ++eptr);
+    for (eptr = ptr; eptr != end() && eptr->type_ != ROUTE_ROW; ++eptr)
+      ;
     return {ptr, eptr - ptr};
   }
-  
+
  private:
   std::initializer_list<LockTableEntry> ar_;
 };
