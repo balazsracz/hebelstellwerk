@@ -35,13 +35,12 @@
 #ifndef _STW_SIGNALLEVER_H__
 #define _STW_SIGNALLEVER_H__
 
-#include "utils/Types.h"
-#include "utils/Registry.h"
-#include "utils/Singleton.h"
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
 #include "utils/Logging.h"
-
+#include "utils/Registry.h"
+#include "utils/Singleton.h"
+#include "utils/Types.h"
 
 enum SignalId : uint8_t;
 
@@ -68,11 +67,11 @@ class SignalLever;
 
 /// Partial template specialization to not have to specify a default turnout to
 /// the registry.
-template<> class Instance<SignalLever> {
+template <>
+class Instance<SignalLever> {
  public:
   static SignalLever* get() { return nullptr; }
 };
-
 
 class SignalRegistry
     : public AbstractRegistry<int16_t, SignalLever, SignalLever>,
@@ -84,15 +83,11 @@ class SignalLever : private Executable {
               bool lever_invert, gpio_pin_t lock_output, bool lock_invert)
       : id_(signal),
         aspect_(aspect),
-        input_invert_(lever_invert),
-        output_invert_(lock_invert),
-        lever_input_(lever_input),
-        lock_output_(lock_output) {
-    input_ = GpioRegistry::instance()->get(lever_input_);
-    lock_ = GpioRegistry::instance()->get(lock_output_);
+        lever_(lever_input, lever_invert, GPIO_INPUT),
+        lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
     auto idx = signal_registry_idx(signal, aspect);
-    SignalRegistry::instance()->register_obj(this, idx, idx+1);
+    SignalRegistry::instance()->register_obj(this, idx, idx + 1);
   }
 
   enum class State {
@@ -136,10 +131,9 @@ class SignalLever : private Executable {
     bool input_is_proceed = get_lever_is_proceed();
     state_ = input_is_proceed ? State::PROCEED : State::STOP_LOCKED;
   }
-  
+
   void loop() override {
-    LOG(LEVEL_INFO, "state %d locked %d output_invert %d", (int)state_, is_locked(), output_invert_);
-    lock_->write(lock_output_, is_locked() ? !output_invert_ : output_invert_);
+    lock_.write(is_locked());
     if (!is_locked()) {
       bool input_is_proceed = get_lever_is_proceed();
       if (state_ == State::STOP && input_is_proceed) {
@@ -155,8 +149,7 @@ class SignalLever : private Executable {
  private:
   /// @return true if the lever is set to proceed aspect.
   bool get_lever_is_proceed() {
-    bool input_is_proceed = input_->read(lever_input_);
-    if (input_invert_) input_is_proceed = !input_is_proceed;
+    bool input_is_proceed = lever_.read();
     return input_is_proceed;
   }
 
@@ -165,26 +158,17 @@ class SignalLever : private Executable {
   /// Which aspect of this signal we represent (Hp1 or Hp2).
   SignalAspect aspect_;
 
-  /// true: input low is signal ON (proceed), input high is signal OFF (stop).
-  /// false: input low is signal OFF (stop), input high is signal ON (proceed).
-  bool input_invert_;
+  /// Helper object for the input Gpio.  When inverted is true: input low is
+  /// signal ON (proceed), input high is signal OFF (stop).  false: input low
+  /// is signal OFF (stop), input high is signal ON (proceed).
+  GpioAccessor lever_;
 
-  /// false: output high is locked. true: output low is locked.
-  bool output_invert_;
-
-  /// Gpio pin for the input from the signal lever.
-  gpio_pin_t lever_input_;
-
-  /// Gpio pin for the output controlling the lock.
-  gpio_pin_t lock_output_;
+  /// Helper object for the output Gpio. When inverted is false: output high is
+  /// locked. true: output low is locked.
+  GpioAccessor lock_;
 
   /// Internal signal state.
   State state_;
-
-  /// Gpio object for the lever input.
-  const Gpio* input_;
-  /// Gpio object for the lock output.
-  const Gpio* lock_;
 };
 
 #endif  // _STW_SIGNALLEVER_H__

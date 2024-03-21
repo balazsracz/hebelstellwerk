@@ -5,12 +5,14 @@
 #include "test_main.h"
 #include "utils/MockPin.h"
 
-
 class SignalTestBase : public TestBase {
  protected:
   SignalTestBase() {
     gpio_reg_.register_obj(&lever_, 13, 14);
     gpio_reg_.register_obj(&lock_, 14, 15);
+
+    EXPECT_CALL(lever_, set_input(13));
+    EXPECT_CALL(lock_, set_output(14));
   }
 
   GpioRegistry gpio_reg_;
@@ -36,7 +38,8 @@ class SignalLeverTest : public SignalTestBase {
 TEST_F(SignalLeverTest, create) {}
 
 TEST_F(SignalLeverTest, registered) {
-  EXPECT_EQ(&sgl_, SignalRegistry::instance()->get(signal_registry_idx(SIG_B, HP2)));
+  EXPECT_EQ(&sgl_,
+            SignalRegistry::instance()->get(signal_registry_idx(SIG_B, HP2)));
 }
 
 TEST_F(SignalLeverTest, locked_unlocked) {
@@ -69,9 +72,13 @@ TEST_F(SignalLeverTest, locked_no_read) {
 
 TEST_F(SignalLeverTest, lock_invert) {
   ex_.~Executor();
-  new(&ex_)Executor();
-  new(&sgl_)SignalLever{SIG_B, HP1, 13, false, 14, true};
-  
+  new (&ex_) Executor();
+
+  EXPECT_CALL(lever_, set_input(13));
+  EXPECT_CALL(lock_, set_output(14));
+
+  new (&sgl_) SignalLever{SIG_B, HP1, 13, false, 14, true};
+
   EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
   ex_.begin();
 
@@ -84,7 +91,6 @@ TEST_F(SignalLeverTest, lock_invert) {
   EXPECT_CALL(lock_, write(14, true));
   ex_.loop();
 }
-
 
 TEST_F(SignalLeverTest, proceed) {
   begin();
@@ -126,9 +132,13 @@ TEST_F(SignalLeverTest, proceed) {
 
 TEST_F(SignalLeverTest, lever_invert) {
   ex_.~Executor();
-  new(&ex_)Executor();
-  new(&sgl_)SignalLever{SIG_B, HP1, 13, true, 14, false};
-  
+  new (&ex_) Executor();
+
+  EXPECT_CALL(lever_, set_input(13));
+  EXPECT_CALL(lock_, set_output(14));
+
+  new (&sgl_) SignalLever{SIG_B, HP1, 13, true, 14, false};
+
   EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
   ex_.begin();
 
@@ -152,7 +162,7 @@ TEST_F(SignalLeverTest, lever_invert) {
   EXPECT_FALSE(sgl_.is_proceed());
   EXPECT_EQ(HP0, sgl_.current_aspect());
   EXPECT_TRUE(sgl_.is_locked());
-  
+
   EXPECT_CALL(lock_, write(14, true));
   ex_.loop();
 }
