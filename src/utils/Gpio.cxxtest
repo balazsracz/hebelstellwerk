@@ -20,7 +20,7 @@ TEST_F(GpioTest, create) {
 
 TEST_F(GpioTest, accessor_output) {
   EXPECT_CALL(pin_, set_output(35));
-  GpioAccessor acc(35, false, true);
+  GpioAccessor acc(35, false, GPIO_OUTPUT);
 
   EXPECT_CALL(pin_, write(35, true));
   acc.write(true);
@@ -43,7 +43,7 @@ TEST_F(GpioTest, accessor_output) {
 
 TEST_F(GpioTest, accessor_output_invert) {
   EXPECT_CALL(pin_, set_output(35));
-  GpioAccessor acc(35, true, true);
+  GpioAccessor acc(35, true, GPIO_OUTPUT);
 
   EXPECT_CALL(pin_, write(35, false));
   acc.write(true);
@@ -63,7 +63,7 @@ TEST_F(GpioTest, accessor_output_invert) {
 
 TEST_F(GpioTest, accessor_input) {
   EXPECT_CALL(pin_, set_input(36));
-  GpioAccessor acc(36, false, false);
+  GpioAccessor acc(36, false, GPIO_INPUT);
 
   EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
   EXPECT_TRUE(acc.read());
@@ -79,7 +79,7 @@ TEST_F(GpioTest, accessor_input) {
 
 TEST_F(GpioTest, accessor_input_invert) {
   EXPECT_CALL(pin_, set_input(36));
-  GpioAccessor acc(36, true, false);
+  GpioAccessor acc(36, true, GPIO_INPUT);
 
   EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
   EXPECT_TRUE(acc.read());

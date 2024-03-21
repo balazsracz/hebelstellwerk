@@ -80,17 +80,22 @@ class DummyGpio : public Gpio {
 class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
                      public Singleton<GpioRegistry> {};
 
+enum GpioDirection { GPIO_INPUT, GPIO_OUTPUT };
+
 /// Helper class to keep a gpio object, query it and support inversion.
 class GpioAccessor {
  public:
-  GpioAccessor(gpio_pin_t pin, bool inverted, bool is_output)
+  GpioAccessor(gpio_pin_t pin, bool inverted, GpioDirection dir)
       : pin_num_(pin),
         inverted_(inverted),
         gpio_(GpioRegistry::instance()->get(pin)) {
-    if (is_output) {
-      gpio_->set_output(pin_num_);
-    } else {
-      gpio_->set_input(pin_num_);
+    switch (dir) {
+      case GPIO_INPUT:
+        gpio_->set_input(pin_num_);
+        break;
+      case GPIO_OUTPUT:
+        gpio_->set_output(pin_num_);
+        break;
     }
   }
 
@@ -109,7 +114,7 @@ class GpioAccessor {
     }
     gpio_->write(pin_num_, value);
   }
-  
+
  private:
   gpio_pin_t pin_num_;
   bool inverted_;

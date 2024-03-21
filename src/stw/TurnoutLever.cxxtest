@@ -10,6 +10,9 @@ class TurnoutTestBase : public TestBase {
   TurnoutTestBase() {
     gpio_reg_.register_obj(&lever_, 13, 14);
     gpio_reg_.register_obj(&lock_, 14, 15);
+
+    EXPECT_CALL(lever_, set_input(13));
+    EXPECT_CALL(lock_, set_output(14));
   }
 
   GpioRegistry gpio_reg_;

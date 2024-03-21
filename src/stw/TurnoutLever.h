@@ -47,7 +47,8 @@ class TurnoutLever;
 
 /// Partial template specialization to not have to specify a default turnout to
 /// the registry.
-template<> class Instance<TurnoutLever> {
+template <>
+class Instance<TurnoutLever> {
  public:
   static TurnoutLever* get() { return nullptr; }
 };
@@ -61,12 +62,8 @@ class TurnoutLever : private Executable {
   TurnoutLever(TurnoutId turnout, gpio_pin_t lever_input, bool lever_invert,
                gpio_pin_t lock_output, bool lock_invert)
       : id_(turnout),
-        input_invert_(lever_invert),
-        output_invert_(lock_invert),
-        lever_input_(lever_input),
-        lock_output_(lock_output) {
-    input_ = GpioRegistry::instance()->get(lever_input_);
-    lock_ = GpioRegistry::instance()->get(lock_output_);
+        lever_(lever_input, lever_invert, GPIO_INPUT),
+        lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
     TurnoutRegistry::instance()->register_obj(this, turnout,
                                               (TurnoutId)(turnout + 1));
@@ -157,7 +154,7 @@ class TurnoutLever : private Executable {
   }
 
   void loop() override {
-    lock_->write(lock_output_, is_locked() ? !output_invert_ : output_invert_);
+    lock_.write(is_locked());
     if (!is_locked()) {
       bool input_is_plus = get_lever_is_plus();
       if ((get_direction() == PLUS) != input_is_plus) {
@@ -171,8 +168,7 @@ class TurnoutLever : private Executable {
 
  private:
   bool get_lever_is_plus() {
-    bool input_is_plus = input_->read(lever_input_);
-    if (input_invert_) input_is_plus = !input_is_plus;
+    bool input_is_plus = lever_.read();
     return input_is_plus;
   }
 
@@ -180,29 +176,19 @@ class TurnoutLever : private Executable {
 
   TurnoutId id_;
 
-  /// true: input low is Plus, input high is Minus. false: input low is Minus,
-  /// input high is Plus.
-  bool input_invert_;
+  /// Helper object for the input Gpio.  When inverted is true: input low is
+  /// Plus, input high is Minus. false: input low is Minus, input high is Plus.
+  GpioAccessor lever_;
 
-  /// false: output high is locked. true: output low is locked.
-  bool output_invert_;
-
-  /// Gpio pin for the input from the turnout lever.
-  gpio_pin_t lever_input_;
-
-  /// Gpio pin for the output controlling the lock.
-  gpio_pin_t lock_output_;
-
+  /// Helper object for the output Gpio. When inverted is false: output high is
+  /// locked. true: output low is locked.
+  GpioAccessor lock_;
   /// Internal turnout state.
   State state_;
 
   /// How many locks do we have right now.
   uint8_t lock_count_{0};
 
-  /// Gpio object for the lever input.
-  const Gpio* input_;
-  /// Gpio object for the lock output.
-  const Gpio* lock_;
 };  // class TurnoutLever
 
 #endif  // _STW_TURNOUTLEVER_H_
