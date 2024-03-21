@@ -1,5 +1,96 @@
 #include "utils/Gpio.h"
 
+//
+
+#include "MockPin.h"
 #include "test_main.h"
 
-// There are not tests here, this just tests that the code compiles correctly.
+class GpioTest : public TestBase {
+ protected:
+  GpioTest() {
+    GpioRegistry::instance()->register_obj(&pin_, 35, 37);
+  }
+  
+  GpioRegistry reg_;
+  StrictMock<MockGpio> pin_;
+};
+
+TEST_F(GpioTest, create) {
+}
+
+TEST_F(GpioTest, accessor_output) {
+  EXPECT_CALL(pin_, set_output(35));
+  GpioAccessor acc(35, false, true);
+
+  EXPECT_CALL(pin_, write(35, true));
+  acc.write(true);
+
+  EXPECT_CALL(pin_, write(35, true));
+  acc.write(true);
+
+  EXPECT_CALL(pin_, write(35, true));
+  acc.write(true);
+  
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(false);
+
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(false);
+
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(false);
+}
+
+TEST_F(GpioTest, accessor_output_invert) {
+  EXPECT_CALL(pin_, set_output(35));
+  GpioAccessor acc(35, true, true);
+
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(true);
+
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(true);
+
+  EXPECT_CALL(pin_, write(35, true));
+  acc.write(false);
+
+  EXPECT_CALL(pin_, write(35, true));
+  acc.write(false);
+
+  EXPECT_CALL(pin_, write(35, false));
+  acc.write(true);
+}
+
+TEST_F(GpioTest, accessor_input) {
+  EXPECT_CALL(pin_, set_input(36));
+  GpioAccessor acc(36, false, false);
+
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
+  EXPECT_FALSE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
+  EXPECT_FALSE(acc.read());
+}
+
+TEST_F(GpioTest, accessor_input_invert) {
+  EXPECT_CALL(pin_, set_input(36));
+  GpioAccessor acc(36, true, false);
+
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
+  EXPECT_FALSE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(false));
+  EXPECT_TRUE(acc.read());
+  EXPECT_CALL(pin_, read(36)).WillOnce(Return(true));
+  EXPECT_FALSE(acc.read());
+}
+
+

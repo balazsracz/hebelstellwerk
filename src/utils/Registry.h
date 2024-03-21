@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <vector>
+#include <cstdint>
 
 #include "utils/Macros.h"
 #include "utils/Atomic.h"

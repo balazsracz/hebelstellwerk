@@ -36,9 +36,9 @@
 #define _UTILS_GPIO_H_
 
 #include "utils/Macros.h"
-#include "utils/Types.h"
 #include "utils/Registry.h"
 #include "utils/Singleton.h"
+#include "utils/Types.h"
 
 /// A nonexistent GPIO pin. Will be translated to a dummy GPIO object by the
 /// GPIO registry.
@@ -79,5 +79,41 @@ class DummyGpio : public Gpio {
 
 class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
                      public Singleton<GpioRegistry> {};
+
+/// Helper class to keep a gpio object, query it and support inversion.
+class GpioAccessor {
+ public:
+  GpioAccessor(gpio_pin_t pin, bool inverted, bool is_output)
+      : pin_num_(pin),
+        inverted_(inverted),
+        gpio_(GpioRegistry::instance()->get(pin)) {
+    if (is_output) {
+      gpio_->set_output(pin_num_);
+    } else {
+      gpio_->set_input(pin_num_);
+    }
+  }
+
+  bool read() {
+    bool value = gpio_->read(pin_num_);
+    if (inverted_) {
+      return !value;
+    } else {
+      return value;
+    }
+  }
+
+  void write(bool value) {
+    if (inverted_) {
+      value = !value;
+    }
+    gpio_->write(pin_num_, value);
+  }
+  
+ private:
+  gpio_pin_t pin_num_;
+  bool inverted_;
+  const Gpio* gpio_;
+};
 
 #endif  // _UTILS_GPIO_H_
