@@ -1,0 +1,70 @@
+#include "stw/LockTable.h"
+
+//
+
+#include "test_main.h"
+
+enum RouteId : uint8_t {
+  ROUTE_A1,
+  ROUTE_A2,
+  ROUTE_A3,
+  ROUTE_B1,
+  ROUTE_B2,
+  ROUTE_B3,
+  ROUTE_C1,
+  ROUTE_C2,
+  ROUTE_C3,
+  ROUTE_D1,
+  ROUTE_D2,
+  ROUTE_D3
+};
+
+enum TurnoutId : uint8_t {
+  TURNOUT_1,
+  TURNOUT_2,
+  TURNOUT_8,
+  TURNOUT_9,
+};
+
+enum SignalId : uint8_t {
+  SIGNAL_A,
+  SIGNAL_B,
+  SIGNAL_C,
+  SIGNAL_D,
+};
+
+TEST(LockTableTest, simple) {
+  LockTable tbl(                                                //
+      {Route(ROUTE_A1), TurnoutPlus(TURNOUT_1), Hp2(SIGNAL_A),  //
+       Route(ROUTE_B1), TurnoutMinus(TURNOUT_8), Hp1(SIGNAL_C)});
+
+  EXPECT_EQ(&tbl, LockTable::instance());
+}
+
+TEST(LockTableTest, get_row) {
+  LockTable tbl(                                                 //
+      {Route(ROUTE_A1), TurnoutPlus(TURNOUT_1), Hp2(SIGNAL_A),   //
+       Route(ROUTE_B1), TurnoutMinus(TURNOUT_8), Hp1(SIGNAL_C),  //
+       Route(ROUTE_D1), Route(ROUTE_D2)});
+
+  auto* ptr = tbl.begin();
+  auto ret = tbl.find_route(ROUTE_A1);
+  EXPECT_EQ(ptr + 1, ret.first);
+  EXPECT_EQ(2u, ret.second);
+
+  ret = tbl.find_route(ROUTE_B1);
+  EXPECT_EQ(ptr + 4, ret.first);
+  EXPECT_EQ(2u, ret.second);
+
+  ret = tbl.find_route(ROUTE_C1);
+  EXPECT_EQ(nullptr, ret.first);
+  EXPECT_EQ(0u, ret.second);
+
+  ret = tbl.find_route(ROUTE_D1);
+  EXPECT_EQ(ptr + 7, ret.first);
+  EXPECT_EQ(0u, ret.second);
+
+  ret = tbl.find_route(ROUTE_D2);
+  EXPECT_EQ(ptr + 8, ret.first);
+  EXPECT_EQ(0u, ret.second);
+}
