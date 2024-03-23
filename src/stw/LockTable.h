@@ -106,6 +106,10 @@ static constexpr LockTableEntry Hp2(SignalId id) {
   return lock_table_helper(SIGNAL_HP2, id);
 }
 
+static constexpr LockTableEntry Aux(AuxId id) {
+  return lock_table_helper(AUX_PLUS, id);
+}
+
 /// Instantiate this class to provide the lock table (Verschlusstabelle). The
 /// necessary syntax is this:
 ///
