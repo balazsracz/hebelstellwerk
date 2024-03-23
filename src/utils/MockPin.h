@@ -26,7 +26,7 @@
  *
  * \file MockPin.h
  *
- * Helper classes for writing unit tests. 
+ * Helper classes for writing unit tests.
  *
  * @author Balazs Racz
  * @date 18 Mar 2024
@@ -35,9 +35,9 @@
 #ifndef _UTILS_MOCKPIN_H_
 #define _UTILS_MOCKPIN_H_
 
+#include "gmock/gmock.h"
 #include "utils/Gpio.h"
 #include "utils/Pwm.h"
-#include "gmock/gmock.h"
 
 #ifndef GTEST
 #error this class is test-only
@@ -60,4 +60,57 @@ class MockPwm : public Pwm {
   MOCK_CONST_METHOD2(write, void(pwm_pin_t, tick_t));
 };
 
-#endif // _UTILS_MOCKPIN_H_
+class FakeGpio : public Gpio {
+ public:
+  FakeGpio(gpio_pin_t start_pin, uint16_t num_pins = 1)
+      : start_pin_(start_pin), num_pins_(num_pins) {
+    state_.resize(num_pins_);
+    is_output_.resize(num_pins_);
+    GpioRegistry::instance()->register_obj(this, start_pin_, start_pin_ + num_pins_);
+  }
+
+  void write(gpio_pin_t pin, bool value) const override {
+    check_valid_pin(pin);
+    state_[pin - start_pin_] = value;
+  }
+  bool read(gpio_pin_t pin) const override {
+    check_valid_pin(pin);
+    return state_[pin - start_pin_];
+  }
+  void set_output(gpio_pin_t pin) const override {
+    check_valid_pin(pin);
+    is_output_[pin - start_pin_] = true;
+  }
+  void set_input(gpio_pin_t pin) const override {
+    check_valid_pin(pin);
+    is_output_[pin - start_pin_] = false;
+  }
+
+  // These functions only exist on the fake for testing.
+
+  /// Check if a pin has been set to output or input.
+  ///
+  /// @param pin pin number (global value).
+  ///
+  /// @return true if the pin is output.
+  ///
+  bool get_output(gpio_pin_t pin) {
+    check_valid_pin(pin);
+    return is_output_[pin - start_pin_];
+  }
+
+  mutable std::vector<bool> state_;
+  mutable std::vector<bool> is_output_;
+
+ private:
+  void check_valid_pin(gpio_pin_t p) const {
+    bool valid = (p >= start_pin_ && p < (start_pin_ + num_pins_));
+    if (!valid) {
+      DIE("not valid pin");
+    }
+  }
+  gpio_pin_t start_pin_;
+  uint16_t num_pins_;
+};
+
+#endif  // _UTILS_MOCKPIN_H_
