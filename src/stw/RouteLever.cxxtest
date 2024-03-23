@@ -108,11 +108,29 @@ class UWBTest : public TestBase, public UWB {
     ex_.begin();
     for (unsigned i = 0; i < 100; ++i) {
       ex_.loop();
+      ex_.advance(5);
     }
   }
+  void wait() {
+    for (unsigned i = 0; i < 100; ++i) {
+      ex_.loop();
+      ex_.advance(5);
+    }
+ }
 };
 
 TEST_F(UWBTest, create) {}
+
+TEST_F(UWBTest, registered) {
+  EXPECT_EQ(&Rab1, RouteRegistry::instance()->get(a1));
+  EXPECT_EQ(&Rab1, RouteRegistry::instance()->get(b1));
+  EXPECT_EQ(&Rab3, RouteRegistry::instance()->get(a3));
+  EXPECT_EQ(&Rab3, RouteRegistry::instance()->get(b3));
+  EXPECT_EQ(&Rcd1, RouteRegistry::instance()->get(c1));
+  EXPECT_EQ(&Rcd1, RouteRegistry::instance()->get(d1));
+  EXPECT_EQ(&Rcd3, RouteRegistry::instance()->get(c3));
+  EXPECT_EQ(&Rcd3, RouteRegistry::instance()->get(d3));
+}
 
 TEST_F(UWBTest, begin_loop) {
   start();
@@ -145,14 +163,45 @@ TEST_F(UWBTest, begin_loop) {
   EXPECT_FALSE(gpios_.read(LOCK_W9));
   EXPECT_FALSE(gpios_.read(LOCK_W10));
   
-  // Fstr levers are locked.
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  // Fstr levers for track 3 are locked.
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
-  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+  // Fstr levers for track 1 are unlocked.
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 }
 
-TEST_F(UWBTest, all_w_plus) {
+TEST_F(UWBTest, set_route_up) {
   start();
+  wait();
+
+  EXPECT_FALSE(Rab1.is_route_set(a1));
+  EXPECT_FALSE(Rab1.is_route_set(b1));
   
+  gpios_.write(IN_a1, true);
+  wait();
+
+  // One route is set.
+  EXPECT_TRUE(Rab1.is_route_set(a1));
+  EXPECT_FALSE(Rab1.is_route_set(b1));
+  // Signal levers are still locked.
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_C_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_D_HP2));
+
+  // The mentioned turnout levers got locked.
+  EXPECT_TRUE(gpios_.read(LOCK_W1a));
+  EXPECT_TRUE(gpios_.read(LOCK_W1b));
+  EXPECT_TRUE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_TRUE(gpios_.read(LOCK_W9));
+  EXPECT_TRUE(gpios_.read(LOCK_W10));
+}
+
+TEST_F(UWBTest, die_wrong_route) {
+  start();
+  EXPECT_DEATH({
+      Rab1.is_route_set(c1);
+    }, "Asked about a route we don't own");
 }

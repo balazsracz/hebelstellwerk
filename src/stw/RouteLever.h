@@ -109,6 +109,10 @@ class RouteLever : private Executable {
     }
   }
 
+  /// @return true if the route lever is lifted out of neutral position and set
+  /// towards the given route. This does not mean that the route is locked in
+  /// that place, but the mechanical locks for turnout levers and lockouts of
+  /// other route levers etc should be engaged.
   bool is_route_set(RouteId id) {
     if (id == id_up_) {
       return state_ == State::UP || state_ == State::UP_LOCKED ||
