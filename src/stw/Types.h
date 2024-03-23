@@ -43,6 +43,17 @@ enum RouteId : uint8_t;
 /// This enum lists the signals (Signale).
 enum SignalId : uint8_t;
 
+static constexpr SignalId NO_SIGNAL = (SignalId)-1;
+
+enum SignalAspect : uint8_t {
+  HP0 = 0,
+  ASPECT_H = HP0,
+  HP1,
+  ASPECT_F1 = HP1,
+  HP2,
+  ASPECT_F2 = HP2
+};
+
 /// This enum lists the turnouts (Weichen).
 enum TurnoutId : uint8_t;
 

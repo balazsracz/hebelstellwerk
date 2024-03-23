@@ -43,15 +43,6 @@
 #include "utils/Types.h"
 #include "stw/Types.h"
 
-enum SignalAspect : uint8_t {
-  HP0 = 0,
-  ASPECT_H = HP0,
-  HP1,
-  ASPECT_F1 = HP1,
-  HP2,
-  ASPECT_F2 = HP2
-};
-
 /// Computes a registration entry for the signal registry.
 ///
 /// @param id signal identifier.
