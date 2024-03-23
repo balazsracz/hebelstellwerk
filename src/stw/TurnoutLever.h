@@ -64,8 +64,7 @@ class TurnoutLever : private Executable {
         lever_(lever_input, lever_invert, GPIO_INPUT),
         lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
-    TurnoutRegistry::instance()->register_obj(this, turnout,
-                                              (TurnoutId)(turnout + 1));
+    TurnoutRegistry::instance()->register_obj(this, turnout);
   }
 
   /// Defines turnout directions.

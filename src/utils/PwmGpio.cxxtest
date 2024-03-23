@@ -4,7 +4,7 @@
 
 class PwmTestBase : public ::testing::Test {
  protected:
-  PwmTestBase() { PwmRegistry::instance()->register_obj(&pwm_, 13, 14); }
+  PwmTestBase() { PwmRegistry::instance()->register_obj(&pwm_, 13); }
 
   StrictMock<MockPwm> pwm_;
   PwmRegistry pwm_reg_;

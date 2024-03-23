@@ -65,7 +65,7 @@ class Block : public Executable {
                            GPIO_INPUT),
         route_locked_lamp_(route_locked_lamp_pin, route_locked_lamp_inverted,
                            GPIO_OUTPUT) {
-    BlockRegistry::instance()->register_obj(this, id, (BlockId)(id + 1));
+    BlockRegistry::instance()->register_obj(this, id);
     Executor::instance()->add(this);
   }
 

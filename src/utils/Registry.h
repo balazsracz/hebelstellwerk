@@ -43,6 +43,10 @@
 #include "utils/Atomic.h"
 #include "utils/Instance.h"
 
+struct Count {
+  uint16_t num;
+};
+
 template<typename reg_num_t, class Obj, class DefaultObj>
 class AbstractRegistry : private Atomic {
  public:
@@ -52,8 +56,9 @@ class AbstractRegistry : private Atomic {
   /// @param start first number that should be registered to this object.
   /// @param end (exclusive) last of the range to register.
   ///
-  void register_obj(Obj* obj, reg_num_t start, reg_num_t end) {
+  void register_obj(Obj* obj, reg_num_t start, Count count = Count{1}) {
     AtomicHolder h(this);
+    reg_num_t end = reg_num_t(start + count.num);
     entries_.push_back(Entry{start, end, obj});
     std::sort(entries_.begin(), entries_.end());
     for (uint16_t i = 0; i < entries_.size() - 1; ++i) {

@@ -43,8 +43,8 @@ TEST(InterpolateTest, inside2) {
 class ServoTestBase : public TestBase {
  protected:
   ServoTestBase() {
-    PwmRegistry::instance()->register_obj(&pwm_a_, 1, 2);
-    PwmRegistry::instance()->register_obj(&pwm_b_, 2, 3);
+    PwmRegistry::instance()->register_obj(&pwm_a_, 1);
+    PwmRegistry::instance()->register_obj(&pwm_b_, 2);
   }
 
   PwmRegistry pwm_reg_;

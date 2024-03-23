@@ -91,7 +91,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
         source_deg_(0),
         target_deg_(0) {
     Executor::instance()->add(this);
-    GpioRegistry::instance()->register_obj(this, gpio_pin, gpio_pin + 1);
+    GpioRegistry::instance()->register_obj(this, gpio_pin);
     pwm_ = PwmRegistry::instance()->get(pwm_pin);
   }
 

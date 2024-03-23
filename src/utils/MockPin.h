@@ -66,7 +66,7 @@ class FakeGpio : public Gpio {
       : start_pin_(start_pin), num_pins_(num_pins) {
     state_.resize(num_pins_);
     is_output_.resize(num_pins_);
-    GpioRegistry::instance()->register_obj(this, start_pin_, start_pin_ + num_pins_);
+    GpioRegistry::instance()->register_obj(this, start_pin_, Count{num_pins_});
   }
 
   void write(gpio_pin_t pin, bool value) const override {

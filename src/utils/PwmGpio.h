@@ -53,7 +53,7 @@ class PwmGpio : public Gpio {
   /// commanded to on.
   PwmGpio(gpio_pin_t gpio_pin, pwm_pin_t pwm_pin, int8_t pct_off, int8_t pct_on)
       : pwm_pin_(pwm_pin), pct_off_(pct_off), pct_on_(pct_on) {
-    GpioRegistry::instance()->register_obj(this, gpio_pin, gpio_pin + 1);
+    GpioRegistry::instance()->register_obj(this, gpio_pin);
     pwm_ = PwmRegistry::instance()->get(pwm_pin);
   }
 

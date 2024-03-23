@@ -69,10 +69,8 @@ class RouteLever : private Executable {
         input_dn_(lever_down, lever_down_inverted, GPIO_INPUT),
         lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
-    RouteRegistry::instance()->register_obj(this, route_up,
-                                            RouteId(route_up + 1));
-    RouteRegistry::instance()->register_obj(this, route_dn,
-                                            RouteId(route_dn + 1));
+    RouteRegistry::instance()->register_obj(this, route_up);
+    RouteRegistry::instance()->register_obj(this, route_dn);
   }
 
   enum class State {

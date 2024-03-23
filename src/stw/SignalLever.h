@@ -86,7 +86,7 @@ class SignalLever : private Executable {
         lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
     auto idx = signal_registry_idx(signal, aspect);
-    SignalRegistry::instance()->register_obj(this, idx, idx + 1);
+    SignalRegistry::instance()->register_obj(this, idx);
   }
 
   enum class State {

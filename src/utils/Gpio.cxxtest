@@ -8,7 +8,7 @@
 class GpioTest : public TestBase {
  protected:
   GpioTest() {
-    GpioRegistry::instance()->register_obj(&pin_, 35, 37);
+    GpioRegistry::instance()->register_obj(&pin_, 35, Count{2});
   }
   
   GpioRegistry reg_;

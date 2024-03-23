@@ -5,9 +5,9 @@
 class RegistryTest : public TestBase {
  protected:
   RegistryTest() {
-    reg_.register_obj(&ga_, 10, 20);
-    reg_.register_obj(&gb_, 30, 40);
-    reg_.register_obj(&gc_, 20, 29);
+    reg_.register_obj(&ga_, 10, Count{10});
+    reg_.register_obj(&gb_, 30, Count{10});
+    reg_.register_obj(&gc_, 20, Count{9});
   }
 
   std::vector<gpio_pin_t> xrange(gpio_pin_t start, gpio_pin_t end) {
@@ -56,12 +56,12 @@ TEST_F(RegistryTest, get_incorrect) {
 TEST_F(RegistryTest, overlap_register) {
   EXPECT_DEATH(
       {  //
-        reg_.register_obj(&ga_, 10, 11);
+        reg_.register_obj(&ga_, 10);
       },
       "Overlapping registrations");
   EXPECT_DEATH(
       {  //
-        reg_.register_obj(&ga_, 11, 40);
+        reg_.register_obj(&ga_, 11, Count{40-11});
       },
       "Overlapping registrations");
 }
