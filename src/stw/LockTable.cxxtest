@@ -33,6 +33,11 @@ enum SignalId : uint8_t {
   SIGNAL_D,
 };
 
+enum BlockId : uint8_t {
+  BLOCK_AB,
+  BLOCK_CD,
+};
+
 TEST(LockTableTest, simple) {
   LockTable tbl(                                                //
       {Route(ROUTE_A1), TurnoutPlus(TURNOUT_1), Hp2(SIGNAL_A),  //
@@ -67,4 +72,43 @@ TEST(LockTableTest, get_row) {
   ret = tbl.find_route(ROUTE_D2);
   EXPECT_EQ(ptr + 8, ret.ptr);
   EXPECT_EQ(0u, ret.size);
+}
+
+TEST(LockTableTest, find_block) {
+  LockTable tbl(  //
+      {
+          Route(ROUTE_A1),
+          TurnoutPlus(TURNOUT_1),
+          BlockOut(BLOCK_AB),
+          Hp2(SIGNAL_A),  //
+          //
+          Route(ROUTE_B1),
+          TurnoutMinus(TURNOUT_8),
+          Hp1(SIGNAL_C),
+          BlockOut(BLOCK_CD),  //
+          //
+          Route(ROUTE_D1),
+          BlockIn(BLOCK_CD),  //
+          //
+          Route(ROUTE_D2),
+      });
+
+  bool is_out = false;
+  EXPECT_EQ(BLOCK_AB,
+            LockTable::find_block(tbl.find_route(ROUTE_A1), &is_out));
+  EXPECT_TRUE(is_out);
+
+  is_out = false;
+  EXPECT_EQ(BLOCK_CD,
+            LockTable::find_block(tbl.find_route(ROUTE_B1), &is_out));
+  EXPECT_TRUE(is_out);
+
+  is_out = true;
+  EXPECT_EQ(BLOCK_CD,
+            LockTable::find_block(tbl.find_route(ROUTE_D1), &is_out));
+  EXPECT_FALSE(is_out);
+
+  is_out = true;
+  EXPECT_EQ(NO_BLOCK,
+            LockTable::find_block(tbl.find_route(ROUTE_D2), &is_out));
 }

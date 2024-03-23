@@ -127,6 +127,20 @@ class RouteLever : private Executable {
   void begin() override {
     row_up_ = LockTable::instance()->find_route(id_up_);
     row_dn_ = LockTable::instance()->find_route(id_dn_);
+    auto block_up_id = LockTable::find_block(row_up_, &block_up_out_);
+    if (block_up_id == NO_BLOCK) {
+      block_up_ = nullptr;
+    } else {
+      block_up_ = BlockRegistry::instance()->get(block_up_id);
+    }
+    auto block_dn_id = LockTable::find_block(row_dn_, &block_dn_out_);
+    if (block_dn_id == NO_BLOCK) {
+      block_dn_ = nullptr;
+    } else {
+      block_dn_ = BlockRegistry::instance()->get(block_dn_id);
+    }
+
+    
     if (input_up_.read()) {
       state_ = State::UP;
     } else if (input_dn_.read()) {
@@ -177,6 +191,9 @@ class RouteLever : private Executable {
           LOG(LEVEL_INFO, "Fstr %d lever up removed", id_up_);
           state_ = State::NEUTRAL;
           unlock_route_preconditions(row_up_);
+        }
+        if (block_up_ && block_up_->route_lock_button().read()) {
+          
         }
         break;
       }
@@ -334,6 +351,15 @@ class RouteLever : private Executable {
   /// Lock table row for the dnwards route.
   LockTable::Row row_dn_;
 
+  /// Pointer to the block object for route_up_.
+  Block* block_up_;
+  /// Pointer to the block object for route_dn_.
+  Block* block_dn_;
+  /// true if block_up is outbounds in the lock table.
+  bool block_up_out_;
+  /// true if block_dn is outbounds in the lock table.
+  bool block_dn_out_;
+  
   /// Internal route state.
   State state_;
 

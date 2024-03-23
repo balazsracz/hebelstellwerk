@@ -110,6 +110,14 @@ static constexpr LockTableEntry Aux(AuxId id) {
   return lock_table_helper(AUX_PLUS, id);
 }
 
+static constexpr LockTableEntry BlockOut(BlockId id) {
+  return lock_table_helper(BLOCK_OUT, id);
+}
+
+static constexpr LockTableEntry BlockIn(BlockId id) {
+  return lock_table_helper(BLOCK_IN, id);
+}
+
 /// Instantiate this class to provide the lock table (Verschlusstabelle). The
 /// necessary syntax is this:
 ///
