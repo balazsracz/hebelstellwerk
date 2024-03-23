@@ -35,6 +35,7 @@
 #ifndef _STW_ROUTELEVER_H_
 #define _STW_ROUTELEVER_H_
 
+#include "stw/Block.h"
 #include "stw/LockTable.h"
 #include "stw/SignalLever.h"
 #include "stw/TurnoutLever.h"
@@ -146,7 +147,7 @@ class RouteLever : private Executable {
     if (!tm_.check()) {
       return;
     }
-    switch(state_) {
+    switch (state_) {
       case State::NEUTRAL_LOCKED: {
         if (check_preconditions(row_up_) && check_preconditions(row_dn_)) {
           state_ = State::NEUTRAL;
@@ -163,18 +164,34 @@ class RouteLever : private Executable {
       }
       case State::NEUTRAL: {
         if (input_up_.read()) {
-          LOG(LEVEL_ERROR, "Fstr %d lever up set", id_up_);
+          LOG(LEVEL_INFO, "Fstr %d lever up set", id_up_);
           state_ = State::UP;
+          lock_route_preconditions(row_up_);
         } else if (input_dn_.read()) {
-          LOG(LEVEL_ERROR, "Fstr %d lever dn set", id_dn_);
+          LOG(LEVEL_INFO, "Fstr %d lever dn set", id_dn_);
           state_ = State::DN;
+          lock_route_preconditions(row_dn_);
         }
         break;
       }
-      case State::UP:
+      case State::UP: {
+        if (!input_up_.read()) {
+          LOG(LEVEL_INFO, "Fstr %d lever up removed", id_up_);
+          state_ = State::NEUTRAL;
+          unlock_route_preconditions(row_up_);
+        }
+        break;
+      }
       case State::UP_LOCKED:
       case State::UP_REPTLOCK:
-      case State::DN:
+      case State::DN: {
+        if (!input_dn_.read()) {
+          LOG(LEVEL_INFO, "Fstr %d lever dn removed", id_dn_);
+          state_ = State::NEUTRAL;
+          unlock_route_preconditions(row_dn_);
+        }
+        break;
+      }
       case State::DN_LOCKED:
       case State::DN_REPTLOCK:
         /// @todo implement
@@ -196,6 +213,13 @@ class RouteLever : private Executable {
   }
 
  private:
+  /// Verifies that the preconditions for setting a route are fulfilled. Goes
+  /// through the lock table, and checks for Turnouts that they are in the
+  /// right direction, Aux that they are set. Ignores signals (nothing to
+  /// check) and block as well (because the direction of the block is not
+  /// given).
+  /// @param row row_up_ or row_dn_.
+  /// @return true if the preconditions are okay for setting this route.
   bool check_preconditions(const LockTable::Row& row) {
     for (const LockTableEntry& e : row) {
       switch (e.type_) {
@@ -235,12 +259,63 @@ class RouteLever : private Executable {
     return true;
   }
 
+  /// Locks the preconditions of a route. This means that Turnout and Aux
+  /// objects mentioned on the lock table row will get locked.
+  void lock_route_preconditions(const LockTable::Row& row) {
+    for (const LockTableEntry& e : row) {
+      switch (e.type_) {
+        case TURNOUT_MINUS:
+        case TURNOUT_PLUS: {
+          TurnoutRegistry::instance()->get((TurnoutId)e.arg_)->add_lock();
+          break;
+        }
+        case AUX_PLUS:
+          /// @todo implement
+          break;
+        case SIGNAL_HP1:
+        case SIGNAL_HP2:
+        case BLOCK_OUT:
+        case BLOCK_IN:
+        case ROUTE_ROW:
+        case NONE:
+          // Nothing to do here.
+          break;
+      }
+    }
+  }
+
+  /// Removes locks from the preconditions of a route. This means that Turnout
+  /// and Aux objects mentioned on the lock table row will get unlocked (if no
+  /// other Route locks them).
+  void unlock_route_preconditions(const LockTable::Row& row) {
+    for (const LockTableEntry& e : row) {
+      switch (e.type_) {
+        case TURNOUT_MINUS:
+        case TURNOUT_PLUS: {
+          TurnoutRegistry::instance()->get((TurnoutId)e.arg_)->remove_lock();
+          break;
+        }
+        case AUX_PLUS:
+          /// @todo implement
+          break;
+        case SIGNAL_HP1:
+        case SIGNAL_HP2:
+        case BLOCK_OUT:
+        case BLOCK_IN:
+        case ROUTE_ROW:
+        case NONE:
+          // Nothing to do here.
+          break;
+      }
+    }
+  }
+
   // Verification rules:
   // - there should be a block, and exactly one block
   // - the up and down should have the same preconditions
   // - there should be exactly one signal allowed per Fstr
-  // 
-  
+  //
+
   static constexpr uint32_t CHECK_PERIOD_MSEC = 10;
 
   /// Number of the route for upwards.

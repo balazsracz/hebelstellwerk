@@ -197,6 +197,17 @@ TEST_F(UWBTest, set_route_up) {
   EXPECT_FALSE(gpios_.read(LOCK_W7));
   EXPECT_TRUE(gpios_.read(LOCK_W9));
   EXPECT_TRUE(gpios_.read(LOCK_W10));
+
+  // Resetting the lever will unlock the turnouts.
+  gpios_.write(IN_a1, false);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_W1a));
+  EXPECT_FALSE(gpios_.read(LOCK_W1b));
+  EXPECT_FALSE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_FALSE(gpios_.read(LOCK_W9));
+  EXPECT_FALSE(gpios_.read(LOCK_W10));
 }
 
 TEST_F(UWBTest, die_wrong_route) {
