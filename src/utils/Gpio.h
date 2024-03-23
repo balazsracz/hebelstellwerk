@@ -99,7 +99,7 @@ class GpioAccessor {
     }
   }
 
-  bool read() {
+  bool read() const {
     bool value = gpio_->read(pin_num_);
     if (inverted_) {
       return !value;
@@ -108,7 +108,7 @@ class GpioAccessor {
     }
   }
 
-  void write(bool value) {
+  void write(bool value) const {
     if (inverted_) {
       value = !value;
     }
@@ -116,8 +116,8 @@ class GpioAccessor {
   }
 
  private:
-  gpio_pin_t pin_num_;
-  bool inverted_;
+  const gpio_pin_t pin_num_;
+  const bool inverted_;
   const Gpio* gpio_;
 };
 
