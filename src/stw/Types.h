@@ -46,6 +46,9 @@ enum SignalId : uint8_t;
 /// This enum lists the turnouts (Weichen).
 enum TurnoutId : uint8_t;
 
+/// This enum lists the blocks.
+enum BlockId : uint8_t;
+
 /// This enum lists the auxiliary items (X-ing, Gleissperren).
 enum AuxId : uint8_t;
 
