@@ -2,4 +2,150 @@
 
 //
 
+#include "stw/LockTable.h"
 #include "test_main.h"
+#include "utils/MockPin.h"
+
+enum SignalId : uint8_t { SIGNAL_A, SIGNAL_B, SIGNAL_C, SIGNAL_D };
+
+enum TurnoutId : uint8_t { W1a, W1b, W2, W7, W9, W10 };
+
+enum RouteId : uint8_t { a1, b1, a3, b3, c3, d3, c1, d1 };
+
+enum AuxId : uint8_t {
+  Bue10_750,
+  Gspr1,
+  Gspr2,
+};
+
+/// These identifiers are used for fake GPIO registration.
+enum GpioId : gpio_pin_t {
+  MIN_GPIO = 35,
+  IN_W1a = MIN_GPIO,
+  LOCK_W1a,
+  IN_W1b,
+  LOCK_W1b,
+  IN_W2,
+  LOCK_W2,
+  IN_W7,
+  LOCK_W7,
+  IN_W9,
+  LOCK_W9,
+  IN_W10,
+  LOCK_W10,
+  IN_a1,
+  IN_b1,
+  LOCK_a1b1,
+  IN_a3,
+  IN_b3,
+  LOCK_a3b3,
+  IN_c3,
+  IN_d3,
+  LOCK_c3d3,
+  IN_c1,
+  IN_d1,
+  LOCK_c1d1,
+  IN_A_HP2,
+  LOCK_A_HP2,
+  IN_B_HP2,
+  LOCK_B_HP2,
+  IN_C_HP2,
+  LOCK_C_HP2,
+  IN_D_HP2,
+  LOCK_D_HP2,
+  NUM_GPIO
+};
+
+/// Intended as a test base class. Declares the objects and the
+/// Verschlusstabelle for UWB.
+class UWB {
+ protected:
+  GpioRegistry gpio_reg_;
+  TurnoutRegistry turnout_reg_;
+  SignalRegistry signal_reg_;
+  RouteRegistry route_reg_;
+
+  LockTable ltbl_{{
+      Route(a1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
+      WeichePlus(W9),  WeichePlus(W10),  Hp2(SIGNAL_A),    Aux(Bue10_750),  //
+      Route(a3),       WeichePlus(W1a),  WeicheMinus(W1b), WeichePlus(W7),
+      WeicheMinus(W9), WeichePlus(W10),  Hp2(SIGNAL_A),    Aux(Bue10_750),  //
+      Route(b1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
+      Hp2(SIGNAL_B),   Aux(Bue10_750),  //
+      Route(b3),       WeichePlus(W1a),  WeicheMinus(W1b), Hp2(SIGNAL_B),
+      Aux(Bue10_750),                                                      //
+      Route(c1),       WeichePlus(W9),   WeichePlus(W10),  Hp2(SIGNAL_C),  //
+      Route(c3),       WeichePlus(W7),   WeicheMinus(W9),  WeichePlus(W10),
+      Hp2(SIGNAL_C),  //
+      Route(d1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
+      WeichePlus(W9),  WeichePlus(W10),  Hp2(SIGNAL_D),  //
+      Route(d3),       WeicheMinus(W1b), WeichePlus(W7),   WeicheMinus(W9),
+      WeichePlus(W10), Hp2(SIGNAL_D),  //
+  }};
+
+  FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
+  TurnoutLever TW1a{W1a, IN_W1a, false, LOCK_W1a, false};
+  TurnoutLever TW1b{W1b, IN_W1b, false, LOCK_W1b, false};
+  TurnoutLever TW2{W2, IN_W2, false, LOCK_W2, false};
+  TurnoutLever TW7{W7, IN_W7, false, LOCK_W7, false};
+  TurnoutLever TW9{W9, IN_W9, false, LOCK_W9, false};
+  TurnoutLever TW10{W10, IN_W10, false, LOCK_W10, false};
+  SignalLever SA{SIGNAL_A, HP2, IN_A_HP2, false, LOCK_A_HP2, false};
+  SignalLever SB{SIGNAL_B, HP2, IN_B_HP2, false, LOCK_B_HP2, false};
+  SignalLever SC{SIGNAL_C, HP2, IN_C_HP2, false, LOCK_C_HP2, false};
+  SignalLever SD{SIGNAL_D, HP2, IN_D_HP2, false, LOCK_D_HP2, false};
+  RouteLever Rab1{a1, b1, IN_a1, false, IN_b1, false, LOCK_a1b1, false};
+  RouteLever Rab3{a3, b3, IN_a3, false, IN_b3, false, LOCK_a3b3, false};
+  RouteLever Rcd3{c3, d3, IN_c3, false, IN_d3, false, LOCK_c3d3, false};
+  RouteLever Rcd1{c1, d1, IN_c1, false, IN_d1, false, LOCK_c1d1, false};
+};
+
+class UWBTest : public TestBase, public UWB {
+ protected:
+  void start() {
+    ex_.begin();
+    for (unsigned i = 0; i < 100; ++i) {
+      ex_.loop();
+    }
+  }
+};
+
+TEST_F(UWBTest, create) {}
+
+TEST_F(UWBTest, begin_loop) {
+  start();
+  EXPECT_TRUE(gpios_.get_output(LOCK_W1a));
+  EXPECT_TRUE(gpios_.get_output(LOCK_W1b));
+  EXPECT_TRUE(gpios_.get_output(LOCK_W2));
+  EXPECT_TRUE(gpios_.get_output(LOCK_W7));
+  EXPECT_TRUE(gpios_.get_output(LOCK_W9));
+  EXPECT_TRUE(gpios_.get_output(LOCK_W10));
+  EXPECT_TRUE(gpios_.get_output(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.get_output(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.get_output(LOCK_c1d1));
+  EXPECT_TRUE(gpios_.get_output(LOCK_c3d3));
+  EXPECT_TRUE(gpios_.get_output(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.get_output(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.get_output(LOCK_C_HP2));
+  EXPECT_TRUE(gpios_.get_output(LOCK_D_HP2));
+  
+  // Signal levers are locked.
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_C_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_D_HP2));
+
+  // Turnout levers are unlocked.
+  EXPECT_FALSE(gpios_.read(LOCK_W1a));
+  EXPECT_FALSE(gpios_.read(LOCK_W1b));
+  EXPECT_FALSE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_FALSE(gpios_.read(LOCK_W9));
+  EXPECT_FALSE(gpios_.read(LOCK_W10));
+  
+  // Fstr levers are locked.
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+}
