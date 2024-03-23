@@ -84,12 +84,14 @@ class UWB {
   }};
 
   FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
-  TurnoutLever TW1a{W1a, IN_W1a, false, LOCK_W1a, false};
-  TurnoutLever TW1b{W1b, IN_W1b, false, LOCK_W1b, false};
-  TurnoutLever TW2{W2, IN_W2, false, LOCK_W2, false};
-  TurnoutLever TW7{W7, IN_W7, false, LOCK_W7, false};
-  TurnoutLever TW9{W9, IN_W9, false, LOCK_W9, false};
-  TurnoutLever TW10{W10, IN_W10, false, LOCK_W10, false};
+  // The turnout levers are marked as inverted, to ensure that the default
+  // value of gpio(false) means the lever is in the normal state (Plus).
+  TurnoutLever TW1a{W1a, IN_W1a, true, LOCK_W1a, false};
+  TurnoutLever TW1b{W1b, IN_W1b, true, LOCK_W1b, false};
+  TurnoutLever TW2{W2, IN_W2, true, LOCK_W2, false};
+  TurnoutLever TW7{W7, IN_W7, true, LOCK_W7, false};
+  TurnoutLever TW9{W9, IN_W9, true, LOCK_W9, false};
+  TurnoutLever TW10{W10, IN_W10, true, LOCK_W10, false};
   SignalLever SA{SIGNAL_A, HP2, IN_A_HP2, false, LOCK_A_HP2, false};
   SignalLever SB{SIGNAL_B, HP2, IN_B_HP2, false, LOCK_B_HP2, false};
   SignalLever SC{SIGNAL_C, HP2, IN_C_HP2, false, LOCK_C_HP2, false};
@@ -148,4 +150,9 @@ TEST_F(UWBTest, begin_loop) {
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+}
+
+TEST_F(UWBTest, all_w_plus) {
+  start();
+  
 }
