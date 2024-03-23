@@ -180,6 +180,27 @@ class LockTable : public Singleton<LockTable> {
     return NO_BLOCK;
   }
 
+  /// Finds the signal which is referenced in a given row of the route table.
+  ///
+  /// @param route reference to the row with the route.
+  /// @param aspect if non-null, will be set to the aspect to which the signal
+  /// should be set.
+  ///
+  /// @return the ID of the signal in the route row.
+  ///
+  static SignalId find_signal(Row route, SignalAspect *aspect) {
+    for (const auto& entry : route) {
+      if (entry.type_ == SIGNAL_HP1) {
+        if (aspect) *aspect = HP1;
+        return (SignalId)entry.arg_;
+      } else if (entry.type_ == SIGNAL_HP2) {
+        if (aspect) *aspect = HP2;
+        return (SignalId)entry.arg_;
+      }
+    }
+    return NO_SIGNAL;
+  }
+  
  private:
   std::initializer_list<LockTableEntry> ar_;
 };

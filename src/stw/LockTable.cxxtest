@@ -112,3 +112,44 @@ TEST(LockTableTest, find_block) {
   EXPECT_EQ(NO_BLOCK,
             LockTable::find_block(tbl.find_route(ROUTE_D2), &is_out));
 }
+
+TEST(LockTableTest, find_signal) {
+  LockTable tbl(  //
+      {
+          Route(ROUTE_A1),
+          TurnoutPlus(TURNOUT_1),
+          BlockOut(BLOCK_AB),
+          Hp2(SIGNAL_A),  //
+          //
+          Route(ROUTE_B1),
+          TurnoutMinus(TURNOUT_8),
+          Hp1(SIGNAL_C),
+          BlockOut(BLOCK_CD),  //
+          //
+          Route(ROUTE_D1),
+          BlockIn(BLOCK_CD),  //
+          //
+          Route(ROUTE_D2),
+      });
+
+  SignalAspect aspect = HP0;
+  EXPECT_EQ(SIGNAL_A,
+            LockTable::find_signal(tbl.find_route(ROUTE_A1), &aspect));
+  EXPECT_EQ(HP2, aspect);
+
+  aspect = HP0;
+  EXPECT_EQ(SIGNAL_C,
+            LockTable::find_signal(tbl.find_route(ROUTE_B1), &aspect));
+  EXPECT_EQ(HP1, aspect);
+
+  aspect = HP0;
+  EXPECT_EQ(NO_SIGNAL,
+            LockTable::find_signal(tbl.find_route(ROUTE_D1), &aspect));
+  EXPECT_EQ(HP0, aspect);
+
+  aspect = HP0;
+  EXPECT_EQ(NO_SIGNAL,
+            LockTable::find_signal(tbl.find_route(ROUTE_D2), &aspect));
+  EXPECT_EQ(HP0, aspect);
+}
+
