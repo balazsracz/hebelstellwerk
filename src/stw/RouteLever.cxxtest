@@ -18,6 +18,11 @@ enum AuxId : uint8_t {
   Gspr2,
 };
 
+enum BlockId : uint8_t {
+  BLOCK_AB,
+  BLOCK_CD,
+};
+
 /// These identifiers are used for fake GPIO registration.
 enum GpioId : gpio_pin_t {
   MIN_GPIO = 35,
@@ -53,6 +58,12 @@ enum GpioId : gpio_pin_t {
   LOCK_C_HP2,
   IN_D_HP2,
   LOCK_D_HP2,
+  AB_LOCK_BTN,
+  AB_LOCK_FIELD,
+  AB_DETECTOR,
+  CD_LOCK_BTN,
+  CD_LOCK_FIELD,
+  CD_DETECTOR,
   NUM_GPIO
 };
 
@@ -64,23 +75,32 @@ class UWB {
   TurnoutRegistry turnout_reg_;
   SignalRegistry signal_reg_;
   RouteRegistry route_reg_;
+  BlockRegistry block_reg_;
 
   LockTable ltbl_{{
-      Route(a1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
-      WeichePlus(W9),  WeichePlus(W10),  Hp2(SIGNAL_A),    Aux(Bue10_750),  //
-      Route(a3),       WeichePlus(W1a),  WeicheMinus(W1b), WeichePlus(W7),
-      WeicheMinus(W9), WeichePlus(W10),  Hp2(SIGNAL_A),    Aux(Bue10_750),  //
-      Route(b1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
-      Hp2(SIGNAL_B),   Aux(Bue10_750),  //
-      Route(b3),       WeichePlus(W1a),  WeicheMinus(W1b), Hp2(SIGNAL_B),
-      Aux(Bue10_750),                                                      //
-      Route(c1),       WeichePlus(W9),   WeichePlus(W10),  Hp2(SIGNAL_C),  //
-      Route(c3),       WeichePlus(W7),   WeicheMinus(W9),  WeichePlus(W10),
+      Route(a1),          WeichePlus(W1a),    WeichePlus(W1b),
+      WeichePlus(W2),     WeichePlus(W9),     WeichePlus(W10),
+      Hp2(SIGNAL_A),      Aux(Bue10_750),     BlockIn(BLOCK_AB),  //
+      Route(a3),          WeichePlus(W1a),    WeicheMinus(W1b),
+      WeichePlus(W7),     WeicheMinus(W9),    WeichePlus(W10),
+      Hp2(SIGNAL_A),      Aux(Bue10_750),     BlockIn(BLOCK_AB),  //
+      Route(b1),          WeichePlus(W1a),    WeichePlus(W1b),
+      WeichePlus(W2),     Hp2(SIGNAL_B),      Aux(Bue10_750),
+      BlockOut(BLOCK_AB),  //
+      Route(b3),          WeichePlus(W1a),    WeicheMinus(W1b),
+      Hp2(SIGNAL_B),      Aux(Bue10_750),     BlockOut(BLOCK_AB),  //
+      Route(c1),          WeichePlus(W9),     WeichePlus(W10),
+      Hp2(SIGNAL_C),      BlockOut(BLOCK_CD),  //
+      Route(c3),          WeichePlus(W7),     WeicheMinus(W9),
+      WeichePlus(W10),    BlockOut(BLOCK_CD),
       Hp2(SIGNAL_C),  //
-      Route(d1),       WeichePlus(W1a),  WeichePlus(W1b),  WeichePlus(W2),
-      WeichePlus(W9),  WeichePlus(W10),  Hp2(SIGNAL_D),  //
-      Route(d3),       WeicheMinus(W1b), WeichePlus(W7),   WeicheMinus(W9),
-      WeichePlus(W10), Hp2(SIGNAL_D),  //
+      Route(d1),          WeichePlus(W1a),    WeichePlus(W1b),
+      WeichePlus(W2),     WeichePlus(W9),     WeichePlus(W10),
+      BlockIn(BLOCK_CD),
+      Hp2(SIGNAL_D),  //
+      Route(d3),          WeicheMinus(W1b),   WeichePlus(W7),
+      WeicheMinus(W9),    WeichePlus(W10),    Hp2(SIGNAL_D),
+      BlockIn(BLOCK_CD)  //
   }};
 
   FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
@@ -100,6 +120,10 @@ class UWB {
   RouteLever Rab3{a3, b3, IN_a3, false, IN_b3, false, LOCK_a3b3, false};
   RouteLever Rcd3{c3, d3, IN_c3, false, IN_d3, false, LOCK_c3d3, false};
   RouteLever Rcd1{c1, d1, IN_c1, false, IN_d1, false, LOCK_c1d1, false};
+  Block BlkAB{BLOCK_AB, AB_DETECTOR,   false, AB_LOCK_BTN,
+              false,    AB_LOCK_FIELD, false};
+  Block BlkCD{BLOCK_CD, CD_DETECTOR,   false, CD_LOCK_BTN,
+              false,    CD_LOCK_FIELD, false};
 };
 
 class UWBTest : public TestBase, public UWB {
@@ -116,7 +140,7 @@ class UWBTest : public TestBase, public UWB {
       ex_.loop();
       ex_.advance(5);
     }
- }
+  }
 };
 
 TEST_F(UWBTest, create) {}
@@ -148,7 +172,7 @@ TEST_F(UWBTest, begin_loop) {
   EXPECT_TRUE(gpios_.get_output(LOCK_B_HP2));
   EXPECT_TRUE(gpios_.get_output(LOCK_C_HP2));
   EXPECT_TRUE(gpios_.get_output(LOCK_D_HP2));
-  
+
   // Signal levers are locked.
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
@@ -162,7 +186,7 @@ TEST_F(UWBTest, begin_loop) {
   EXPECT_FALSE(gpios_.read(LOCK_W7));
   EXPECT_FALSE(gpios_.read(LOCK_W9));
   EXPECT_FALSE(gpios_.read(LOCK_W10));
-  
+
   // Fstr levers for track 3 are locked.
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
@@ -177,7 +201,7 @@ TEST_F(UWBTest, set_route_up) {
 
   EXPECT_FALSE(Rab1.is_route_set(a1));
   EXPECT_FALSE(Rab1.is_route_set(b1));
-  
+
   gpios_.write(IN_a1, true);
   wait();
 
@@ -212,7 +236,40 @@ TEST_F(UWBTest, set_route_up) {
 
 TEST_F(UWBTest, die_wrong_route) {
   start();
-  EXPECT_DEATH({
-      Rab1.is_route_set(c1);
-    }, "Asked about a route we don't own");
+  EXPECT_DEATH({ Rab1.is_route_set(c1); }, "Asked about a route we don't own");
+}
+
+TEST_F(UWBTest, lock_route_up) {
+  start();
+  wait();
+
+  EXPECT_FALSE(Rab1.is_route_set(a1));
+  EXPECT_FALSE(Rab1.is_route_set(b1));
+
+  gpios_.write(IN_a1, true);
+  wait();
+
+  EXPECT_TRUE(Rab1.is_route_set(a1));
+  EXPECT_FALSE(Rab1.is_route_set(b1));
+
+  // Signal levers are still locked.
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_C_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_D_HP2));
+
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+
+  // Now one signal lever can go.
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_C_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_D_HP2));
+
+  // and the Fstr lever got locked.
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
 }

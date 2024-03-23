@@ -191,23 +191,32 @@ class RouteLever : private Executable {
           LOG(LEVEL_INFO, "Fstr %d lever up removed", id_up_);
           state_ = State::NEUTRAL;
           unlock_route_preconditions(row_up_);
-        }
-        if (block_up_ && block_up_->route_lock_button().read()) {
-          
+        } else if (block_up_ && block_up_->route_lock_button().read() &&
+                   check_block(block_up_, block_up_out_)) {
+          state_ = State::UP_LOCKED;
+          unlock_signal(row_up_);
         }
         break;
       }
       case State::UP_LOCKED:
+        break;
       case State::UP_REPTLOCK:
+        break;
       case State::DN: {
         if (!input_dn_.read()) {
           LOG(LEVEL_INFO, "Fstr %d lever dn removed", id_dn_);
           state_ = State::NEUTRAL;
           unlock_route_preconditions(row_dn_);
         }
+        if (block_dn_ && block_dn_->route_lock_button().read() &&
+            check_block(block_dn_, block_dn_out_)) {
+          state_ = State::DN_LOCKED;
+          unlock_signal(row_dn_);
+        }
         break;
       }
       case State::DN_LOCKED:
+        break;
       case State::DN_REPTLOCK:
         /// @todo implement
         break;
@@ -325,6 +334,22 @@ class RouteLever : private Executable {
     }
   }
 
+  /// Unlocks the signal lever matching the route. Dies if there is no signal
+  /// lever in the route.
+  void unlock_signal(const LockTable::Row& row) {
+    SignalAspect a = HP0;
+    SignalId id = LockTable::find_signal(row, &a);
+    SignalLever* lever =
+        SignalRegistry::instance()->get(signal_registry_idx(id, a));
+    lever->unlock();
+  }
+
+  bool check_block(Block* blk, bool out) {
+    /// @todo implement once the block has the necessary APIs.
+    return true;
+  }
+  
+  
   // Verification rules:
   // - there should be a block, and exactly one block
   // - the up and down should have the same preconditions
