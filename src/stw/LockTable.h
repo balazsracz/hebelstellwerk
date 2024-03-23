@@ -151,6 +151,27 @@ class LockTable : public Singleton<LockTable> {
     return {ptr, eptr - ptr};
   }
 
+  /// Finds the block which is referenced in a given row of the route table.
+  ///
+  /// @param route reference to the row with the route.
+  /// @param is_outbounds if non-null, will be set to true of the block is
+  /// referenced outbounds, to false if its is referenced inbounds.
+  ///
+  /// @return the ID of the block in the route row.
+  ///
+  static BlockId find_block(Row route, bool* is_outbounds) {
+    for (const auto& entry : route) {
+      if (entry.type_ == BLOCK_OUT) {
+        if (is_outbounds) *is_outbounds = true;
+        return (BlockId)entry.arg_;
+      } else if (entry.type_ == BLOCK_IN) {
+        if (is_outbounds) *is_outbounds = false;
+        return (BlockId)entry.arg_;
+      }
+    }
+    return NO_BLOCK;
+  }
+
  private:
   std::initializer_list<LockTableEntry> ar_;
 };
