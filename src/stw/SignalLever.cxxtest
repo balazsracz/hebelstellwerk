@@ -28,7 +28,18 @@ class SignalLeverTest : public SignalTestBase {
 
   void begin() {
     EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+    EXPECT_CALL(lock_, write(14, false));
     ex_.begin();
+  }
+
+  /// Waits 500 msec with the lever reporting normal state.
+  void wait_with_lever_normal() {
+    for (unsigned i = 0; i < 10; i++) {
+      ex_.advance(49);
+      EXPECT_CALL(lock_, write(14, false));
+      EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+      ex_.loop();
+    }
   }
 
   SignalRegistry t_reg_;
@@ -42,6 +53,7 @@ TEST_F(SignalLeverTest, registered) {
             SignalRegistry::instance()->get(signal_registry_idx(SIG_B, HP2)));
 }
 
+// Tests unlocking directly at startup.
 TEST_F(SignalLeverTest, locked_unlocked) {
   begin();
   EXPECT_TRUE(sgl_.is_locked());
@@ -57,17 +69,36 @@ TEST_F(SignalLeverTest, locked_unlocked) {
   EXPECT_FALSE(sgl_.is_locked());
 }
 
-TEST_F(SignalLeverTest, locked_no_read) {
+TEST_F(SignalLeverTest, locked_startup) {
   begin();
   EXPECT_TRUE(sgl_.is_locked());
   EXPECT_EQ(HP0, sgl_.current_aspect());
 
-  // input never read
-  EXPECT_CALL(lock_, write(14, true));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  // Not yet locked at startup
+  EXPECT_CALL(lock_, write(14, false));
   ex_.loop();
   EXPECT_TRUE(sgl_.is_locked());
   EXPECT_EQ(HP0, sgl_.current_aspect());
   EXPECT_FALSE(sgl_.is_proceed());
+
+  // 500 msec not locked yet.
+  wait_with_lever_normal();
+  // another 500 msec not locked yet.
+  wait_with_lever_normal();
+
+  // Now the lever locks.
+  ex_.advance(49);
+  EXPECT_CALL(lock_, write(14, true));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  // Then the lever is not read anymore as we are locked.
+  for (int i = 0; i < 20; ++i) {
+    ex_.advance(49);
+    EXPECT_CALL(lock_, write(14, true));
+    ex_.loop();
+  }
 }
 
 TEST_F(SignalLeverTest, lock_invert) {
@@ -80,9 +111,13 @@ TEST_F(SignalLeverTest, lock_invert) {
   new (&sgl_) SignalLever{SIG_B, HP1, 13, false, 14, true};
 
   EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  EXPECT_CALL(lock_, write(14, true));  // unlocked at begin
   ex_.begin();
 
-  EXPECT_CALL(lock_, write(14, false));
+  ex_.advance(1001);
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  EXPECT_CALL(lock_, write(14, false));  // locked
   ex_.loop();
 
   sgl_.unlock();
@@ -125,8 +160,18 @@ TEST_F(SignalLeverTest, proceed) {
   EXPECT_TRUE(sgl_.is_locked());
   EXPECT_FALSE(sgl_.is_proceed());
 
-  // lock at the next loop
+  // lock only a second later
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  wait_with_lever_normal();
+  wait_with_lever_normal();
+
+  // Now the lever locks.
+  ex_.advance(49);
   EXPECT_CALL(lock_, write(14, true));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
   ex_.loop();
 }
 
@@ -140,8 +185,12 @@ TEST_F(SignalLeverTest, lever_invert) {
   new (&sgl_) SignalLever{SIG_B, HP1, 13, true, 14, false};
 
   EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  EXPECT_CALL(lock_, write(14, false));
   ex_.begin();
 
+  ex_.advance(1001);
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
   EXPECT_CALL(lock_, write(14, true));
   ex_.loop();
 
@@ -163,6 +212,61 @@ TEST_F(SignalLeverTest, lever_invert) {
   EXPECT_EQ(HP0, sgl_.current_aspect());
   EXPECT_TRUE(sgl_.is_locked());
 
+  ex_.advance(1001);
+
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
   EXPECT_CALL(lock_, write(14, true));
+  ex_.loop();
+}
+
+TEST_F(SignalLeverTest, lock_when_proceed) {
+  begin();
+
+  sgl_.unlock();
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  // Enable the signal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+
+  EXPECT_EQ(HP2, sgl_.current_aspect());
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_TRUE(sgl_.is_proceed());
+
+  // return to normal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  wait_with_lever_normal();  // 500 msec only
+
+  // now lever is in proceed again
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+
+  // lever stuck at proceed
+  for (int i = 0; i < 100; ++i) {
+    ex_.advance(50);
+    EXPECT_CALL(lock_, write(14, false)); // not locking
+    EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+    ex_.loop();
+  }
+
+  // now we wait 1 sec again with lever normal.
+  wait_with_lever_normal();  // 490 msec
+  wait_with_lever_normal();  // 490 msec
+
+  ex_.advance(50);
+
+  // now locked.
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  EXPECT_CALL(lock_, write(14, true)); 
   ex_.loop();
 }
