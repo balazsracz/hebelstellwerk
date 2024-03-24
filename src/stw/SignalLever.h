@@ -129,7 +129,7 @@ class SignalLever : private Executable {
       return;
     }
     LOG(LEVEL_INFO, "Signal %d/Hp%d lock", id_, aspect_);
-    state_ = State::STOP_LOCKED;
+    wait_and_lock();
   }
 
   /// Called by the executor once at startup. Sets up the initial state of the

@@ -254,7 +254,7 @@ TEST_F(SignalLeverTest, lock_when_proceed) {
   // lever stuck at proceed
   for (int i = 0; i < 100; ++i) {
     ex_.advance(50);
-    EXPECT_CALL(lock_, write(14, false)); // not locking
+    EXPECT_CALL(lock_, write(14, false));  // not locking
     EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
     ex_.loop();
   }
@@ -267,6 +267,96 @@ TEST_F(SignalLeverTest, lock_when_proceed) {
 
   // now locked.
   EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
-  EXPECT_CALL(lock_, write(14, true)); 
+  EXPECT_CALL(lock_, write(14, true));
   ex_.loop();
+}
+
+TEST_F(SignalLeverTest, unlock_lock) {
+  begin();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  sgl_.unlock();
+
+  EXPECT_FALSE(sgl_.is_locked());
+
+  sgl_.lock();
+  EXPECT_TRUE(sgl_.is_locked());
+}
+
+TEST_F(SignalLeverTest, unlock_proceed_reset_unlock_lock) {
+  begin();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  sgl_.unlock();
+
+  EXPECT_FALSE(sgl_.is_locked());
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  // Enable the signal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(true));
+  ex_.loop();
+
+  EXPECT_EQ(HP2, sgl_.current_aspect());
+  EXPECT_TRUE(sgl_.is_proceed());
+
+  // Reset the signal
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  // Unlock the lever a second time.
+  sgl_.unlock();
+
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  ex_.advance(1001);
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_FALSE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+  
+  // Now lock the lever again.
+  sgl_.lock();
+
+  EXPECT_CALL(lock_, write(14, false));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
+
+  ex_.advance(1001);
+
+  // moves the lock
+  EXPECT_CALL(lock_, write(14, true));
+  EXPECT_CALL(lever_, read(13)).WillOnce(Return(false));
+  ex_.loop();
+
+  EXPECT_TRUE(sgl_.is_locked());
+  EXPECT_FALSE(sgl_.is_proceed());
 }
