@@ -32,8 +32,8 @@
  * @date 18 Mar 2024
  */
 
-#ifndef _UTILS_PWMGPIO_H_
-#define _UTILS_PWMGPIO_H_
+#ifndef _UTILS_SERVOGPIO_H_
+#define _UTILS_SERVOGPIO_H_
 
 #include "utils/Executable.h"
 #include "utils/Executor.h"
@@ -240,4 +240,4 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   mutable Timer tm_;
 };
 
-#endif  // _UTILS_PWMGPIO_H_
+#endif  // _UTILS_SERVOGPIO_H_
