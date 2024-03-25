@@ -238,7 +238,7 @@ class RouteLever : private Executable {
   //
   static constexpr uint32_t CHECK_PERIOD_MSEC = 10;
 
-  enum class State {
+  enum class State : uint8_t {
     /// Lever is in the middle state. No routes are set. Lever is locked
     /// because preconditions for settings the routes are not met.
     NEUTRAL_LOCKED,
@@ -256,7 +256,7 @@ class RouteLever : private Executable {
 
   struct Route {
     Route(RouteId route, gpio_pin_t lever, bool lever_inverted)
-        : id_(route), input_(lever, lever_inverted, GPIO_INPUT) {}
+        : input_(lever, lever_inverted, GPIO_INPUT), id_(route) {}
 
     bool is(RouteId id) { return id == id_; }
 
@@ -365,9 +365,6 @@ class RouteLever : private Executable {
       }
     }
 
-    /// Number of the route for upwards.
-    RouteId id_;
-
     /// Gpio. HIGH means the lever is up (if not inverted).
     GpioAccessor input_;
 
@@ -376,6 +373,9 @@ class RouteLever : private Executable {
 
     /// Pointer to the block object for route id_.
     Block* block_;
+
+    /// Number of the route for upwards.
+    RouteId id_;
 
     /// true if block_ is outbounds in the lock table.
     bool block_out_;
@@ -387,7 +387,6 @@ class RouteLever : private Executable {
 
     /// Internal route state.
     State state_;
-
   } up_, dn_;
 
   /// Gpio for the lock. HIGH means the lever is locked.
