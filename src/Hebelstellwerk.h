@@ -34,6 +34,9 @@
 
 #include "utils/GpioRegistry.h"
 #include "utils/Gpio.h"
+#include "utils/Pwm.h"
+#include "utils/PwmGpio.h"
+#include "utils/ServoGpio.h"
 #include "utils/Executor.h"
 #include "utils/Timer.h"
 
