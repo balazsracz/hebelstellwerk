@@ -84,16 +84,10 @@ class RouteLever : private Executable {
     UP,
     /// The lever is up and the route is locked in.
     UP_LOCKED,
-    /// The route is set and locked, the Signal was set to proceed and returned
-    /// to Stop (i.e., the route has been traveled by a train).
-    UP_REPTLOCK,
     /// The lever is dn, but the route is not locked yet.
     DN,
     /// The lever is dn and the route is locked in.
     DN_LOCKED,
-    /// The route is set and locked, the Signal was set to proceed and returned
-    /// to Stop (i.e., the route has been traveled by a train).
-    DN_REPTLOCK,
   };
 
   /// @return true if the lever is locked.
@@ -114,11 +108,9 @@ class RouteLever : private Executable {
   /// other route levers etc should be engaged.
   bool is_route_set(RouteId id) {
     if (id == id_up_) {
-      return state_ == State::UP || state_ == State::UP_LOCKED ||
-             state_ == State::UP_REPTLOCK;
+      return state_ == State::UP || state_ == State::UP_LOCKED;
     } else if (id == id_dn_) {
-      return state_ == State::DN || state_ == State::DN_LOCKED ||
-             state_ == State::DN_REPTLOCK;
+      return state_ == State::DN || state_ == State::DN_LOCKED;
     } else {
       DIE("Asked about a route we don't own.");
     }
@@ -140,7 +132,6 @@ class RouteLever : private Executable {
       block_dn_ = BlockRegistry::instance()->get(block_dn_id);
     }
 
-    
     if (input_up_.read()) {
       state_ = State::UP;
     } else if (input_dn_.read()) {
@@ -194,14 +185,44 @@ class RouteLever : private Executable {
         } else if (block_up_ && block_up_->route_lock_button().read() &&
                    check_block(block_up_, block_up_out_)) {
           state_ = State::UP_LOCKED;
-          unlock_signal(row_up_);
+          block_up_->route_locked_lamp().write(true);
+          seen_proceed_ = false;
+          seen_train_ = false;
+          find_signal_lever(row_up_)->unlock();
         }
         break;
       }
-      case State::UP_LOCKED:
+      case State::UP_LOCKED: {
+        // Checks for signal lever on proceed.
+        if (!seen_proceed_ && find_signal_lever(row_up_)->is_proceed()) {
+          seen_proceed_ = true;
+        }
+        // Checks for train seen on detector afterwards.
+        if (seen_proceed_ && !seen_train_ &&
+            block_up_->track_detector().read()) {
+          seen_train_ = true;
+        }
+        // Checks for signal lever re-set. Depending on inbounds or outbounds
+        // direction, we may have to keep the lever locked or unlock it again.
+        if (seen_proceed_ && !seen_train_ && !block_up_out_ && !find_signal_lever(row_up_)->is_proceed()) {
+          seen_proceed_ = false;
+          find_signal_lever(row_up_)->unlock();
+        }
+        if (seen_proceed_ && seen_train_ &&
+            !find_signal_lever(row_up_)->is_proceed() &&
+            !block_up_->track_detector().read()) {
+          // All conditions have been fulfilled to release the route:
+          //
+          // - we've seen the signal lever go to proceed
+          // - we've seen a train in the detector
+          // - the detector is now clear
+          // - the signal lever is taken back
+          find_signal_lever(row_up_)->lock();
+          block_up_->route_locked_lamp().write(false);
+          state_ = State::UP;  // will unlock the route lever
+        }
         break;
-      case State::UP_REPTLOCK:
-        break;
+      }
       case State::DN: {
         if (!input_dn_.read()) {
           LOG(LEVEL_INFO, "Fstr %d lever dn removed", id_dn_);
@@ -211,13 +232,11 @@ class RouteLever : private Executable {
         if (block_dn_ && block_dn_->route_lock_button().read() &&
             check_block(block_dn_, block_dn_out_)) {
           state_ = State::DN_LOCKED;
-          unlock_signal(row_dn_);
+          find_signal_lever(row_dn_)->unlock();
         }
         break;
       }
       case State::DN_LOCKED:
-        break;
-      case State::DN_REPTLOCK:
         /// @todo implement
         break;
     }
@@ -334,22 +353,20 @@ class RouteLever : private Executable {
     }
   }
 
-  /// Unlocks the signal lever matching the route. Dies if there is no signal
-  /// lever in the route.
-  void unlock_signal(const LockTable::Row& row) {
+  /// @return the signal lever for the given row.
+  SignalLever* find_signal_lever(const LockTable::Row& row) {
     SignalAspect a = HP0;
     SignalId id = LockTable::find_signal(row, &a);
     SignalLever* lever =
         SignalRegistry::instance()->get(signal_registry_idx(id, a));
-    lever->unlock();
+    return lever;
   }
 
   bool check_block(Block* blk, bool out) {
     /// @todo implement once the block has the necessary APIs.
     return true;
   }
-  
-  
+
   // Verification rules:
   // - there should be a block, and exactly one block
   // - the up and down should have the same preconditions
@@ -384,7 +401,12 @@ class RouteLever : private Executable {
   bool block_up_out_;
   /// true if block_dn is outbounds in the lock table.
   bool block_dn_out_;
-  
+
+  /// True if the signal was seen as set to proceed.
+  bool seen_proceed_ : 1;
+  /// True if the detector was seen as occupied.
+  bool seen_train_ : 1;
+
   /// Internal route state.
   State state_;
 
