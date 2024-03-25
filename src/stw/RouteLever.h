@@ -63,86 +63,38 @@ class RouteLever : private Executable {
   RouteLever(RouteId route_up, RouteId route_dn, gpio_pin_t lever_up,
              bool lever_up_inverted, gpio_pin_t lever_down,
              bool lever_down_inverted, gpio_pin_t lock_output, bool lock_invert)
-      : id_up_(route_up),
-        id_dn_(route_dn),
-        input_up_(lever_up, lever_up_inverted, GPIO_INPUT),
-        input_dn_(lever_down, lever_down_inverted, GPIO_INPUT),
+      : up_(route_up, lever_up, lever_up_inverted),
+        dn_(route_dn, lever_down, lever_down_inverted),
         lock_(lock_output, lock_invert, GPIO_OUTPUT) {
     Executor::instance()->add(this);
     RouteRegistry::instance()->register_obj(this, route_up);
     RouteRegistry::instance()->register_obj(this, route_dn);
   }
 
-  enum class State {
-    /// Lever is in the middle state. No routes are set. Lever is locked
-    /// because preconditions for settings the routes are not met.
-    NEUTRAL_LOCKED,
-    /// Lever is in the middle state. No routes are set. The preconditions for
-    /// setting a route are fulfilled. The lever is unlocked and can be moved.
-    NEUTRAL,
-    /// The lever is up, but the route is not locked yet.
-    UP,
-    /// The lever is up and the route is locked in.
-    UP_LOCKED,
-    /// The lever is dn, but the route is not locked yet.
-    DN,
-    /// The lever is dn and the route is locked in.
-    DN_LOCKED,
-  };
-
   /// @return true if the lever is locked.
-  bool is_locked() {
-    switch (state_) {
-      case State::NEUTRAL_LOCKED:
-      case State::UP_LOCKED:
-      case State::DN_LOCKED:
-        return true;
-      default:
-        return false;
-    }
-  }
+  bool is_locked() { return up_.is_locked() || dn_.is_locked(); }
 
   /// @return true if the route lever is lifted out of neutral position and set
   /// towards the given route. This does not mean that the route is locked in
   /// that place, but the mechanical locks for turnout levers and lockouts of
   /// other route levers etc should be engaged.
   bool is_route_set(RouteId id) {
-    if (id == id_up_) {
-      return state_ == State::UP || state_ == State::UP_LOCKED;
-    } else if (id == id_dn_) {
-      return state_ == State::DN || state_ == State::DN_LOCKED;
+    if (up_.is(id)) {
+      return up_.is_route_set();
+    } else if (dn_.is(id)) {
+      return dn_.is_route_set();
     } else {
       DIE("Asked about a route we don't own.");
     }
   }
 
   void begin() override {
-    row_up_ = LockTable::instance()->find_route(id_up_);
-    row_dn_ = LockTable::instance()->find_route(id_dn_);
-    auto block_up_id = LockTable::find_block(row_up_, &block_up_out_);
-    if (block_up_id == NO_BLOCK) {
-      block_up_ = nullptr;
-    } else {
-      block_up_ = BlockRegistry::instance()->get(block_up_id);
-    }
-    auto block_dn_id = LockTable::find_block(row_dn_, &block_dn_out_);
-    if (block_dn_id == NO_BLOCK) {
-      block_dn_ = nullptr;
-    } else {
-      block_dn_ = BlockRegistry::instance()->get(block_dn_id);
-    }
-
-    if (input_up_.read()) {
-      state_ = State::UP;
-    } else if (input_dn_.read()) {
-      state_ = State::DN;
-    } else {
-      state_ = State::NEUTRAL_LOCKED;
-    }
+    up_.begin();
+    dn_.begin();
     // The period how frequently we check will be different for different route
     // levers. This is to avoid coordinates CPU use between different state
     // machines.
-    tm_.start_drifting(CHECK_PERIOD_MSEC + id_up_);
+    tm_.start_drifting(CHECK_PERIOD_MSEC + up_.id_);
   }
 
   void loop() override {
@@ -150,96 +102,8 @@ class RouteLever : private Executable {
     if (!tm_.check()) {
       return;
     }
-    switch (state_) {
-      case State::NEUTRAL_LOCKED: {
-        if (check_preconditions(row_up_) && check_preconditions(row_dn_)) {
-          state_ = State::NEUTRAL;
-          LOG(LEVEL_INFO, "Fstr %d/%d unlocked", id_up_, id_dn_);
-        } else {
-          if (input_up_.read()) {
-            LOG(LEVEL_ERROR, "Fstr %d unexpected up", id_up_);
-          }
-          if (input_dn_.read()) {
-            LOG(LEVEL_ERROR, "Fstr %d unexpected dn", id_up_);
-          }
-        }
-        break;
-      }
-      case State::NEUTRAL: {
-        if (input_up_.read()) {
-          LOG(LEVEL_INFO, "Fstr %d lever up set", id_up_);
-          state_ = State::UP;
-          lock_route_preconditions(row_up_);
-        } else if (input_dn_.read()) {
-          LOG(LEVEL_INFO, "Fstr %d lever dn set", id_dn_);
-          state_ = State::DN;
-          lock_route_preconditions(row_dn_);
-        }
-        break;
-      }
-      case State::UP: {
-        if (!input_up_.read()) {
-          LOG(LEVEL_INFO, "Fstr %d lever up removed", id_up_);
-          state_ = State::NEUTRAL;
-          unlock_route_preconditions(row_up_);
-        } else if (block_up_ && block_up_->route_lock_button().read() &&
-                   check_block(block_up_, block_up_out_)) {
-          state_ = State::UP_LOCKED;
-          block_up_->route_locked_lamp().write(true);
-          seen_proceed_ = false;
-          seen_train_ = false;
-          find_signal_lever(row_up_)->unlock();
-        }
-        break;
-      }
-      case State::UP_LOCKED: {
-        // Checks for signal lever on proceed.
-        if (!seen_proceed_ && find_signal_lever(row_up_)->is_proceed()) {
-          seen_proceed_ = true;
-        }
-        // Checks for train seen on detector afterwards.
-        if (seen_proceed_ && !seen_train_ &&
-            block_up_->track_detector().read()) {
-          seen_train_ = true;
-        }
-        // Checks for signal lever re-set. Depending on inbounds or outbounds
-        // direction, we may have to keep the lever locked or unlock it again.
-        if (seen_proceed_ && !seen_train_ && !block_up_out_ && !find_signal_lever(row_up_)->is_proceed()) {
-          seen_proceed_ = false;
-          find_signal_lever(row_up_)->unlock();
-        }
-        if (seen_proceed_ && seen_train_ &&
-            !find_signal_lever(row_up_)->is_proceed() &&
-            !block_up_->track_detector().read()) {
-          // All conditions have been fulfilled to release the route:
-          //
-          // - we've seen the signal lever go to proceed
-          // - we've seen a train in the detector
-          // - the detector is now clear
-          // - the signal lever is taken back
-          find_signal_lever(row_up_)->lock();
-          block_up_->route_locked_lamp().write(false);
-          state_ = State::UP;  // will unlock the route lever
-        }
-        break;
-      }
-      case State::DN: {
-        if (!input_dn_.read()) {
-          LOG(LEVEL_INFO, "Fstr %d lever dn removed", id_dn_);
-          state_ = State::NEUTRAL;
-          unlock_route_preconditions(row_dn_);
-        }
-        if (block_dn_ && block_dn_->route_lock_button().read() &&
-            check_block(block_dn_, block_dn_out_)) {
-          state_ = State::DN_LOCKED;
-          find_signal_lever(row_dn_)->unlock();
-        }
-        break;
-      }
-      case State::DN_LOCKED:
-        /// @todo implement
-        break;
-    }
+    up_.loop();
+    dn_.loop();
     /// @todo implement state machine.
     if (!is_locked()) {
 #if 0
@@ -263,7 +127,7 @@ class RouteLever : private Executable {
   /// given).
   /// @param row row_up_ or row_dn_.
   /// @return true if the preconditions are okay for setting this route.
-  bool check_preconditions(const LockTable::Row& row) {
+  static bool check_preconditions(const LockTable::Row& row) {
     for (const LockTableEntry& e : row) {
       switch (e.type_) {
         case TURNOUT_PLUS: {
@@ -304,7 +168,7 @@ class RouteLever : private Executable {
 
   /// Locks the preconditions of a route. This means that Turnout and Aux
   /// objects mentioned on the lock table row will get locked.
-  void lock_route_preconditions(const LockTable::Row& row) {
+  static void lock_route_preconditions(const LockTable::Row& row) {
     for (const LockTableEntry& e : row) {
       switch (e.type_) {
         case TURNOUT_MINUS:
@@ -330,7 +194,7 @@ class RouteLever : private Executable {
   /// Removes locks from the preconditions of a route. This means that Turnout
   /// and Aux objects mentioned on the lock table row will get unlocked (if no
   /// other Route locks them).
-  void unlock_route_preconditions(const LockTable::Row& row) {
+  static void unlock_route_preconditions(const LockTable::Row& row) {
     for (const LockTableEntry& e : row) {
       switch (e.type_) {
         case TURNOUT_MINUS:
@@ -354,7 +218,7 @@ class RouteLever : private Executable {
   }
 
   /// @return the signal lever for the given row.
-  SignalLever* find_signal_lever(const LockTable::Row& row) {
+  static SignalLever* find_signal_lever(const LockTable::Row& row) {
     SignalAspect a = HP0;
     SignalId id = LockTable::find_signal(row, &a);
     SignalLever* lever =
@@ -362,7 +226,7 @@ class RouteLever : private Executable {
     return lever;
   }
 
-  bool check_block(Block* blk, bool out) {
+  static bool check_block(Block* blk, bool out) {
     /// @todo implement once the block has the necessary APIs.
     return true;
   }
@@ -372,43 +236,162 @@ class RouteLever : private Executable {
   // - the up and down should have the same preconditions
   // - there should be exactly one signal allowed per Fstr
   //
-
   static constexpr uint32_t CHECK_PERIOD_MSEC = 10;
 
-  /// Number of the route for upwards.
-  RouteId id_up_;
-  /// Number of the route for downwards.
-  RouteId id_dn_;
+  enum class State {
+    /// Lever is in the middle state. No routes are set. Lever is locked
+    /// because preconditions for settings the routes are not met.
+    NEUTRAL_LOCKED,
+    /// Lever is in the middle state. No routes are set. The preconditions for
+    /// setting a route are fulfilled. The lever is unlocked and can be moved.
+    NEUTRAL,
+    /// The lever is up/dn, but the route is not locked yet.
+    SET,
+    /// The lever is up/dn and the route is locked in.
+    SET_LOCKED,
+  };
 
-  /// Gpio for upwards. HIGH means the lever is up (if not inverted).
-  GpioAccessor input_up_;
-  /// Gpio for downwards. HIGH means the lever is down (if not inverted).
-  GpioAccessor input_dn_;
+  struct Route;
+  friend struct Route;
+
+  struct Route {
+    Route(RouteId route, gpio_pin_t lever, bool lever_inverted)
+        : id_(route), input_(lever, lever_inverted, GPIO_INPUT) {}
+
+    bool is(RouteId id) { return id == id_; }
+
+    bool is_route_set() {
+      return state_ == State::SET || state_ == State::SET_LOCKED;
+    }
+
+    bool is_locked() {
+      switch (state_) {
+        case State::NEUTRAL_LOCKED:
+        case State::SET_LOCKED:
+          return true;
+        default:
+          return false;
+      }
+    }
+
+    /// This function is called once at the beginning by the parent.
+    void begin() {
+      row_ = LockTable::instance()->find_route(id_);
+      auto block_id = LockTable::find_block(row_, &block_out_);
+      if (block_id == NO_BLOCK) {
+        block_ = nullptr;
+      } else {
+        block_ = BlockRegistry::instance()->get(block_id);
+      }
+      if (input_.read()) {
+        state_ = State::SET;
+      } else {
+        state_ = State::NEUTRAL;
+      }
+    }
+
+    /// This function is called every 10 msec by the parent.
+    void loop() {
+      switch (state_) {
+        case State::NEUTRAL_LOCKED: {
+          if (check_preconditions(row_)) {
+            state_ = State::NEUTRAL;
+            LOG(LEVEL_INFO, "Fstr %d unlocked", id_);
+          } else {
+            if (input_.read()) {
+              LOG(LEVEL_ERROR, "Fstr %d unexpected up", id_);
+            }
+          }
+          break;
+        }
+        case State::NEUTRAL: {
+          if (input_.read()) {
+            LOG(LEVEL_INFO, "Fstr %d lever up set", id_);
+            state_ = State::SET;
+            lock_route_preconditions(row_);
+          } else if (!check_preconditions(row_)) {
+            state_ = State::NEUTRAL_LOCKED;
+            LOG(LEVEL_INFO, "Fstr %d locked", id_);
+          }
+          break;
+        }
+        case State::SET: {
+          if (!input_.read()) {
+            LOG(LEVEL_INFO, "Fstr %d lever removed", id_);
+            state_ = State::NEUTRAL;
+            unlock_route_preconditions(row_);
+          } else if (block_ && block_->route_lock_button().read() &&
+                     check_block(block_, block_out_)) {
+            state_ = State::SET_LOCKED;
+            block_->route_locked_lamp().write(true);
+            seen_proceed_ = false;
+            seen_train_ = false;
+            find_signal_lever(row_)->unlock();
+          }
+          break;
+        }
+        case State::SET_LOCKED: {
+          // Checks for signal lever on proceed.
+          if (!seen_proceed_ && find_signal_lever(row_)->is_proceed()) {
+            seen_proceed_ = true;
+          }
+          // Checks for train seen on detector afterwards.
+          if (seen_proceed_ && !seen_train_ &&
+              block_->track_detector().read()) {
+            seen_train_ = true;
+          }
+          // Checks for signal lever re-set. Depending on inbounds or outbounds
+          // direction, we may have to keep the lever locked or unlock it again.
+          if (seen_proceed_ && !seen_train_ && !block_out_ &&
+              !find_signal_lever(row_)->is_proceed()) {
+            seen_proceed_ = false;
+            find_signal_lever(row_)->unlock();
+          }
+          if (seen_proceed_ && seen_train_ &&
+              !find_signal_lever(row_)->is_proceed() &&
+              !block_->track_detector().read()) {
+            // All conditions have been fulfilled to release the route:
+            //
+            // - we've seen the signal lever go to proceed
+            // - we've seen a train in the detector
+            // - the detector is now clear
+            // - the signal lever is taken back
+            find_signal_lever(row_)->lock();
+            block_->route_locked_lamp().write(false);
+            state_ = State::SET;  // will unlock the route lever
+          }
+          break;
+        }
+      }
+    }
+
+    /// Number of the route for upwards.
+    RouteId id_;
+
+    /// Gpio. HIGH means the lever is up (if not inverted).
+    GpioAccessor input_;
+
+    /// Lock table row for the route.
+    LockTable::Row row_;
+
+    /// Pointer to the block object for route id_.
+    Block* block_;
+
+    /// true if block_ is outbounds in the lock table.
+    bool block_out_;
+
+    /// True if the signal was seen as set to proceed.
+    bool seen_proceed_ : 1;
+    /// True if the detector was seen as occupied.
+    bool seen_train_ : 1;
+
+    /// Internal route state.
+    State state_;
+
+  } up_, dn_;
 
   /// Gpio for the lock. HIGH means the lever is locked.
   GpioAccessor lock_;
-
-  /// Lock table row for the upwards route.
-  LockTable::Row row_up_;
-  /// Lock table row for the dnwards route.
-  LockTable::Row row_dn_;
-
-  /// Pointer to the block object for route_up_.
-  Block* block_up_;
-  /// Pointer to the block object for route_dn_.
-  Block* block_dn_;
-  /// true if block_up is outbounds in the lock table.
-  bool block_up_out_;
-  /// true if block_dn is outbounds in the lock table.
-  bool block_dn_out_;
-
-  /// True if the signal was seen as set to proceed.
-  bool seen_proceed_ : 1;
-  /// True if the detector was seen as occupied.
-  bool seen_train_ : 1;
-
-  /// Internal route state.
-  State state_;
 
   /// Used to periodically check the preconditions.
   Timer tm_;
