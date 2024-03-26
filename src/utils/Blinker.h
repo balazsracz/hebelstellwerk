@@ -24,40 +24,39 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file GpioInfra.ino
+ * \file Blinker.h
  *
- * Example Arduino sketch for the Hebelstellwerk library showing various GPIO
- * infrastructure including using GPIO extenders, PWM extenders and driving
- * Servos.
+ * Helper class that blinks a Gpio. Used for debugging mostly.
  *
  * @author Balazs Racz
  * @date 26 March 2024
  */
 
-#include <Arduino.h>
-#include <Hebelstellwerk.h>
+#ifndef _UTILS_BLINKER_H_
+#define _UTILS_BLINKER_H_
 
-#include "utils/Blinker.h"
+#include "utils/Gpio.h"
+#include "utils/Executor.h"
+#include "utils/Timer.h"
 
-PWM9685 pwm_chip(16);
-PwmGpio gpio_1(101, 18 /*pwm channel 2*/, 10, 60);
-ServoGpio gpio_2(102, 20 /*pwm channel 4*/, 10, 30, 400);
+class Blinker : public Executable {
+ public:
+  Blinker(gpio_pin_t gpio) : output_(gpio) { ex.add(this); }
 
+  void begin() override {}
 
-Blinker blinker{101};
-Blinker blinker2{LED_BUILTIN};
-Blinker blinker3{102};
+  void loop() override {
+    if (tm_.check()) {
+      gpio_->write(output_, state_);
+      state_ = !state_;
+    }
+  }
 
-/// Arduino setup routine.
-void setup() {
-  Serial.begin(9600);
-  Serial.println("hello world");
-  // Calls the executor to do begin for all registered objects.
-  ex.begin();
-}
+ private:
+  gpio_pin_t output_;
+  const Gpio* gpio_{GpioRegistry::instance()->get(output_)};
+  bool state_{true};
+  Timer tm_{Timer::Periodic{600}};
+};
 
-/// Arduino loop routine.
-void loop() {
-  // Calls the executor to do loop for all registered objects.
-  ex.loop();
-}
+#endif // _UTILS_BLINKER_H_
