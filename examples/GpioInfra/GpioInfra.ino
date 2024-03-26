@@ -43,10 +43,14 @@ PWM9685 pwm_chip(16);
 PwmGpio gpio_1(101, 18 /*pwm channel 2*/, 10, 60);
 ServoGpio gpio_2(102, 20 /*pwm channel 4*/, 10, 30, 400);
 
+Gpio23017 ext_chip(128);
+GpioAccessor acco(128, false, GPIO_OUTPUT);
+GpioAccessor acci(128+8, false, GPIO_INPUT);
 
 Blinker blinker{101};
 Blinker blinker2{LED_BUILTIN};
 Blinker blinker3{102};
+//Blinker blinker4{128};
 
 /// Arduino setup routine.
 void setup() {
@@ -60,4 +64,5 @@ void setup() {
 void loop() {
   // Calls the executor to do loop for all registered objects.
   ex.loop();
+  acco.write(acci.read());
 }
