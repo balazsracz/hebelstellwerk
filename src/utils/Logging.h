@@ -48,9 +48,11 @@
 
 #elif defined(ARDUINO)
 
-#define LOG(level, fmt, args...)      \
-  do {                                \
-    Serial.printf(fmt "\n", args); \
+#define LOG(level, fmt, args...)           \
+  do {                                     \
+    static char buf[300];                  \
+    snprintf(buf, sizeof(buf), fmt, args); \
+    Serial.println(buf);                   \
   } while (0)
 
 #endif
