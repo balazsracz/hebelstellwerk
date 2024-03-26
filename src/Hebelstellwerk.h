@@ -40,11 +40,23 @@
 #include "utils/Executor.h"
 #include "utils/Timer.h"
 
+#include "stw/TurnoutLever.h"
+#include "stw/SignalLever.h"
+#include "stw/RouteLever.h"
+#include "stw/LockTable.h"
+
 GpioRegistry g_gpio_registry;
+PwmRegistry g_pwm_registry;
+TurnoutRegistry g_turnout_registry;
+SignalRegistry g_signal_registry;
+RouteRegistry g_route_registry;
+
 Executor ex;
 
 #ifdef ARDUINO
 #include "utils/ArduinoGpio.h"
+#include "utils/Pwm9685.h"
+#include "utils/Gpio23017.h"
 
 ArduinoGpio g_arduino_gpio;
 #endif
