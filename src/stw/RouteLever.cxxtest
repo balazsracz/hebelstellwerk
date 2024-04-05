@@ -145,6 +145,7 @@ class UWBTest : public TestBase, public UWB {
 
 TEST_F(UWBTest, create) {}
 
+/// Tests that the routes we have in our example all made it into the registry.
 TEST_F(UWBTest, registered) {
   EXPECT_EQ(&Rab1, RouteRegistry::instance()->get(a1));
   EXPECT_EQ(&Rab1, RouteRegistry::instance()->get(b1));
@@ -156,6 +157,7 @@ TEST_F(UWBTest, registered) {
   EXPECT_EQ(&Rcd3, RouteRegistry::instance()->get(d3));
 }
 
+/// Tests initial state, before we loop.
 TEST_F(UWBTest, begin_loop) {
   start();
   EXPECT_TRUE(gpios_.get_output(LOCK_W1a));
@@ -195,6 +197,8 @@ TEST_F(UWBTest, begin_loop) {
   EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 }
 
+/// In the initial state, moves a lever up (expects turnotus to be locked), and
+/// then returns to the neutral state (expects turnouts to be unlocked).
 TEST_F(UWBTest, set_route_up) {
   start();
   wait();
@@ -239,6 +243,7 @@ TEST_F(UWBTest, die_wrong_route) {
   EXPECT_DEATH({ Rab1.is_route_set(c1); }, "Asked about a route we don't own");
 }
 
+/// Moves a lever up and locks it.
 TEST_F(UWBTest, lock_route_up) {
   start();
   wait();
