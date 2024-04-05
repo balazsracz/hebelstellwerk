@@ -78,42 +78,64 @@ static constexpr LockTableEntry lock_table_helper(LockTableEntryType type,
   // (((uint16_t)type) << 8) | value;
 }
 
+/// Starts a new row in the lock table. The row is for a specific route
+/// (usually one half of a route lever).
 static constexpr LockTableEntry Route(RouteId id) {
   return lock_table_helper(ROUTE_ROW, id);
 }
 
+/// Declares that a turnout has to be in the + state in order to allow the
+/// current route. It will be locked there when the route is locked.
 static constexpr LockTableEntry TurnoutPlus(TurnoutId id) {
   return lock_table_helper(TURNOUT_PLUS, id);
 }
 
+/// Alias for TurnoutPlus in German.
 static constexpr LockTableEntry WeichePlus(TurnoutId id) {
   return lock_table_helper(TURNOUT_PLUS, id);
 }
 
+/// Declares that a turnout has to be in the - state in order to allow the
+/// current route. It will be locked there when the route is locked.
 static constexpr LockTableEntry TurnoutMinus(TurnoutId id) {
   return lock_table_helper(TURNOUT_MINUS, id);
 }
 
+/// Alias for TurnoutMinus in German.
 static constexpr LockTableEntry WeicheMinus(TurnoutId id) {
   return lock_table_helper(TURNOUT_MINUS, id);
 }
 
+/// Declares that when a route is set and locked, a given signal should be
+/// enabled for the aspect Hp1.
 static constexpr LockTableEntry Hp1(SignalId id) {
   return lock_table_helper(SIGNAL_HP1, id);
 }
 
+/// Declares that when a route is set and locked, a given signal should be
+/// enabled for the aspect Hp2.
 static constexpr LockTableEntry Hp2(SignalId id) {
   return lock_table_helper(SIGNAL_HP2, id);
 }
 
+/// Declares that an Aux input has to be engaged in order to allow the current
+/// route.  It will be locked there when the route is locked.
 static constexpr LockTableEntry Aux(AuxId id) {
   return lock_table_helper(AUX_PLUS, id);
 }
 
+/// Declares that the current route uses the particular block in the outbounds
+/// direction. This is a dependency; the block has to be set with permission
+/// for outbounds train, and the track has to be free. The detector circuit of
+/// this block will be used to determine when the route lock can be released.
 static constexpr LockTableEntry BlockOut(BlockId id) {
   return lock_table_helper(BLOCK_OUT, id);
 }
 
+/// Declares that the current route uses the particular block in the inbounds
+/// direction. This is a not dependency; the block may have an arbitrary
+/// state. The detector circuit of this block will be used to determine when
+/// the route lock can be released.
 static constexpr LockTableEntry BlockIn(BlockId id) {
   return lock_table_helper(BLOCK_IN, id);
 }
