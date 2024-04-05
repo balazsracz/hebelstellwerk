@@ -55,6 +55,7 @@ enum LockTableEntryType : uint8_t {
   AUX_PLUS,
   BLOCK_OUT,
   BLOCK_IN,
+  ROUTE_EXC,
 };
 
 /// We keep entries of this type in the lock table.
@@ -138,6 +139,17 @@ static constexpr LockTableEntry BlockOut(BlockId id) {
 /// the route lock can be released.
 static constexpr LockTableEntry BlockIn(BlockId id) {
   return lock_table_helper(BLOCK_IN, id);
+}
+
+/// Declares that the given route must NOT be set in order to set the current
+/// route. This is purely a dependency. THIS SETTING IS NOT SYMMETRIC. If two
+/// routes mutually exclude each other, then the mutual declaration has to be
+/// made in both rows of the lock table. An example when routes are not
+/// mutually excluding is a Durchfahrt, where the inbounds route has to be set
+/// first, then the outbounds route may be set. Combining the routes in the
+/// opposite order is however not allowed.
+static constexpr LockTableEntry RouteExc(RouteId id) {
+  return lock_table_helper(ROUTE_EXC, id);
 }
 
 /// Instantiate this class to provide the lock table (Verschlusstabelle). The

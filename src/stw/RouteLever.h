@@ -158,6 +158,13 @@ class RouteLever : private Executable {
         case BLOCK_IN:
           /// @todo implement
           break;
+        case ROUTE_EXC:
+          if (RouteRegistry::instance()
+                  ->get((RouteId)e.arg_)
+                  ->is_route_set((RouteId)e.arg_)) {
+            return false;
+          }
+          break;
         case ROUTE_ROW:
         case NONE:
           return true;
@@ -183,6 +190,7 @@ class RouteLever : private Executable {
         case SIGNAL_HP2:
         case BLOCK_OUT:
         case BLOCK_IN:
+        case ROUTE_EXC:
         case ROUTE_ROW:
         case NONE:
           // Nothing to do here.
@@ -209,6 +217,7 @@ class RouteLever : private Executable {
         case SIGNAL_HP2:
         case BLOCK_OUT:
         case BLOCK_IN:
+        case ROUTE_EXC:
         case ROUTE_ROW:
         case NONE:
           // Nothing to do here.
