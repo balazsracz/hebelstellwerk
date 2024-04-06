@@ -1,0 +1,44 @@
+#include "stw/FelderBlock.h"
+#include "stw/RouteLever.h"
+#include "test_main.h"
+#include "utils/MockPin.h"
+
+enum BlockId : uint8_t {
+  BLOCK_AB,
+  BLOCK_CD,
+};
+
+/// These identifiers are used for fake GPIO registration.
+enum GpioId : gpio_pin_t {
+  MIN_GPIO = 35,
+  AB_LOCK_BTN,
+  AB_LOCK_FIELD,
+  AB_DETECTOR,
+  AB_VORBLOCK_IN,
+  AB_RUCKBLOCK_IN,
+  AB_ABGABE_IN,
+  AB_KURBEL,
+
+  NUM_GPIO  // always last.
+
+};
+
+class FelderBlockTest : public TestBase {
+ protected:
+  GpioRegistry gpio_reg_;
+  TurnoutRegistry turnout_reg_;
+  SignalRegistry signal_reg_;
+  RouteRegistry route_reg_;
+  BlockRegistry block_reg_;
+
+  FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
+  FelderBlock block_{nullptr, BLOCK_AB, AB_DETECTOR,   false, AB_LOCK_BTN,
+                     false,    AB_LOCK_FIELD, false};
+  const uint16_t block_setup_ = 
+      block_.set_vorblock_taste(AB_VORBLOCK_IN, false) |
+      block_.set_ruckblock_taste(AB_RUCKBLOCK_IN, false) |
+      block_.set_abgabe_taste(AB_ABGABE_IN, false) |
+      block_.set_kurbel(AB_KURBEL, false);
+};
+
+TEST_F(FelderBlockTest, create) {}

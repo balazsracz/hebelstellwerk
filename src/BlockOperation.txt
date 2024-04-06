@@ -1,0 +1,12 @@
+What do we need to do for the block operations?
+
+Vorblocktaste (GPIO-In)
+RÃ¼ckblocktaste (GPIO-In)
+Abgabetaste (GPIO-In)
+Kurbel (Analog-In)
+Anfangsfeld (Red/White LED)
+Endfeld (Red/White LED)
+Fahrrichtungsfeld (Red/White LED)
+Fahrstrassenverriegelungsmelder (Red/White LED)
+Signalhaltmelder (red LED or Red/White LED?)
+StÃ¶rungsmelder (one LED)
