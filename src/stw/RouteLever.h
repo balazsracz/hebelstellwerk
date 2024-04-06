@@ -156,7 +156,7 @@ class RouteLever : private Executable {
           /// @todo implement
           break;
         case BLOCK_IN:
-          /// @todo implement
+          // There are no preconditions for Block In.
           break;
         case ROUTE_EXC:
           if (RouteRegistry::instance()
@@ -301,6 +301,7 @@ class RouteLever : private Executable {
 
     /// This function is called every 10 msec by the parent.
     void loop() {
+      auto* signal_lever = find_signal_lever(row_);
       switch (state_) {
         case State::NEUTRAL_LOCKED: {
           if (check_preconditions(row_)) {
@@ -332,40 +333,48 @@ class RouteLever : private Executable {
           } else if (block_ && block_->route_lock_button().read() &&
                      check_block(block_, block_out_)) {
             state_ = State::SET_LOCKED;
+            LOG(LEVEL_INFO, "Fstr %d locking route", id_);
             block_->route_locked_lamp().write(true);
             seen_proceed_ = false;
             seen_train_ = false;
-            find_signal_lever(row_)->unlock();
+            signal_lever->unlock();
           }
           break;
         }
         case State::SET_LOCKED: {
           // Checks for signal lever on proceed.
-          if (!seen_proceed_ && find_signal_lever(row_)->is_proceed()) {
+          if (!seen_proceed_ && signal_lever->is_proceed()) {
+            LOG(LEVEL_INFO, "Fstr %d seen proceed", id_);
             seen_proceed_ = true;
           }
           // Checks for train seen on detector afterwards.
           if (seen_proceed_ && !seen_train_ &&
               block_->track_detector().read()) {
+            LOG(LEVEL_INFO, "Fstr %d seen train", id_);
             seen_train_ = true;
           }
           // Checks for signal lever re-set. Depending on inbounds or outbounds
           // direction, we may have to keep the lever locked or unlock it again.
           if (seen_proceed_ && !seen_train_ && !block_out_ &&
-              !find_signal_lever(row_)->is_proceed()) {
-            seen_proceed_ = false;
-            find_signal_lever(row_)->unlock();
+              !signal_lever->is_proceed() && signal_lever->is_locked()) {
+            // Note: we don't clear seen_proceed here because it is impossible
+            // to tell whether the signal was reset before a train passed it or
+            // after.
+            //
+            // seen_proceed_ = false;
+            signal_lever->unlock();
           }
           if (seen_proceed_ && seen_train_ &&
-              !find_signal_lever(row_)->is_proceed() &&
+              !signal_lever->is_proceed() &&
               !block_->track_detector().read()) {
+            LOG(LEVEL_INFO, "Fstr %d complete&unlock", id_);
             // All conditions have been fulfilled to release the route:
             //
             // - we've seen the signal lever go to proceed
             // - we've seen a train in the detector
             // - the detector is now clear
             // - the signal lever is taken back
-            find_signal_lever(row_)->lock();
+            signal_lever->lock();
             block_->route_locked_lamp().write(false);
             state_ = State::SET;  // will unlock the route lever
           }
