@@ -300,11 +300,14 @@ TEST_F(UWBTest, full_cycle_route) {
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
+  
 
   LOG(LEVEL_INFO, "===Route lock button");
   gpios_.write(AB_LOCK_BTN, true);
   wait();
   gpios_.write(AB_LOCK_BTN, false);
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
@@ -322,6 +325,7 @@ TEST_F(UWBTest, full_cycle_route) {
 
   EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   wait();
 
@@ -344,6 +348,7 @@ TEST_F(UWBTest, full_cycle_route) {
   // Signal is not locked yet and Fstr not unlocked yet.
   EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   LOG(LEVEL_INFO, "===Train is gone");
   gpios_.write(AB_DETECTOR, false);
@@ -352,6 +357,7 @@ TEST_F(UWBTest, full_cycle_route) {
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
 
   gpios_.write(IN_a1, false);
   wait();
@@ -369,6 +375,8 @@ TEST_F(UWBTest, full_cycle_route) {
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
   EXPECT_FALSE(gpios_.read(LOCK_c1d1));
+
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
 }
 
 /// Moves a lever down and locks it.
@@ -381,6 +389,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
 
   EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
 
   LOG(LEVEL_INFO, "===Route lock button");
   gpios_.write(AB_LOCK_BTN, true);
@@ -389,6 +398,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
 
   EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   LOG(LEVEL_INFO, "===Signal lever set");
   gpios_.write(IN_B_HP2, true);
@@ -396,6 +406,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
 
   EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   LOG(LEVEL_INFO, "===Signal returned to stop");
   gpios_.write(IN_B_HP2, false);
@@ -409,6 +420,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
   // after two 500 ms cycles the signal lever will lock.
   EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   // Train comes.
   LOG(LEVEL_INFO, "===Train arrives");
@@ -419,6 +431,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
   // Fstr not unlocked yet.
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
 
   LOG(LEVEL_INFO, "===Train is gone");
   gpios_.write(AB_DETECTOR, false);
@@ -427,6 +440,7 @@ TEST_F(UWBTest, full_cycle_route_out) {
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
 
   gpios_.write(IN_b1, false);
   wait();
@@ -443,4 +457,6 @@ TEST_F(UWBTest, full_cycle_route_out) {
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
   EXPECT_FALSE(gpios_.read(LOCK_c1d1));
+
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
 }
