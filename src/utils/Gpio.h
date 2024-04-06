@@ -115,10 +115,25 @@ class GpioAccessor {
     gpio_->write(pin_num_, value);
   }
 
- private:
+ protected:
+  /// Empty constructor to be used only by descendants.
+  GpioAccessor() : pin_num_(0), inverted_(false), gpio_(nullptr) {}
+
   const gpio_pin_t pin_num_;
   const bool inverted_;
   const Gpio* gpio_;
+};
+
+/// Alternate to the GpioAccessor that allows getting the
+class DelayedGpioAccessor : public GpioAccessor {
+ public:
+  DelayedGpioAccessor() {}
+
+  void setup(gpio_pin_t pin, bool inverted, GpioDirection dir) {
+    // We call a placement constructor of the base class to set up the const
+    // arguments that are local to this class.
+    new (this) GpioAccessor(pin, inverted, dir);
+  }
 };
 
 #endif  // _UTILS_GPIO_H_
