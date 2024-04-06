@@ -349,47 +349,98 @@ TEST_F(UWBTest, full_cycle_route) {
   gpios_.write(AB_DETECTOR, false);
   wait();
   wait();
-  
+
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+
+  gpios_.write(IN_a1, false);
+  wait();
+  wait();
+
+  // Now again the turnout levers and the route levers for track 1 are free.
+  EXPECT_FALSE(gpios_.read(LOCK_W1a));
+  EXPECT_FALSE(gpios_.read(LOCK_W1b));
+  EXPECT_FALSE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_FALSE(gpios_.read(LOCK_W9));
+  EXPECT_FALSE(gpios_.read(LOCK_W10));
+
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 }
 
-/// Moves a lever up and locks it.
+/// Moves a lever down and locks it.
 TEST_F(UWBTest, full_cycle_route_out) {
   start();
   wait();
 
-  gpios_.write(IN_a1, true);
+  gpios_.write(IN_b1, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Route lock button");
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+  gpios_.write(AB_LOCK_BTN, false);
+
+  EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Signal lever set");
+  gpios_.write(IN_B_HP2, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Signal returned to stop");
+  gpios_.write(IN_B_HP2, false);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  wait();
+
+  // after two 500 ms cycles the signal lever will lock.
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  // Train comes.
+  LOG(LEVEL_INFO, "===Train arrives");
+  gpios_.write(AB_DETECTOR, true);
+  wait();
+  wait();
+
+  // Fstr not unlocked yet.
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Train is gone");
+  gpios_.write(AB_DETECTOR, false);
+  wait();
   wait();
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
 
-  gpios_.write(AB_LOCK_BTN, true);
+  gpios_.write(IN_b1, false);
   wait();
 
-  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  // Now again the turnout levers and the route levers for track 1 are free.
+  EXPECT_FALSE(gpios_.read(LOCK_W1a));
+  EXPECT_FALSE(gpios_.read(LOCK_W1b));
+  EXPECT_FALSE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_FALSE(gpios_.read(LOCK_W9));
+  EXPECT_FALSE(gpios_.read(LOCK_W10));
 
-  gpios_.write(IN_A_HP2, true);
-  wait();
-
-  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
-
-  gpios_.write(IN_A_HP2, false);
-  wait();
-
-  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
-
-  wait();
-
-  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
-
-  wait();
-
-  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 }
