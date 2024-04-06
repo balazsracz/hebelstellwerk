@@ -78,29 +78,28 @@ class UWB {
   BlockRegistry block_reg_;
 
   LockTable ltbl_{{
-      Route(a1),          WeichePlus(W1a),    WeichePlus(W1b),
-      WeichePlus(W2),     WeichePlus(W9),     WeichePlus(W10),
-      Hp2(SIGNAL_A),      Aux(Bue10_750),     BlockIn(BLOCK_AB),  //
-      Route(a3),          WeichePlus(W1a),    WeicheMinus(W1b),
-      WeichePlus(W7),     WeicheMinus(W9),    WeichePlus(W10),
-      Hp2(SIGNAL_A),      Aux(Bue10_750),     BlockIn(BLOCK_AB),  //
-      Route(b1),          WeichePlus(W1a),    WeichePlus(W1b),
-      WeichePlus(W2),     Hp2(SIGNAL_B),      Aux(Bue10_750),
-      BlockOut(BLOCK_AB),  //
-      Route(b3),          WeichePlus(W1a),    WeicheMinus(W1b),
-      Hp2(SIGNAL_B),      Aux(Bue10_750),     BlockOut(BLOCK_AB),  //
-      Route(c1),          WeichePlus(W9),     WeichePlus(W10),
-      Hp2(SIGNAL_C),      BlockOut(BLOCK_CD),  //
-      Route(c3),          WeichePlus(W7),     WeicheMinus(W9),
-      WeichePlus(W10),    BlockOut(BLOCK_CD),
-      Hp2(SIGNAL_C),  //
-      Route(d1),          WeichePlus(W1a),    WeichePlus(W1b),
-      WeichePlus(W2),     WeichePlus(W9),     WeichePlus(W10),
-      BlockIn(BLOCK_CD),
-      Hp2(SIGNAL_D),  //
-      Route(d3),          WeicheMinus(W1b),   WeichePlus(W7),
-      WeicheMinus(W9),    WeichePlus(W10),    Hp2(SIGNAL_D),
-      BlockIn(BLOCK_CD)  //
+      Route(a1), WeichePlus(W1a), WeichePlus(W1b), WeichePlus(W2),
+      WeichePlus(W9), WeichePlus(W10), Hp2(SIGNAL_A), Aux(Bue10_750),
+      BlockIn(BLOCK_AB),
+      RouteExc(c1),  // Durchfahrt sollte in umgekehrter Reihenfolge gestellt
+                     // sein
+      RouteExc(d1),  // Einfahrt in dasselbe Gleis
+      Route(a3), WeichePlus(W1a), WeicheMinus(W1b), WeichePlus(W7),
+      WeicheMinus(W9), WeichePlus(W10), Hp2(SIGNAL_A), Aux(Bue10_750),
+      BlockIn(BLOCK_AB), RouteExc(c3), RouteExc(d3),  //
+      Route(b1), WeichePlus(W1a), WeichePlus(W1b), WeichePlus(W2),
+      Hp2(SIGNAL_B), Aux(Bue10_750), BlockOut(BLOCK_AB),  //
+      Route(b3), WeichePlus(W1a), WeicheMinus(W1b), Hp2(SIGNAL_B),
+      Aux(Bue10_750), BlockOut(BLOCK_AB),  //
+      Route(c1), WeichePlus(W9), WeichePlus(W10), Hp2(SIGNAL_C),
+      BlockOut(BLOCK_CD), RouteExc(b1),  //
+      Route(c3), WeichePlus(W7), WeicheMinus(W9), WeichePlus(W10),
+      BlockOut(BLOCK_CD), Hp2(SIGNAL_C),  //
+      Route(d1), WeichePlus(W1a), WeichePlus(W1b), WeichePlus(W2),
+      WeichePlus(W9), WeichePlus(W10), BlockIn(BLOCK_CD), RouteExc(a1),
+      RouteExc(b1), Hp2(SIGNAL_D),  //
+      Route(d3), WeicheMinus(W1b), WeichePlus(W7), WeicheMinus(W9),
+      WeichePlus(W10), Hp2(SIGNAL_D), BlockIn(BLOCK_CD)  //
   }};
 
   FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
@@ -136,7 +135,7 @@ class UWBTest : public TestBase, public UWB {
     }
   }
   void wait() {
-    for (unsigned i = 0; i < 100; ++i) {
+    for (unsigned i = 0; i < 101; ++i) {
       ex_.loop();
       ex_.advance(5);
     }
@@ -251,11 +250,23 @@ TEST_F(UWBTest, lock_route_up) {
   EXPECT_FALSE(Rab1.is_route_set(a1));
   EXPECT_FALSE(Rab1.is_route_set(b1));
 
+  // Two Fstr levers were locked before:
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
+
   gpios_.write(IN_a1, true);
   wait();
 
   EXPECT_TRUE(Rab1.is_route_set(a1));
   EXPECT_FALSE(Rab1.is_route_set(b1));
+
+  // Now the opposing Fstr is not eligible anymore.
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
 
   // Signal levers are still locked.
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
@@ -276,5 +287,109 @@ TEST_F(UWBTest, lock_route_up) {
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
-  /// @todo this fails right now EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+}
+
+/// Moves a lever up and locks it.
+TEST_F(UWBTest, full_cycle_route) {
+  start();
+  wait();
+
+  gpios_.write(IN_a1, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Route lock button");
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+  gpios_.write(AB_LOCK_BTN, false);
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Signal leverset");
+  gpios_.write(IN_A_HP2, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Signal returned to stop");
+  gpios_.write(IN_A_HP2, false);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  wait();
+
+  // This is an inbound route. The signal lever will be repeatedly unlocked
+  // even if it is returned to normal.
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  // Train comes.
+  LOG(LEVEL_INFO, "===Train arrives");
+  gpios_.write(AB_DETECTOR, true);
+  wait();
+  wait();
+
+  // Signal is not locked yet and Fstr not unlocked yet.
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  LOG(LEVEL_INFO, "===Train is gone");
+  gpios_.write(AB_DETECTOR, false);
+  wait();
+  wait();
+  
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+}
+
+/// Moves a lever up and locks it.
+TEST_F(UWBTest, full_cycle_route_out) {
+  start();
+  wait();
+
+  gpios_.write(IN_a1, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  gpios_.write(IN_A_HP2, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  gpios_.write(IN_A_HP2, false);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
 }
