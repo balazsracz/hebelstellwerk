@@ -93,7 +93,7 @@ static constexpr LockTableEntry TurnoutPlus(TurnoutId id) {
 
 /// Alias for TurnoutPlus in German.
 static constexpr LockTableEntry WeichePlus(TurnoutId id) {
-  return lock_table_helper(TURNOUT_PLUS, id);
+  return TurnoutPlus(id);
 }
 
 /// Declares that a turnout has to be in the - state in order to allow the
@@ -104,7 +104,7 @@ static constexpr LockTableEntry TurnoutMinus(TurnoutId id) {
 
 /// Alias for TurnoutMinus in German.
 static constexpr LockTableEntry WeicheMinus(TurnoutId id) {
-  return lock_table_helper(TURNOUT_MINUS, id);
+  return TurnoutMinus(id);
 }
 
 /// Declares that when a route is set and locked, a given signal should be
@@ -150,6 +150,11 @@ static constexpr LockTableEntry BlockIn(BlockId id) {
 /// opposite order is however not allowed.
 static constexpr LockTableEntry RouteExc(RouteId id) {
   return lock_table_helper(ROUTE_EXC, id);
+}
+
+/// Alias for RouteExc.
+static constexpr LockTableEntry FstrMinus(RouteId id) {
+  return RouteExc(id);
 }
 
 /// Instantiate this class to provide the lock table (Verschlusstabelle). The
