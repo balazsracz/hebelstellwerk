@@ -38,6 +38,7 @@
 #include <Hebelstellwerk.h>
 
 #include "utils/Blinker.h"
+#include "utils/AnalogGpio.h"
 
 PWM9685 pwm_chip(16);
 PwmGpio gpio_1(101, 18 /*pwm channel 2*/, 10, 60);
