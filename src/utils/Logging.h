@@ -41,18 +41,19 @@
 #ifdef GTEST
 #include <stdio.h>
 
-#define LOG(level, fmt, args...)        \
-  do {                                  \
-    fprintf(stderr, fmt "\n", args); \
+#define LOG(level, fmt...) \
+  do {                     \
+    fprintf(stderr, fmt);  \
+    fprintf(stderr, "\n"); \
   } while (0)
 
 #elif defined(ARDUINO)
 
-#define LOG(level, fmt, args...)           \
-  do {                                     \
-    static char buf[300];                  \
-    snprintf(buf, sizeof(buf), fmt, args); \
-    Serial.println(buf);                   \
+#define LOG(level, fmt...)           \
+  do {                               \
+    static char buf[300];            \
+    snprintf(buf, sizeof(buf), fmt); \
+    Serial.println(buf);             \
   } while (0)
 
 #endif
