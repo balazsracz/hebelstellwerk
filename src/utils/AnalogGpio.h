@@ -45,6 +45,7 @@
 
 #include "utils/Gpio.h"
 #include "utils/Timer.h"
+#include "utils/Logging.h"
 
 /// Analog input GPIO. Simulates a digital input pin by performing analog reads
 /// of an arduino input. The input has to be above a given threshold of voltage
@@ -65,20 +66,20 @@ class AnalogGpio : public Gpio, private Executable {
   /// threshold to consider it active.
   AnalogGpio(gpio_pin_t register_pin, int arduino_pin, int16_t threshold_analog,
              int16_t length_msec)
-      : arduino_pin_(arduino_pin_),
+      : arduino_pin_(arduino_pin),
         length_msec_(length_msec),
         threshold_analog_(threshold_analog)
 
   {
     Executor::instance()->add(this);
-    GpioRegistry::instance()->register_obj(this, 0, Count{NUM_DIGITAL_PINS});
+    GpioRegistry::instance()->register_obj(this, register_pin);
   }
   void begin() override {
     pinMode(arduino_pin_, INPUT);
     tm_.start_periodic(POLL_MSEC);
   }
   void loop() override {
-    if (tm_.check()) {
+    while (tm_.check()) {
       auto current = analogRead(arduino_pin_);
       if (current >= threshold_analog_) {
         msec_above_ += POLL_MSEC;
@@ -92,7 +93,8 @@ class AnalogGpio : public Gpio, private Executable {
     DIE("Analog Pin does not support write.");
   }
   bool read(gpio_pin_t pin) const override {
-    return msec_above_ >= threshold_analog_;
+    LOG(LEVEL_VERBOSE, "analog_gpio read %d >= %d", msec_above_, length_msec_);
+    return msec_above_ >= length_msec_;
   }
   void set_output(gpio_pin_t pin) const override {
     DIE("Analog Pin does not support output.");
@@ -116,7 +118,7 @@ class AnalogGpio : public Gpio, private Executable {
   const int16_t threshold_analog_;
 
   /// How many msec did we measure to be above the threshold.
-  int16_t msec_above_{0};
+  uint16_t msec_above_{0};
 };
 
 #endif  // Arduino

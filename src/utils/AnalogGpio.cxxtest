@@ -1,0 +1,89 @@
+#include "test_main.h"
+
+static int g_read_value = 0;
+static constexpr int  READ_PIN = 22;
+int analogRead(int pin) {
+  EXPECT_EQ(READ_PIN, pin);
+  return g_read_value;
+}
+static constexpr unsigned THRESHOLD = 103;
+
+static constexpr unsigned INPUT = 0;
+void pinMode(int, int) {}
+
+#define ANALOGGPIO_TEST
+#include "utils/AnalogGpio.h"
+
+class AnalogGpioTest : public TestBase {
+protected:
+  AnalogGpioTest() {
+    ex_.begin();
+    g_read_value = 0;
+  }
+
+  void wait(unsigned msec = 500) {
+    for (unsigned i = 0; i < msec; ++i) {
+      ex_.advance(1);
+      ex_.loop();
+    }
+  }
+
+  GpioRegistry reg_;
+};
+
+TEST_F(AnalogGpioTest, registered) {
+  AnalogGpio gpio{13, READ_PIN, THRESHOLD, 450};
+  EXPECT_EQ(&gpio, GpioRegistry::instance()->get_or_null(13));
+}
+
+TEST_F(AnalogGpioTest, read_default_toggle_back) {
+  AnalogGpio gpio{13, READ_PIN, THRESHOLD, 450};
+  GpioAccessor acc{13, false, GPIO_INPUT};
+
+  EXPECT_FALSE(acc.read());
+  wait();
+  EXPECT_FALSE(acc.read());
+
+  g_read_value = THRESHOLD + 1;
+  wait(10);
+  //EXPECT_FALSE(acc.read());
+  
+  wait(1000);
+  EXPECT_TRUE(acc.read());
+  // Below threshold immediately resets to zero.
+  g_read_value = THRESHOLD - 1;
+  wait(50);
+  EXPECT_FALSE(acc.read());
+
+  // Now check that a short wait does not trigger up.
+  g_read_value = THRESHOLD + 1;
+  wait(400);
+  LOG(LEVEL_INFO, "tricky here");
+  EXPECT_FALSE(acc.read());
+  wait(50);
+  EXPECT_TRUE(acc.read());
+  wait(500);
+  EXPECT_TRUE(acc.read());
+
+  // Back again
+  g_read_value = THRESHOLD - 1;
+  wait(50);
+  EXPECT_FALSE(acc.read());
+  
+}
+
+
+TEST_F(AnalogGpioTest, many_toggle) {
+  AnalogGpio gpio{13, READ_PIN, THRESHOLD, 450};
+  GpioAccessor acc{13, false, GPIO_INPUT};
+
+  for(int cnt = 0; cnt < 100; ++cnt) {
+    g_read_value = THRESHOLD - 1;
+    wait();
+    EXPECT_FALSE(acc.read());
+    g_read_value = THRESHOLD + 1;
+    wait();
+    EXPECT_TRUE(acc.read());
+  }
+  
+}
