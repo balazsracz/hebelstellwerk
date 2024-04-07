@@ -196,6 +196,17 @@ private:
   /// Current state of the block.
   State state_ {State::IN_OCC};
 
+  /// ID of the route that was last locked.
+  RouteId locked_route_;
+  /// True if a route is locked through this block.
+  bool have_route_locked_ : 1;
+  /// True if the last locked route was outbounds.
+  bool route_is_out_ : 1;
+  /// True if we have seen a route locked outbound through this block. 
+  bool seen_route_locked_out_ : 1;
+  /// True if we have seen a route locked inbound through this block. 
+  bool seen_route_locked_in_ : 1;
+
   
 };
 
