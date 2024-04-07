@@ -245,6 +245,15 @@ class RouteLever : private Executable {
   // - the up and down should have the same preconditions
   // - there should be exactly one signal allowed per Fstr
   //
+  // - when different routes are going to the same block, they have to somehow
+  //   exclude each other.
+  //
+  // - when different blocks have the same fahrstrassenfestlegetaste, then they
+  //   also have to be somehow excluding each other. When one of these route
+  //   levers is set, all others need to be immediately locked by the lock
+  //   table.
+
+  /// How often do we run the state machine.
   static constexpr uint32_t CHECK_PERIOD_MSEC = 10;
 
   enum class State : uint8_t {
@@ -334,7 +343,7 @@ class RouteLever : private Executable {
                      check_block(block_, block_out_)) {
             state_ = State::SET_LOCKED;
             LOG(LEVEL_INFO, "Fstr %d locking route", id_);
-            block_->route_locked_lamp().write(true);
+            block_->notify_route_locked(id_, block_out_);
             seen_proceed_ = false;
             seen_train_ = false;
             signal_lever->unlock();
@@ -375,7 +384,7 @@ class RouteLever : private Executable {
             // - the detector is now clear
             // - the signal lever is taken back
             signal_lever->lock();
-            block_->route_locked_lamp().write(false);
+            block_->notify_route_complete(id_);
             state_ = State::SET;  // will unlock the route lever
           }
           break;

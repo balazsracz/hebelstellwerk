@@ -82,6 +82,27 @@ class Block : public Executable {
 
   const GpioAccessor& route_locked_lamp() { return route_locked_lamp_; }
 
+  /// @return true if an outgoing train is allowed to go towards this
+  /// block. This means that we have permission for the track and the track is
+  /// free.
+  virtual bool allow_outgoing_train() { return true; }
+  
+  /// Called by the route lever state machine when a route for this block is
+  /// set and locked.
+  /// @param id the route that was set and locked.
+  /// @param is_out true if the route is outbounds (towards the block).
+  virtual void notify_route_locked(RouteId id, bool is_out) {
+    route_locked_lamp_.write(true);
+  }
+
+  /// Called by the route lever state machine when a route was set & locked for
+  /// this block, and a train has traversed it.
+  /// @param id the route that was set, locked and is now unlocked.
+  /// @param is_out true if the route is outbounds (towards the block).
+  virtual void notify_route_complete(RouteId id) {
+    route_locked_lamp_.write(false);
+  }
+  
  private:
   BlockId id_;
 
