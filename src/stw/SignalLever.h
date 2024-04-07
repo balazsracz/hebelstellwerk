@@ -82,7 +82,7 @@ class SignalLever : private Executable {
     SignalRegistry::instance()->register_obj(this, idx);
   }
 
-  enum class State {
+  enum class State : uint8_t {
     STOP_LOCKED,
     STOP,
     PROCEED,
