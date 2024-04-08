@@ -65,6 +65,11 @@ static inline BlockBits operator|(BlockBits a, BlockBits b) {
   return BlockBits(r);
 }
 
+static inline uint16_t operator&(uint16_t a, BlockBits b) {
+  uint16_t r =  a & ((uint16_t)b);
+  return r;
+}
+
 class I2CBlockInterface {
  public:
   /// Sets the status bits. Currently only the lower 8 bits are defined.
@@ -73,10 +78,21 @@ class I2CBlockInterface {
 
   /// Adds some bits to the status word. This is usually used to send a
   /// message.
-  void add_status(BlockBits bits) {
-    set_status(get_status() | (uint16_t)bits);
+  void send_bit(BlockBits bit) {
+    set_status(get_status() | (uint16_t)bit | (uint16_t)BlockBits::NEWOUTPUT);
   }
-  
+
+  /// Removes the incoming notification bit. This bit is set by the peripheral
+  /// when an incoming message changes the state.
+  void clear_incoming_notify() {
+    set_status(get_status() & ~(uint16_t)BlockBits::NEWINPUT);
+  }
+
+  /// @return true if there is a new message from the opposing side.
+  bool has_incoming_notify() {
+    return get_status() & (uint16_t)BlockBits::NEWINPUT;
+  }
+
   /// Gets the current status bits.
   /// @return the last known status bits from the block interface module.
   virtual uint16_t get_status() = 0;

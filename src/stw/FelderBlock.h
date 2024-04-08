@@ -94,9 +94,13 @@ class FelderBlock : public Block {
     storungsmelder_.setup(pin, inverted, GPIO_OUTPUT);
     return 1u << 8;
   }
+  uint16_t set_streckentastensperre(gpio_pin_t pin, bool inverted) {
+    streckentastensperre_.setup(pin, inverted, GPIO_OUTPUT);
+    return 1u << 9;
+  }
 
   /// These bits should be set after all the setup is done.
-  static constexpr uint16_t EXPECTED_SETUP = (1u << 9) - 1;
+  static constexpr uint16_t EXPECTED_SETUP = (1u << 10) - 1;
 
   enum class State : uint8_t {
     /// No permission, track is free.
@@ -150,18 +154,50 @@ class FelderBlock : public Block {
     if (!tm_.check()) {
       return;
     }
+    /// @todo handle Signalhaltmelder.
     switch (state_) {
       case State::IN_FREE: {
+        if (iface_->has_incoming_notify()) {
+          uint16_t status = iface_->get_status();
+          if (status & BlockBits::IN_BUSY) {
+            iface_->clear_incoming_notify();
+            state_ = State::IN_OCC;
+            return;
+          }
+          if (status & BlockBits::TRACK_OUT) {
+            iface_->clear_incoming_notify();
+            state_ = State::OUT_FREE;
+            return;
+          }
+        }
         break;
       }
       case State::IN_OCC: {
+        // Handle elektrische Streckentastensperre output.
+        streckentastensperre_.write(track_detector().read());
+
+        // Check if a train has traveled inbounds through this block, and the
+        // route lever matching that has been re-set.
+        if (seen_route_locked_in_ && !have_route_locked_ &&
+            !RouteRegistry::instance()
+                 ->get(locked_route_)
+                 ->is_route_set(locked_route_)) {
+          // Now Ruckblocken is possible.
+          if (ruckblock_taste_.read() && kurbel_.read()) {
+            uint16_t status = iface_->get_status();
+            status &= ~(uint16_t)BlockBits::IN_BUSY;
+            status |= BlockBits::NEWOUTPUT;
+            iface_->set_status(status);
+            return wait_for_complete(State::IN_FREE);
+          }
+        }
         break;
       }
       case State::OUT_FREE: {
         if (!have_route_locked_) {
           // Now handoff is possible.
           if (abgabe_taste_.read() && kurbel_.read()) {
-            iface_->add_status(BlockBits::HANDOFF | BlockBits::NEWOUTPUT);
+            iface_->send_bit(BlockBits::HANDOFF);
             return wait_for_complete(State::IN_FREE);
           }
         }
@@ -173,13 +209,19 @@ class FelderBlock : public Block {
                  ->is_route_set(locked_route_)) {
           // Now Vorblocken is possible.
           if (vorblock_taste_.read() && kurbel_.read()) {
-            iface_->add_status(BlockBits::OUT_BUSY | BlockBits::NEWOUTPUT);
+            iface_->send_bit(BlockBits::OUT_BUSY);
             return wait_for_complete(State::OUT_OCC);
           }
         }
         break;
       }
       case State::OUT_OCC: {
+        if (iface_->has_incoming_notify() &&
+            (iface_->get_status() & BlockBits::OUT_BUSY) == 0) {
+          iface_->clear_incoming_notify();
+          state_ = State::OUT_FREE;
+          return;
+        }
         break;
       }
     }
@@ -223,6 +265,9 @@ class FelderBlock : public Block {
   /// trains to the track. Value is 1 for white, 0 for red.
   DelayedGpioAccessor erlaubnisfeld_;
 
+  /// Output for a white field showing that the track button is locked. This is
+  /// controlled by the detector. 1 for lit, 0 for dark.
+  DelayedGpioAccessor streckentastensperre_;
   /// Output for a red field showing that the incoming signal is showing the
   /// stop aspect. 1 for red, 0 for dark.
   DelayedGpioAccessor signalhaltmelder_;
