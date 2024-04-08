@@ -37,14 +37,15 @@
 
 #include "stw/Block.h"
 #include "stw/I2CBlock.h"
+#include "stw/RouteLever.h"
 #include "utils/Timer.h"
 
 class FelderBlock : public Block {
  public:
-  FelderBlock(I2CBlockInterface* iface, BlockId id, gpio_pin_t track_detector_pin,
-              bool track_detector_inverted, gpio_pin_t route_lock_button_pin,
-              bool route_lock_button_inverted, gpio_pin_t route_locked_lamp_pin,
-              bool route_locked_lamp_inverted)
+  FelderBlock(I2CBlockInterface* iface, BlockId id,
+              gpio_pin_t track_detector_pin, bool track_detector_inverted,
+              gpio_pin_t route_lock_button_pin, bool route_lock_button_inverted,
+              gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted)
       : Block(id, track_detector_pin, track_detector_inverted,
               route_lock_button_pin, route_lock_button_inverted,
               route_locked_lamp_pin, route_locked_lamp_inverted) {}
@@ -55,61 +56,60 @@ class FelderBlock : public Block {
   // and at the end the resulting bitmask should equal the constant
   // EXPECTED_SETUP.
 
-  
   uint16_t set_vorblock_taste(gpio_pin_t pin, bool inverted) {
     vorblock_taste_.setup(pin, inverted, GPIO_INPUT);
-    return 1u<<0;
+    return 1u << 0;
   }
   uint16_t set_ruckblock_taste(gpio_pin_t pin, bool inverted) {
     ruckblock_taste_.setup(pin, inverted, GPIO_INPUT);
-    return 1u<<1;
+    return 1u << 1;
   }
   uint16_t set_abgabe_taste(gpio_pin_t pin, bool inverted) {
     abgabe_taste_.setup(pin, inverted, GPIO_INPUT);
-    return 1u<<2;
+    return 1u << 2;
   }
   uint16_t set_kurbel(gpio_pin_t pin, bool inverted) {
     kurbel_.setup(pin, inverted, GPIO_INPUT);
-    return 1u<<3;
+    return 1u << 3;
   }
 
   uint16_t set_anfangsfeld(gpio_pin_t pin, bool inverted) {
     anfangsfeld_.setup(pin, inverted, GPIO_OUTPUT);
-    return 1u<<4;
+    return 1u << 4;
   }
   uint16_t set_endfeld(gpio_pin_t pin, bool inverted) {
     endfeld_.setup(pin, inverted, GPIO_OUTPUT);
-    return 1u<<5;
+    return 1u << 5;
   }
   uint16_t set_erlaubnisfeld(gpio_pin_t pin, bool inverted) {
     erlaubnisfeld_.setup(pin, inverted, GPIO_OUTPUT);
-    return 1u<<6;
+    return 1u << 6;
   }
 
   uint16_t set_signalhaltmelder(gpio_pin_t pin, bool inverted) {
     signalhaltmelder_.setup(pin, inverted, GPIO_OUTPUT);
-    return 1u<<7;
+    return 1u << 7;
   }
   uint16_t set_storungsmelder(gpio_pin_t pin, bool inverted) {
     storungsmelder_.setup(pin, inverted, GPIO_OUTPUT);
-    return 1u<<8;
+    return 1u << 8;
   }
-  
+
   /// These bits should be set after all the setup is done.
-  static constexpr uint16_t EXPECTED_SETUP = (1u<<9) - 1;
+  static constexpr uint16_t EXPECTED_SETUP = (1u << 9) - 1;
 
   enum class State : uint8_t {
-    /// No permission, track is free. 
+    /// No permission, track is free.
     IN_FREE,
-    /// No permission, track is occupied. 
+    /// No permission, track is occupied.
     IN_OCC,
-    /// Have permission, track is free. 
+    /// Have permission, track is free.
     OUT_FREE,
-    /// Have permission, track is occupied. 
+    /// Have permission, track is occupied.
     OUT_OCC
   };
-  
-private:
+
+ private:
   void begin() override {
     Block::begin();
     tm_.start_drifting(13);
@@ -118,7 +118,7 @@ private:
   void loop() override {
     Block::loop();
     // Sets the output GPIOs.
-    switch(state_) {
+    switch (state_) {
       case State::IN_FREE: {
         /// @todo is the Anfangsfeld red when the Erlaubnisfeld is red?
         anfangsfeld_.write(WHITE);
@@ -150,21 +150,60 @@ private:
     if (!tm_.check()) {
       return;
     }
-    
+    switch (state_) {
+      case State::IN_FREE: {
+        break;
+      }
+      case State::IN_OCC: {
+        break;
+      }
+      case State::OUT_FREE: {
+        if (!have_route_locked_) {
+          // Now handoff is possible.
+          if (abgabe_taste_.read() && kurbel_.read()) {
+            iface_->add_status(BlockBits::HANDOFF | BlockBits::NEWOUTPUT);
+            return wait_for_complete(State::IN_FREE);
+          }
+        }
+        // Check if a train has traveled outbounds through this block, and the
+        // route lever matching that has been re-set.
+        if (seen_route_locked_out_ && !have_route_locked_ &&
+            !RouteRegistry::instance()
+                 ->get(locked_route_)
+                 ->is_route_set(locked_route_)) {
+          // Now Vorblocken is possible.
+          if (vorblock_taste_.read() && kurbel_.read()) {
+            iface_->add_status(BlockBits::OUT_BUSY | BlockBits::NEWOUTPUT);
+            return wait_for_complete(State::OUT_OCC);
+          }
+        }
+        break;
+      }
+      case State::OUT_OCC: {
+        break;
+      }
+    }
   }
 
-  
+  void wait_for_complete(State s) {
+    /// @todo implement some way to delay until a block operation completes.
+    state_ = s;
+  }
+
   /// Hardware connection for the actual block PCB.
   I2CBlockInterface* iface_;
 
   /// Button to signal an outgoing train to the next station, i.e., set the
-  /// track to busy with an outgoing train.
+  /// track to busy with an outgoing train. True when the user presses the
+  /// button.
   DelayedGpioAccessor vorblock_taste_;
   /// Button to signal that an incoming train from the next station has
-  /// arrived, i.e., to set a busy incoming track to clear.
+  /// arrived, i.e., to set a busy incoming track to clear.  True when the user
+  /// presses the button.
   DelayedGpioAccessor ruckblock_taste_;
   /// Button to hand off the permission to the next station, i.e., set an
-  /// outgoing track to an incoming track.
+  /// outgoing track to an incoming track.  True when the user presses the
+  /// button.
   DelayedGpioAccessor abgabe_taste_;
 
   /// Input for the crank. For an analog crank, this should be a virtual Gpio
@@ -173,7 +212,7 @@ private:
 
   static constexpr bool RED = false;
   static constexpr bool WHITE = true;
-  
+
   /// Output for a red/white field showing that an outgoing track is
   /// clear. Value is 1 for white, 0 for red.
   DelayedGpioAccessor anfangsfeld_;
@@ -192,9 +231,11 @@ private:
   DelayedGpioAccessor storungsmelder_;
 
   Timer tm_;
-  
+
   /// Current state of the block.
-  State state_ {State::IN_OCC};
+  State state_{State::IN_OCC};
+
+  /// @todo these need to be initialized
 
   /// ID of the route that was last locked.
   RouteId locked_route_;
@@ -202,12 +243,10 @@ private:
   bool have_route_locked_ : 1;
   /// True if the last locked route was outbounds.
   bool route_is_out_ : 1;
-  /// True if we have seen a route locked outbound through this block. 
+  /// True if we have seen a route locked outbound through this block.
   bool seen_route_locked_out_ : 1;
-  /// True if we have seen a route locked inbound through this block. 
+  /// True if we have seen a route locked inbound through this block.
   bool seen_route_locked_in_ : 1;
-
-  
 };
 
-#endif // _STW_FELDERBLOCK_H_
+#endif  // _STW_FELDERBLOCK_H_

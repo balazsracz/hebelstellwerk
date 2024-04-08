@@ -60,11 +60,23 @@ enum class BlockBits : uint16_t {
   IN_BUSY = 0x80,
 };
 
+static inline BlockBits operator|(BlockBits a, BlockBits b) {
+  uint16_t r = ((uint16_t)a) | ((uint16_t)b);
+  return BlockBits(r);
+}
+
 class I2CBlockInterface {
  public:
   /// Sets the status bits. Currently only the lower 8 bits are defined.
   /// @param status the new status bits to write to the block interface module.
   virtual void set_status(uint16_t status) = 0;
+
+  /// Adds some bits to the status word. This is usually used to send a
+  /// message.
+  void add_status(BlockBits bits) {
+    set_status(get_status() | (uint16_t)bits);
+  }
+  
   /// Gets the current status bits.
   /// @return the last known status bits from the block interface module.
   virtual uint16_t get_status() = 0;
