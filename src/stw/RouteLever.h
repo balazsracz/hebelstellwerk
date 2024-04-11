@@ -252,6 +252,10 @@ class RouteLever : private Executable {
   //   also have to be somehow excluding each other. When one of these route
   //   levers is set, all others need to be immediately locked by the lock
   //   table.
+  //
+  // - for every block, when we look at all the rows of the lock table that
+  //   have that block as input, the signal name has to be the same across
+  //   them. It may be different aspect (hp1/hp2).
 
   /// How often do we run the state machine.
   static constexpr uint32_t CHECK_PERIOD_MSEC = 10;
