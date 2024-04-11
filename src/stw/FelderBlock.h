@@ -117,6 +117,8 @@ class FelderBlock : public Block {
   void begin() override {
     Block::begin();
     tm_.start_drifting(13);
+    /// @todo  Search for signal levers for this block.
+    // asdsadsa
   }
 
   void loop() override {
@@ -154,18 +156,24 @@ class FelderBlock : public Block {
     if (!tm_.check()) {
       return;
     }
-    /// @todo handle Signalhaltmelder.
+    storungsmelder_.write(iface_->get_status() & BlockBits::ERROR);
+    /// @todo handle Signalhaltmelder. We should search for all signal levers,
+    /// and check whether any of them are set to proceed.
     switch (state_) {
       case State::IN_FREE: {
         if (iface_->has_incoming_notify()) {
           uint16_t status = iface_->get_status();
           if (status & BlockBits::IN_BUSY) {
             iface_->clear_incoming_notify();
+            LOG(LEVEL_INFO, "Block %d: IN_FREE->IN_OCC (Vorblocken erhalten)",
+                id_);
             state_ = State::IN_OCC;
             return;
           }
           if (status & BlockBits::TRACK_OUT) {
             iface_->clear_incoming_notify();
+            LOG(LEVEL_INFO, "Block %d: IN_FREE->OUT_FREE (Erlaubnis erhalten)",
+                id_);
             state_ = State::OUT_FREE;
             return;
           }
@@ -186,8 +194,10 @@ class FelderBlock : public Block {
           if (ruckblock_taste_.read() && kurbel_.read()) {
             uint16_t status = iface_->get_status();
             status &= ~(uint16_t)BlockBits::IN_BUSY;
-            status |= BlockBits::NEWOUTPUT;
+            status |= (uint16_t)BlockBits::NEWOUTPUT;
             iface_->set_status(status);
+            LOG(LEVEL_INFO, "Block %d: IN_OCC->IN_FREE (Ruckblocken gesendet)",
+                id_);
             return wait_for_complete(State::IN_FREE);
           }
         }
@@ -198,6 +208,8 @@ class FelderBlock : public Block {
           // Now handoff is possible.
           if (abgabe_taste_.read() && kurbel_.read()) {
             iface_->send_bit(BlockBits::HANDOFF);
+            LOG(LEVEL_INFO, "Block %d: OUT_FREE->IN_FREE (Erlaubnis gesendet)",
+                id_);
             return wait_for_complete(State::IN_FREE);
           }
         }
@@ -210,6 +222,8 @@ class FelderBlock : public Block {
           // Now Vorblocken is possible.
           if (vorblock_taste_.read() && kurbel_.read()) {
             iface_->send_bit(BlockBits::OUT_BUSY);
+            LOG(LEVEL_INFO, "Block %d: OUT_FREE->OUT_OCC (Vorblocken gesendet)",
+                id_);
             return wait_for_complete(State::OUT_OCC);
           }
         }
@@ -219,6 +233,8 @@ class FelderBlock : public Block {
         if (iface_->has_incoming_notify() &&
             (iface_->get_status() & BlockBits::OUT_BUSY) == 0) {
           iface_->clear_incoming_notify();
+          LOG(LEVEL_INFO, "Block %d: OUT_OCC->OUT_FREE (Ruckblocken erhalten)",
+              id_);
           state_ = State::OUT_FREE;
           return;
         }
@@ -232,8 +248,16 @@ class FelderBlock : public Block {
     state_ = s;
   }
 
+  struct SignalLeverPtr {
+    SignalLever* lever;
+    SignalLeverPtr* next;
+  };
+
   /// Hardware connection for the actual block PCB.
   I2CBlockInterface* iface_;
+
+  /// Signal levers that are used for the inbounds signal on this block.
+  SignalLeverPtr* signals_in_{nullptr};
 
   /// Button to signal an outgoing train to the next station, i.e., set the
   /// track to busy with an outgoing train. True when the user presses the

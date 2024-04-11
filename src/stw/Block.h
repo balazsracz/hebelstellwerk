@@ -102,10 +102,11 @@ class Block : public Executable {
   virtual void notify_route_complete(RouteId id) {
     route_locked_lamp_.write(false);
   }
-  
- private:
+
+ protected:
   BlockId id_;
 
+ private:
   /// Block occupancy detector that covers the piece of track that is between
   /// the inbounds signal and the first turnout of the station. When inverted =
   /// false, HIGH means that there is a train on that section.
