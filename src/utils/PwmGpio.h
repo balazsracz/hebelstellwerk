@@ -108,7 +108,7 @@ class DualPwmGpio : public Gpio {
   /// @param pct_on percent (0..100) duty cycle to use when the GPIO is
   /// commanded to on.
   DualPwmGpio(gpio_pin_t gpio_pin, pwm_pin_t pwm_pin_off, pwm_pin_t pwm_pin_on,
-              int8_t pct_off, int8_t pct_on)
+              int8_t pct_off = 100, int8_t pct_on = 100)
       : pwm_pin_off_(pwm_pin_off),
         pwm_pin_on_(pwm_pin_on),
         pct_off_(pct_off),
