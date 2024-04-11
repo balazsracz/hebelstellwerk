@@ -38,14 +38,14 @@
 enum class BlockBits : uint16_t {
   /// The block is in startup mode and it does not know what the status bits
   /// should be.
-  STARTUP = 0x01,
+  STARTUP = 0x08,
   /// A piece of information is written from the local operator into the
   /// status, and this is still pending transmission to the remote station.
   NEWOUTPUT = 0x02,
   /// A new piece of information has arrived from the opposing station.
   NEWINPUT = 0x04,
   /// 1 when there is a transmission error on the line.
-  ERROR = 0x08,
+  ERROR = 0x01,
   /// 1 = we have the trackage rights (==out). 0 = the opposite station has the
   /// trackage rights (== in)
   TRACK_OUT = 0x10,
