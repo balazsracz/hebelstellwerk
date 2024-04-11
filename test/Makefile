@@ -72,13 +72,16 @@ clean veryclean: clean-gtest
 
 run-tests: $(TESTOUTPUTS) $(TESTMD5)
 
-build-examples: build-blink build-gpioinfra
+build-examples: build-blink build-gpioinfra build-uwb
 
 build-blink:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/Blink
 
 build-gpioinfra:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/GpioInfra
+
+build-uwb:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/UWB
 
 
 tests: run-tests build-examples
