@@ -98,9 +98,5 @@ class I2CBlockInterface {
   virtual uint16_t get_status() = 0;
 };
 
-#ifdef ARDUINO
-
-
-#endif 
 
 #endif //_STW_I2CBLOCK_H_
