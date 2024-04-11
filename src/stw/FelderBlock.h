@@ -152,6 +152,9 @@ class FelderBlock : public Block {
         break;
       }
     }
+
+    /// @todo handle initialization state
+    
     // The rest of the logic we only do occasionally.
     if (!tm_.check()) {
       return;
