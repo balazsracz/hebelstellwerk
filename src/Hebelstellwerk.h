@@ -44,6 +44,8 @@
 #include "stw/SignalLever.h"
 #include "stw/RouteLever.h"
 #include "stw/LockTable.h"
+#include "stw/I2CBlockImpl.h"
+#include "stw/FelderBlock.h"
 
 GpioRegistry g_gpio_registry;
 PwmRegistry g_pwm_registry;
