@@ -59,6 +59,8 @@ class I2CBlock : public I2CBlockInterface, private Executable {
 
     if (!dev_.begin(true)) {
       LOG(LEVEL_ERROR, "I2C Block addr %02x is not responding", dev_.address());
+    } else {
+      refresh();
     }
   }
 
@@ -70,9 +72,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
       dirty_ = false;
     }
     if (tm_.check()) {
-      if (!dev_.read((uint8_t *)&last_status_, 2)) {
-        LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
-      }
+      refresh();
     }
   }
 
@@ -87,6 +87,13 @@ class I2CBlock : public I2CBlockInterface, private Executable {
 
  private:
   static constexpr unsigned POLL_MSEC = 43;
+
+  /// Reloads the status word from the i2c device.
+  void refresh() {
+    if (!dev_.read((uint8_t *)&last_status_, 2)) {
+      LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
+    }
+  }
 
   Adafruit_I2CDevice dev_;
 
