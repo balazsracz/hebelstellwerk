@@ -41,8 +41,6 @@
 
 enum GpioPin : gpio_pin_t {
   /// @todo these are wrong. Check the wiring instead.
-  GPIO_AB_DETECTOR = 6,
-  GPIO_CD_DETECTOR = 7,
 
   ARDUINO_MIN = 99,
   GPIO_VERRIEGELUNG_FH_D1C1,
@@ -104,6 +102,12 @@ enum GpioPin : gpio_pin_t {
   GPIO_BTN_ANFANG_B,
   GPIO_BTN_ERLAUBNIS_B,
   GPIO_BTN_ENDFELD_B,
+
+  GPIO_EXT_DETECTOR, 
+  GPIO_AB_DETECTOR = GPIO_EXT_DETECTOR + 3,
+  GPIO_CD_DETECTOR = GPIO_EXT_DETECTOR + 1,
+  GPIO_EXT_DETECTOR_END = GPIO_EXT_DETECTOR + 15, 
+
 
 };
 
@@ -222,6 +226,7 @@ Gpio23017 ext_hebel_sig_w(GPIO_EXT_HEBEL_SIG_W, 0x25);
 Gpio23017 ext_hebel_fstr(GPIO_EXT_HEBEL_FSTR, 0x26);
 /// @todo is this I2C address correct?
 Gpio23017 ext_hebel_taster(GPIO_EXT_TASTER, 0x27);
+Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
 // ======================== Logical devices =========================
 
