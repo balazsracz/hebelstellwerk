@@ -58,7 +58,8 @@ class Gpio23017 : public Gpio, public Executable {
   }
 
   void begin() override {
-    if (!driver_.begin_I2C(i2c_address_, wire_instance_)) {
+    init_ok_ = driver_.begin_I2C(i2c_address_, wire_instance_);
+    if (!init_ok_) {
       LOG(LEVEL_ERROR, "Failed to start MCP23017 with address 0x%x gpio %d",
           i2c_address_, start_pin_);
     }
@@ -108,6 +109,13 @@ class Gpio23017 : public Gpio, public Executable {
     }
   }
 
+  uint16_t input_states() {
+    return input_states_;
+  }
+  bool ok() {
+    return init_ok_;
+  }
+  
  private:
   /// Backing driver that talks through i2c to the chip.
   mutable Adafruit_MCP23X17 driver_;
@@ -124,6 +132,8 @@ class Gpio23017 : public Gpio, public Executable {
   /// true if begin was already called. THis is important due to delayed I2C
   /// initialization.
   bool begin_done_{false};
+  /// True when the initialization returned success.
+  bool init_ok_{false};
   /// I2C bus instance.
   TwoWire* wire_instance_;
   /// Timer for polling the inputs.
