@@ -228,6 +228,29 @@ Gpio23017 ext_hebel_taster(GPIO_EXT_TASTER, 0x27);
 /// @todo is this I2C address correct?
 Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
+
+class Report : public Executable {
+public:
+  Report() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(1000);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    ++i;
+    //Serial.print("Hello ");
+    //Serial.println(i);
+    //LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d", ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(), ext_detector.ok());
+    LOG(LEVEL_INFO, "hebel %04x fstr %04x taster %04x det %04x", ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(), ext_hebel_taster.input_states(), ext_detector.input_states());
+  }
+
+private:
+  Timer tm_;
+  int i = 0;
+} reporter;
+
 // ======================== Logical devices =========================
 
 enum SignalId : uint8_t { SIGNAL_A, SIGNAL_B, SIGNAL_C, SIGNAL_D };
