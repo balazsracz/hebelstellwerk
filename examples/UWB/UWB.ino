@@ -280,7 +280,8 @@ TurnoutLever TW7{W7, GPIO_HEBEL_7, WHEB_INV, GPIO_VERRIEGELUNG_7, WLCK_INV};
 TurnoutLever TW9{W9, GPIO_HEBEL_9, WHEB_INV, GPIO_VERRIEGELUNG_9, WLCK_INV};
 TurnoutLever TW10{W10, GPIO_HEBEL_10, WHEB_INV, GPIO_VERRIEGELUNG_10, WLCK_INV};
 
-static constexpr bool SHEB_INV = false;
+
+static constexpr bool SHEB_INV = true;
 static constexpr bool SLCK_INV = false;
 
 SignalLever SA{SIGNAL_A, HP2, GPIO_HEBEL_A, SHEB_INV, GPIO_VERRIEGELUNG_A,
