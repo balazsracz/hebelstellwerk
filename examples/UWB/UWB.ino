@@ -222,10 +222,10 @@ DualPwmGpio gpio_erlaubnis_b(GPIO_ERLAUBNIS_B, PWM_ERLAUBNIS_B_ROT,
                              PWM_ERLAUBNIS_B_WEISS);
 DualPwmGpio gpio_endfeld_a(GPIO_ENDFELD_A, PWM_END_A_ROT, PWM_END_A_WEISS);
 
-Gpio23017 ext_hebel_sig_w(GPIO_EXT_HEBEL_SIG_W, 0x25);
-Gpio23017 ext_hebel_fstr(GPIO_EXT_HEBEL_FSTR, 0x26);
-/// @todo is this I2C address correct?
+Gpio23017 ext_hebel_sig_w(GPIO_EXT_HEBEL_SIG_W, 0x26);
+Gpio23017 ext_hebel_fstr(GPIO_EXT_HEBEL_FSTR, 0x25);
 Gpio23017 ext_hebel_taster(GPIO_EXT_TASTER, 0x27);
+/// @todo is this I2C address correct?
 Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
 // ======================== Logical devices =========================
