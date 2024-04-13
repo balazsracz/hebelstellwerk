@@ -160,7 +160,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   ///
   /// @return y coordinate of interpolated point
   ///
-  static int32_t interpolate(int32_t ax, int32_t ay, int32_t bx, int32_t by,
+  static constexpr int32_t interpolate(int32_t ax, int32_t ay, int32_t bx, int32_t by,
                              int32_t midx) {
     int32_t diffx = bx - ax;
     int32_t diffy = by - ay;
@@ -239,5 +239,14 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   /// Helper class to pace when we are commanding the servos.
   mutable Timer tm_;
 };
+
+/// Computes a reverse mapping of a servo pulse length in microseconds
+/// (1000..2000) and turns it into a degree.
+/// @param micros how long the servo pulse should be, between 1000 and 2000
+/// (could also overhang a bit, so 500 to 2500 are OK).
+/// @return degree to set the servo to, -90 .. 270.
+static constexpr int16_t usec(uint16_t micros) {
+  return ServoGpio::interpolate(1000, 0, 2000, 180, micros);
+}
 
 #endif  // _UTILS_SERVOGPIO_H_
