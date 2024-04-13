@@ -53,6 +53,7 @@ PwmRegistry g_pwm_registry;
 TurnoutRegistry g_turnout_registry;
 SignalRegistry g_signal_registry;
 RouteRegistry g_route_registry;
+BlockRegistry g_block_registry;
 
 Executor ex;
 
