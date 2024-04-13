@@ -293,7 +293,11 @@ SignalLever SC{SIGNAL_C, HP2, GPIO_HEBEL_C, SHEB_INV, GPIO_VERRIEGELUNG_C,
 SignalLever SD{SIGNAL_D, HP2, GPIO_HEBEL_D, SHEB_INV, GPIO_VERRIEGELUNG_D,
                SLCK_INV};
 
-static constexpr bool RHEB_INV = false;
+
+
+#if 1
+
+static constexpr bool RHEB_INV = true;
 static constexpr bool RLCK_INV = false;
 
 RouteLever Rab1(a1, b1, GPIO_HEBEL_A1, RHEB_INV, GPIO_HEBEL_B1, RHEB_INV,
@@ -305,6 +309,19 @@ RouteLever Rcd3(c3, d3, GPIO_HEBEL_C3, RHEB_INV, GPIO_HEBEL_D3, RHEB_INV,
 RouteLever Rcd1(c1, d1, GPIO_HEBEL_C1, RHEB_INV, GPIO_HEBEL_D1, RHEB_INV,
                 GPIO_VERRIEGELUNG_FH_D1C1, RLCK_INV);
 
+#endif
+
+#if 1
+
+  Block BlkAB(BLOCK_AB, GPIO_AB_DETECTOR, false,
+                  GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false);
+  Block BlkCD(BLOCK_CD, GPIO_CD_DETECTOR, false,
+                  GPIO_BTN_FESTLEGE_CD, true, GPIO_FESTLEGE_CD, false);
+
+#endif
+
+#if 0
+
 /// @todo check the actual I2C addresses.
 I2CBlock i2c_ab(0x52);
 I2CBlock i2c_cd(0x53);
@@ -313,6 +330,8 @@ FelderBlock BlkAB(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
                   GPIO_BTN_FESTLEGE_AB, false, GPIO_FESTLEGE_AB, false);
 FelderBlock BlkCD(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
                   GPIO_BTN_FESTLEGE_CD, false, GPIO_FESTLEGE_CD, false);
+
+#endif
 
 // ================ Verschlusstabelle ===============
 
