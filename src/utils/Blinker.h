@@ -35,13 +35,16 @@
 #ifndef _UTILS_BLINKER_H_
 #define _UTILS_BLINKER_H_
 
-#include "utils/Gpio.h"
 #include "utils/Executor.h"
+#include "utils/Gpio.h"
 #include "utils/Timer.h"
 
 class Blinker : public Executable {
  public:
-  Blinker(gpio_pin_t gpio) : output_(gpio) { ex.add(this); }
+  Blinker(gpio_pin_t gpio, unsigned period_msec = 600)
+      : output_(gpio), tm_(Timer::Periodic{period_msec}) {
+    ex.add(this);
+  }
 
   void begin() override {}
 
@@ -56,7 +59,7 @@ class Blinker : public Executable {
   gpio_pin_t output_;
   const Gpio* gpio_{GpioRegistry::instance()->get(output_)};
   bool state_{true};
-  Timer tm_{Timer::Periodic{600}};
+  Timer tm_;
 };
 
-#endif // _UTILS_BLINKER_H_
+#endif  // _UTILS_BLINKER_H_
