@@ -67,7 +67,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   void loop() override {
     if (dirty_) {
       if (!dev_.write((uint8_t *)&last_status_, 2)) {
-        LOG(LEVEL_INFO, "Failed I2C Block %02x status write.", dev_.address());
+        //LOG(LEVEL_INFO, "Failed I2C Block %02x status write.", dev_.address());
       }
       dirty_ = false;
     }
@@ -91,7 +91,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   /// Reloads the status word from the i2c device.
   void refresh() {
     if (!dev_.read((uint8_t *)&last_status_, 2)) {
-      LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
+      //LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
     }
   }
 
@@ -102,6 +102,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   uint16_t last_status_{0};
 
   bool dirty_{false};
+  bool last_error_{false};
 };
 
 #endif  // Arduino
