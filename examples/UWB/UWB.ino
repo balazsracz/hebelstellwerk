@@ -58,6 +58,10 @@ enum GpioPin : gpio_pin_t {
   GPIO_VERRIEGELUNG_1A,
   GPIO_VERRIEGELUNG_1B,
 
+  GPIO_KURBEL,
+
+  GPIO_DUMMY,
+
   GPIO_ENDFELD_D,
   GPIO_ERLAUBNIS_C,
   GPIO_ANFANGS_C,
@@ -101,13 +105,12 @@ enum GpioPin : gpio_pin_t {
   GPIO_BTN_FESTLEGE_AB,
   GPIO_BTN_ANFANG_B,
   GPIO_BTN_ERLAUBNIS_B,
-  GPIO_BTN_ENDFELD_B,
+  GPIO_BTN_ENDFELD_A,
 
-  GPIO_EXT_DETECTOR, 
+  GPIO_EXT_DETECTOR,
   GPIO_AB_DETECTOR = GPIO_EXT_DETECTOR + 3,
   GPIO_CD_DETECTOR = GPIO_EXT_DETECTOR + 1,
-  GPIO_EXT_DETECTOR_END = GPIO_EXT_DETECTOR + 15, 
-
+  GPIO_EXT_DETECTOR_END = GPIO_EXT_DETECTOR + 15,
 
 };
 
@@ -117,8 +120,13 @@ static_assert(GPIO_EXT_HEBEL_SIG_W + 15 == GPIO_HEBEL_D,
 static_assert(GPIO_EXT_HEBEL_FSTR + 15 == GPIO_HEBEL_A1,
               "misaligned ext hebel fstr");
 
-static_assert(GPIO_EXT_TASTER + 15 == GPIO_BTN_ENDFELD_B,
+static_assert(GPIO_EXT_TASTER + 15 == GPIO_BTN_ENDFELD_A,
               "misaligned ext taster");
+
+///@todo add kubel analog gpio
+DummyGpio kurbel(GPIO_KURBEL);
+
+DummyGpio dummy(GPIO_DUMMY);
 
 enum PwmPin : pwm_pin_t {
   PWM_CHIP_LOCKSERVO = 50,
@@ -228,9 +236,8 @@ Gpio23017 ext_hebel_taster(GPIO_EXT_TASTER, 0x27);
 /// @todo is this I2C address correct?
 Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
-
 class Report : public Executable {
-public:
+ public:
   Report() {
     Executor::instance()->add(this);
     tm_.start_periodic(1000);
@@ -240,13 +247,17 @@ public:
   void loop() override {
     if (!tm_.check()) return;
     ++i;
-    //Serial.print("Hello ");
-    //Serial.println(i);
-    //LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d", ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(), ext_detector.ok());
-    LOG(LEVEL_INFO, "hebel %04x fstr %04x taster %04x det %04x", ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(), ext_hebel_taster.input_states(), ext_detector.input_states());
+    // Serial.print("Hello ");
+    // Serial.println(i);
+    // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
+    // ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(),
+    // ext_detector.ok());
+    LOG(LEVEL_INFO, "hebel %04x fstr %04x taster %04x det %04x",
+        ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(),
+        ext_hebel_taster.input_states(), ext_detector.input_states());
   }
 
-private:
+ private:
   Timer tm_;
   int i = 0;
 } reporter;
@@ -280,7 +291,6 @@ TurnoutLever TW7{W7, GPIO_HEBEL_7, WHEB_INV, GPIO_VERRIEGELUNG_7, WLCK_INV};
 TurnoutLever TW9{W9, GPIO_HEBEL_9, WHEB_INV, GPIO_VERRIEGELUNG_9, WLCK_INV};
 TurnoutLever TW10{W10, GPIO_HEBEL_10, WHEB_INV, GPIO_VERRIEGELUNG_10, WLCK_INV};
 
-
 static constexpr bool SHEB_INV = true;
 static constexpr bool SLCK_INV = false;
 
@@ -292,8 +302,6 @@ SignalLever SC{SIGNAL_C, HP2, GPIO_HEBEL_C, SHEB_INV, GPIO_VERRIEGELUNG_C,
                SLCK_INV};
 SignalLever SD{SIGNAL_D, HP2, GPIO_HEBEL_D, SHEB_INV, GPIO_VERRIEGELUNG_D,
                SLCK_INV};
-
-
 
 #if 1
 
@@ -311,7 +319,7 @@ RouteLever Rcd1(c1, d1, GPIO_HEBEL_C1, RHEB_INV, GPIO_HEBEL_D1, RHEB_INV,
 
 #endif
 
-#if 1
+#if 0
 
   Block BlkAB(BLOCK_AB, GPIO_AB_DETECTOR, false,
                   GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false);
@@ -320,16 +328,39 @@ RouteLever Rcd1(c1, d1, GPIO_HEBEL_C1, RHEB_INV, GPIO_HEBEL_D1, RHEB_INV,
 
 #endif
 
-#if 0
+#if 1
 
 /// @todo check the actual I2C addresses.
 I2CBlock i2c_ab(0x52);
 I2CBlock i2c_cd(0x53);
 
-FelderBlock BlkAB(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
-                  GPIO_BTN_FESTLEGE_AB, false, GPIO_FESTLEGE_AB, false);
-FelderBlock BlkCD(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
-                  GPIO_BTN_FESTLEGE_CD, false, GPIO_FESTLEGE_CD, false);
+FelderBlock blk_ab(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
+                   GPIO_BTN_FESTLEGE_AB, false, GPIO_FESTLEGE_AB, false);
+const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
+                   blk_ab.set_ruckblock_taste(GPIO_BTN_ENDFELD_A, true) |
+                   blk_ab.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_B, true) |
+                   blk_ab.set_kurbel(GPIO_KURBEL, false) |
+                   blk_ab.set_anfangsfeld(GPIO_ANFANGS_B, false) |
+                   blk_ab.set_endfeld(GPIO_ENDFELD_A, false) |
+                   blk_ab.set_erlaubnisfeld(GPIO_ERLAUBNIS_B, false) |
+                   /// @todo figure out these GPIO assignments
+                   blk_ab.set_signalhaltmelder(GPIO_DUMMY, false) |
+                   blk_ab.set_storungsmelder(GPIO_DUMMY, false) |
+                   blk_ab.set_streckentastensperre(GPIO_DUMMY, false);
+
+FelderBlock blk_cd(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
+                   GPIO_BTN_FESTLEGE_CD, false, GPIO_FESTLEGE_CD, false);
+const auto cdrdy = blk_cd.set_vorblock_taste(GPIO_BTN_ANFANG_C, true) |
+                   blk_cd.set_ruckblock_taste(GPIO_BTN_ENDFELD_D, true) |
+                   blk_cd.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_C, true) |
+                   blk_cd.set_kurbel(GPIO_KURBEL, false) |
+                   blk_cd.set_anfangsfeld(GPIO_ANFANGS_C, false) |
+                   blk_cd.set_endfeld(GPIO_ENDFELD_D, false) |
+                   blk_cd.set_erlaubnisfeld(GPIO_ERLAUBNIS_C, false) |
+                   /// @todo figure out these GPIO assignments
+                   blk_cd.set_signalhaltmelder(GPIO_DUMMY, false) |
+                   blk_cd.set_storungsmelder(GPIO_DUMMY, false) |
+                   blk_cd.set_streckentastensperre(GPIO_DUMMY, false);
 
 #endif
 
@@ -363,12 +394,20 @@ Blinker blinker2{LED_BUILTIN};
 
 /// Arduino setup routine.
 void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  digitalWrite(LED_BUILTIN, true);
   Serial.begin(9600);
-  // wait for serial to be up.
-  delay(50);
+  // wait for serial to be up, up to 1.5 seconds.
+  for (int i = 0; i < 30; ++i) {
+    if (Serial) break;
+    delay(50);
+  }
+  digitalWrite(LED_BUILTIN, false);
   Serial.println("hello world");
   // Calls the executor to do begin for all registered objects.
   ex.begin();
+  blk_ab.check_setup(abrdy);
+  blk_cd.check_setup(cdrdy);
 }
 
 /// Arduino loop routine.
