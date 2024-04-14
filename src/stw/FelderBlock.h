@@ -48,7 +48,8 @@ class FelderBlock : public Block {
               gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted)
       : Block(id, track_detector_pin, track_detector_inverted,
               route_lock_button_pin, route_lock_button_inverted,
-              route_locked_lamp_pin, route_locked_lamp_inverted) {}
+              route_locked_lamp_pin, route_locked_lamp_inverted),
+        iface_(iface) {}
 
   // Setup functions. Allows defining the GPIO mapping for this given block in
   // a way that is a bit more readable, than just having a super long list of
@@ -102,6 +103,15 @@ class FelderBlock : public Block {
   /// These bits should be set after all the setup is done.
   static constexpr uint16_t EXPECTED_SETUP = (1u << 10) - 1;
 
+  void check_setup(uint16_t setup_value) {
+    if (EXPECTED_SETUP != setup_value) {
+      LOG(LEVEL_ERROR,
+          "Missing setup GPIO. Expected %03x actual %03x missing %03x",
+          EXPECTED_SETUP, setup_value, EXPECTED_SETUP & ~setup_value);
+      DIE("Missing GPIO setup for block.");
+    }
+  }
+
   enum class State : uint8_t {
     /// No permission, track is free.
     IN_FREE,
@@ -154,7 +164,7 @@ class FelderBlock : public Block {
     }
 
     /// @todo handle initialization state
-    
+
     // The rest of the logic we only do occasionally.
     if (!tm_.check()) {
       return;
@@ -257,7 +267,7 @@ class FelderBlock : public Block {
   };
 
   /// Hardware connection for the actual block PCB.
-  I2CBlockInterface* iface_;
+  I2CBlockInterface* iface_{nullptr};
 
   /// Signal levers that are used for the inbounds signal on this block.
   SignalLeverPtr* signals_in_{nullptr};
