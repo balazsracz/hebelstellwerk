@@ -37,33 +37,47 @@
 
 #include <assert.h>
 
-#define ASSERT(x) assert((x))
-
 #if defined(ARDUINO) && defined(LED_BUILTIN)
 
-#define DIE(x)                         \
-  Serial.println(x);                   \
-  do {                                 \
-    pinMode(LED_BUILTIN, OUTPUT);      \
-    while (1) {                        \
-      digitalWrite(LED_BUILTIN, HIGH); \
-      delay(125);                      \
-      digitalWrite(LED_BUILTIN, LOW);  \
-      delay(125);                      \
-    }                                  \
+#define DIE(x)                                         \
+  if (Serial) {                                        \
+    Serial.println(x);                                 \
+  }                                                    \
+  do {                                                 \
+    pinMode(LED_BUILTIN, OUTPUT);                      \
+    while (1) {                                        \
+      volatile int xx = 0;                             \
+      digitalWrite(LED_BUILTIN, HIGH);                 \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
+      digitalWrite(LED_BUILTIN, LOW);                  \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
+    }                                                  \
   } while (0)
+
+#define ASSERT(x)                \
+  do {                           \
+    if (!(x)) {                  \
+      DIE("assert failed: " #x); \
+    }                            \
+  } while (0)
+
+//      assert((x));
 
 #elif defined(NDEBUG)
 
 #warning bad DIE because NDEBUG
 
-#define DIE(x) do { int can_not_compile_die_with_NDEBUG[-1]; } while(0)
+#define DIE(x)                               \
+  do {                                       \
+    int can_not_compile_die_with_NDEBUG[-1]; \
+  } while (0)
 
-#else // NDEBUG is not defined, use assert to die
-
+#else  // NDEBUG is not defined, use assert to die
 
 #define DIE(x) assert(false && x)
 
-#endif // NDEBUG is not defined, use assert
+#define ASSERT(x) assert(x)
 
-#endif // _STW_MACROS_H_
+#endif  // NDEBUG is not defined, use assert
+
+#endif  // _STW_MACROS_H_
