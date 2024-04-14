@@ -70,15 +70,23 @@ class Gpio {
   }
 };  // Class Gpio
 
+class DummyGpio;
+
+class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
+                     public Singleton<GpioRegistry> {};
+
 class DummyGpio : public Gpio {
+ public:  
+  DummyGpio() {}
+  DummyGpio(gpio_pin_t num) {
+    GpioRegistry::instance()->register_obj(this, num);
+  }
+  
   void write(gpio_pin_t pin, bool value) const override {}
   bool read(gpio_pin_t pin) const override { return false; }
   void set_output(gpio_pin_t pin) const override {}
   void set_input(gpio_pin_t pin) const override {}
 };
-
-class GpioRegistry : public AbstractRegistry<gpio_pin_t, const Gpio, DummyGpio>,
-                     public Singleton<GpioRegistry> {};
 
 enum GpioDirection { GPIO_INPUT, GPIO_OUTPUT };
 
@@ -124,7 +132,10 @@ class GpioAccessor {
   const Gpio* gpio_;
 };
 
-/// Alternate to the GpioAccessor that allows getting the
+/// Alternate to the GpioAccessor that allows setting the underlying gpio
+/// parameters later than construction time. Call setup() when the parameters
+/// are available. It is illegalt to use read() and write() until the setup is
+/// complete.
 class DelayedGpioAccessor : public GpioAccessor {
  public:
   DelayedGpioAccessor() {}
@@ -133,6 +144,16 @@ class DelayedGpioAccessor : public GpioAccessor {
     // We call a placement constructor of the base class to set up the const
     // arguments that are local to this class.
     new (this) GpioAccessor(pin, inverted, dir);
+  }
+
+  void write(bool value) const {
+    ASSERT(gpio_);
+    GpioAccessor::write(value);
+  }
+
+  bool read() const {
+    ASSERT(gpio_);
+    return GpioAccessor::read();
   }
 };
 
