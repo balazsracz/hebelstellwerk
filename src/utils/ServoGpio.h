@@ -246,7 +246,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
 /// (could also overhang a bit, so 500 to 2500 are OK).
 /// @return degree to set the servo to, -90 .. 270.
 static constexpr int16_t usec(uint16_t micros) {
-  return ServoGpio::interpolate(1000, 0, 2000, 180, micros) + 10;
+  return ServoGpio::interpolate(1000, 0, 2000, 180, micros);
 }
 
 #endif  // _UTILS_SERVOGPIO_H_
