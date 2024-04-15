@@ -64,11 +64,17 @@ class PWM9685 : public Pwm, public Executable {
     } else {
       // We want ~1000 count to be 1 msec. 4096 count would then be 4 msec. This
       // turns into 250 Hz frequency.
-      driver_.setPWMFreq(250);
+      driver_.setPWMFreq(250/4);
     }
   }
 
-  tick_t tick_per_msec() const override { return 1024; }
+  void set_freq(uint32_t osc_freq, uint16_t pwm_freq, uint16_t tick_per_msec) {
+    driver_.setOscillatorFrequency(osc_freq);
+    driver_.setPWMFreq(pwm_freq);
+    tick_per_msec_ = tick_per_msec;
+  }
+
+  tick_t tick_per_msec() const override { return tick_per_msec_; }
   tick_t tick_per_period() const override { return 4096; }
 
   void write(pwm_pin_t pin, tick_t count_high) const override {
@@ -82,6 +88,7 @@ class PWM9685 : public Pwm, public Executable {
   mutable Adafruit_PWMServoDriver driver_;
   /// Registered first pin.
   pwm_pin_t start_pin_;
+  uint16_t tick_per_msec_{1024/4};
 };
 
 #endif  // _UTILS_PWM9685_H_
