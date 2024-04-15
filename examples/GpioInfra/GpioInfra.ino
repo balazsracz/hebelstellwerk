@@ -58,6 +58,9 @@ enum GpioPin : gpio_pin_t {
   GPIO_VERRIEGELUNG_2,
   GPIO_VERRIEGELUNG_1A,
   GPIO_VERRIEGELUNG_1B,
+  
+  GPIO_SERVO_CAL,
+
 };
 
 enum PwmPin : pwm_pin_t {
@@ -96,35 +99,39 @@ PWM9685 pwm_chip_servo(PWM_CHIP_LOCKSERVO, 0x41);
 static constexpr int LCK_TIME_MSEC = 1000;
 
 ServoGpio gpio_verr_fh_d1c1(GPIO_VERRIEGELUNG_FH_D1C1, PWM_VERRIEGELUNG_FH_D1C1,
-                            usec(1500), usec(1600), LCK_TIME_MSEC);
+                            usec(2360), usec(2540), LCK_TIME_MSEC);
 ServoGpio gpio_verr_fh_d3c3(GPIO_VERRIEGELUNG_FH_D3C3, PWM_VERRIEGELUNG_FH_D3C3,
                             usec(2080), usec(2360), LCK_TIME_MSEC);
 ServoGpio gpio_verr_fh_a3b3(GPIO_VERRIEGELUNG_FH_A3B3, PWM_VERRIEGELUNG_FH_A3B3,
                             usec(1007), usec(1367), LCK_TIME_MSEC);
 ServoGpio gpio_verr_fh_a1b1(GPIO_VERRIEGELUNG_FH_A1B1, PWM_VERRIEGELUNG_FH_A1B1,
-                            usec(1630), usec(2030), LCK_TIME_MSEC);
+                            usec(1533), usec(1967), LCK_TIME_MSEC);
 
 ServoGpio gpio_verr_d(GPIO_VERRIEGELUNG_D, PWM_VERRIEGELUNG_D,  //
                       usec(1240), usec(1746), LCK_TIME_MSEC);
 ServoGpio gpio_verr_c(GPIO_VERRIEGELUNG_C, PWM_VERRIEGELUNG_C,  //
-                      usec(1030), usec(1513), LCK_TIME_MSEC);
+                      usec(973), usec(1513), LCK_TIME_MSEC);
 ServoGpio gpio_verr_b(GPIO_VERRIEGELUNG_B, PWM_VERRIEGELUNG_B,  //
                       usec(1570), usec(1987), LCK_TIME_MSEC);
 ServoGpio gpio_verr_a(GPIO_VERRIEGELUNG_A, PWM_VERRIEGELUNG_A,  //
-                      usec(1250), usec(1670), LCK_TIME_MSEC);
+                      usec(1210), usec(1670), LCK_TIME_MSEC);
 
 ServoGpio gpio_verr_10(GPIO_VERRIEGELUNG_10, PWM_VERRIEGELUNG_10,  //
-                       usec(1580), usec(1950), LCK_TIME_MSEC);
+                       usec(1453), usec(2000), LCK_TIME_MSEC);
 ServoGpio gpio_verr_9(GPIO_VERRIEGELUNG_9, PWM_VERRIEGELUNG_9,  //
-                      usec(1650), usec(2100), LCK_TIME_MSEC);
+                      usec(1500), usec(2033), LCK_TIME_MSEC);
 ServoGpio gpio_verr_7(GPIO_VERRIEGELUNG_7, PWM_VERRIEGELUNG_7,  //
-                      usec(1153), usec(1600), LCK_TIME_MSEC);
+                      usec(1153), usec(1680), LCK_TIME_MSEC);
 ServoGpio gpio_verr_2(GPIO_VERRIEGELUNG_2, PWM_VERRIEGELUNG_2,  //
-                      usec(933), usec(1380), LCK_TIME_MSEC);
+                      usec(933), usec(1353), LCK_TIME_MSEC);
 ServoGpio gpio_verr_1a(GPIO_VERRIEGELUNG_1A, PWM_VERRIEGELUNG_1A,  //
                        usec(1500), usec(2046), LCK_TIME_MSEC);
 ServoGpio gpio_verr_1b(GPIO_VERRIEGELUNG_1B, PWM_VERRIEGELUNG_1B,  //
-                       usec(1453), usec(1880), LCK_TIME_MSEC);
+                       usec(1453), usec(1826), LCK_TIME_MSEC);
+
+ServoGpio gpio_measure(GPIO_SERVO_CAL, PWM_UNUSED_41_4,  //
+                       usec(1000), usec(1100), 0);
+
 
 // Blinker blinker{101};
 Blinker blinker2{LED_BUILTIN, 2000};
@@ -140,6 +147,7 @@ void setup() {
   Serial.println("hello world");
   // Calls the executor to do begin for all registered objects.
   ex.begin();
+  pwm_chip_servo.set_freq(23500000, 111, 458);
 }
 
 /// Arduino loop routine.
@@ -158,7 +166,7 @@ void loop() {
             GPIO_VERRIEGELUNG_D, GPIO_VERRIEGELUNG_C, GPIO_VERRIEGELUNG_B,
             GPIO_VERRIEGELUNG_A, GPIO_VERRIEGELUNG_10, GPIO_VERRIEGELUNG_9,
             GPIO_VERRIEGELUNG_7, GPIO_VERRIEGELUNG_2, GPIO_VERRIEGELUNG_1A,
-            GPIO_VERRIEGELUNG_1B}) {
+            GPIO_VERRIEGELUNG_1B, GPIO_SERVO_CAL}) {
         GpioRegistry::instance()->get(i)->write(0, true);
       }
     } else {
@@ -168,7 +176,7 @@ void loop() {
             GPIO_VERRIEGELUNG_D, GPIO_VERRIEGELUNG_C, GPIO_VERRIEGELUNG_B,
             GPIO_VERRIEGELUNG_A, GPIO_VERRIEGELUNG_10, GPIO_VERRIEGELUNG_9,
             GPIO_VERRIEGELUNG_7, GPIO_VERRIEGELUNG_2, GPIO_VERRIEGELUNG_1A,
-            GPIO_VERRIEGELUNG_1B}) {
+            GPIO_VERRIEGELUNG_1B, GPIO_SERVO_CAL}) {
         GpioRegistry::instance()->get(i)->write(0, false);
       }
     }
