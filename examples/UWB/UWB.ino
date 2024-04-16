@@ -236,6 +236,8 @@ Gpio23017 ext_hebel_taster(GPIO_EXT_TASTER, 0x27);
 /// @todo is this I2C address correct?
 Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
+GlobalState global_state;
+
 class Report : public Executable {
  public:
   Report() {
@@ -247,6 +249,11 @@ class Report : public Executable {
   void loop() override {
     if (!tm_.check()) return;
     ++i;
+    if (entsp_a.read() && entsp_b.read() && (i & 1)) {
+      GlobalState::instance()->is_unlocked_ ^= 1;
+      LOG(LEVEL_INFO, "Global unlock %s",
+          GlobalState::instance()->is_unlocked_ ? "true" : "false");
+    }
     // Serial.print("Hello ");
     // Serial.println(i);
     // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
@@ -258,6 +265,8 @@ class Report : public Executable {
   }
 
  private:
+  GpioAccessor entsp_a{GPIO_BTN_ANFANG_C, true, GPIO_INPUT};
+  GpioAccessor entsp_b{GPIO_BTN_ENDFELD_D, true, GPIO_INPUT};
   Timer tm_;
   int i = 0;
 } reporter;
