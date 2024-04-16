@@ -129,13 +129,13 @@ class DualPwmGpio : public Gpio {
       if (last_state_) {
         count *= pct_on_;
         count /= 100;
-        pwm_on_->write(pwm_pin_on_, count);
-        pwm_off_->write(pwm_pin_off_, 0);
+        pwm_on_->write(pwm_pin_on_, count - 1);
+        pwm_off_->write(pwm_pin_off_, 1);
       } else {
         count *= pct_off_;
         count /= 100;
-        pwm_off_->write(pwm_pin_off_, count);
-        pwm_on_->write(pwm_pin_on_, 0);
+        pwm_off_->write(pwm_pin_off_, count - 1);
+        pwm_on_->write(pwm_pin_on_, 1);
       }
     }
   }
