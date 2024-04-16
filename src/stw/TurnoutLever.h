@@ -41,6 +41,7 @@
 #include "utils/Registry.h"
 #include "utils/Types.h"
 #include "stw/Types.h"
+#include "stw/GlobalCommand.h"
 
 class TurnoutLever;
 
@@ -152,7 +153,7 @@ class TurnoutLever : private Executable {
   }
 
   void loop() override {
-    lock_.write(is_locked());
+    lock_.write(is_locked() && !global_is_unlocked());
     if (!is_locked()) {
       bool input_is_plus = get_lever_is_plus();
       if ((get_direction() == PLUS) != input_is_plus) {

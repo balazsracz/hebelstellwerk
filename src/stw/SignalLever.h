@@ -36,6 +36,7 @@
 #define _STW_SIGNALLEVER_H__
 
 #include "stw/Types.h"
+#include "stw/GlobalCommand.h"
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
 #include "utils/Logging.h"
@@ -160,7 +161,7 @@ class SignalLever : private Executable {
         LOG(LEVEL_INFO, "Signal %d/Hp%d lock after timer", id_, aspect_);
       }
     }
-    lock_.write(is_locked() && !lock_wait_);
+    lock_.write(is_locked() && !lock_wait_ && !global_is_unlocked());
     if (!is_locked()) {
       bool input_is_proceed = get_lever_is_proceed();
       if (state_ == State::STOP && input_is_proceed) {

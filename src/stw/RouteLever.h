@@ -40,6 +40,7 @@
 #include "stw/SignalLever.h"
 #include "stw/TurnoutLever.h"
 #include "stw/Types.h"
+#include "stw/GlobalCommand.h"
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
 #include "utils/Registry.h"
@@ -98,7 +99,7 @@ class RouteLever : private Executable {
   }
 
   void loop() override {
-    lock_.write(is_locked());
+    lock_.write(is_locked() && !global_is_unlocked());
     if (!tm_.check()) {
       return;
     }
@@ -278,7 +279,11 @@ class RouteLever : private Executable {
 
   struct Route {
     Route(RouteId route, gpio_pin_t lever, bool lever_inverted)
-        : input_(lever, lever_inverted, GPIO_INPUT), id_(route) {}
+        : input_(lever, lever_inverted, GPIO_INPUT),
+          id_(route),
+          seen_proceed_(false),
+          seen_train_(false),
+          error_unexpected_set_(false) {}
 
     bool is(RouteId id) { return id == id_; }
 
@@ -318,18 +323,24 @@ class RouteLever : private Executable {
       switch (state_) {
         case State::NEUTRAL_LOCKED: {
           if (check_preconditions(row_)) {
+            error_unexpected_set_ = false;
             state_ = State::NEUTRAL;
             LOG(LEVEL_INFO, "Fstr %d unlocked", id_);
           } else {
             if (input_.read()) {
-              LOG(LEVEL_ERROR, "Fstr %d unexpected up", id_);
+              if (!error_unexpected_set_) {
+                error_unexpected_set_ = true;
+                LOG(LEVEL_ERROR, "Fstr %d unexpected set", id_);
+              }
+            } else {
+              error_unexpected_set_ = false;
             }
           }
           break;
         }
         case State::NEUTRAL: {
           if (input_.read()) {
-            LOG(LEVEL_INFO, "Fstr %d lever up set", id_);
+            LOG(LEVEL_INFO, "Fstr %d lever set", id_);
             state_ = State::SET;
             lock_route_preconditions(row_);
           } else if (!check_preconditions(row_)) {
@@ -416,6 +427,9 @@ class RouteLever : private Executable {
     /// True if the detector was seen as occupied.
     bool seen_train_ : 1;
 
+    /// Prevents repeating unexpected set error.
+    bool error_unexpected_set_ : 1;
+    
     /// Internal route state.
     State state_;
   } up_, dn_;
