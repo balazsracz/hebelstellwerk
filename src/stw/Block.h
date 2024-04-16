@@ -40,6 +40,7 @@
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
 #include "utils/Registry.h"
+#include "utils/Logging.h"
 
 class Block;
 
@@ -92,6 +93,7 @@ class Block : public Executable {
   /// @param id the route that was set and locked.
   /// @param is_out true if the route is outbounds (towards the block).
   virtual void notify_route_locked(RouteId id, bool is_out) {
+    LOG(LEVEL_INFO, "Route %d (out:%d) locked lamp on", id, is_out); 
     route_locked_lamp_.write(true);
   }
 
@@ -100,6 +102,7 @@ class Block : public Executable {
   /// @param id the route that was set, locked and is now unlocked.
   /// @param is_out true if the route is outbounds (towards the block).
   virtual void notify_route_complete(RouteId id) {
+    LOG(LEVEL_INFO, "Route %d locked lamp off", id); 
     route_locked_lamp_.write(false);
   }
 
