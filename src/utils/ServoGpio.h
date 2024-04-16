@@ -98,12 +98,23 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   void begin() override {
     command_deg(deg_off_);
     steady_state_ = true;
+    output_off_ = false;
+    target_time_millis_ = Executor::instance()->millis() + SERVO_TURNOFF_MSEC;
   }
 
   void loop() override {
     if (steady_state_) {
-      // nothing to do
-      return;
+      if (output_off_) {
+        // nothing to do
+        return;
+      } else {
+        auto millis = Executor::instance()->millis();
+        if (millis >= target_time_millis_) {
+          output_off_ = true;
+          pwm_->write(pwm_pin_, 0);
+        }
+        return;
+      }
     }
     auto millis = Executor::instance()->millis();
     if (millis >= target_time_millis_) {
@@ -121,6 +132,8 @@ class ServoGpio : public Gpio, public Servo, private Executable {
       }
       // Reached final state.
       steady_state_ = true;
+      output_off_ = false;
+      target_time_millis_ = millis + SERVO_TURNOFF_MSEC;
       return;
     }
     // Still in the middle of the travel
@@ -195,6 +208,8 @@ class ServoGpio : public Gpio, public Servo, private Executable {
 
  private:
   static constexpr uint32_t SERVO_UPDATE_MSEC = 50;
+  /// After this many msec in steady state we turn off the PWM output.
+  static constexpr uint32_t SERVO_TURNOFF_MSEC = 1000;
 
   /// PWM pin object from the registry.
   const Pwm* pwm_;
@@ -223,6 +238,8 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   mutable bool pending_overrotate_ : 1;
   /// 1 if we have reached the steady state.
   mutable bool steady_state_ : 1;
+  /// 1 if we have turned off the output.
+  mutable bool output_off_ : 1;
 
   /// Degree that we commanded last time.
   mutable int16_t commanded_deg_;
