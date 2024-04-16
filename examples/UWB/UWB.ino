@@ -306,7 +306,7 @@ SignalLever SD{SIGNAL_D, HP2, GPIO_HEBEL_D, SHEB_INV, GPIO_VERRIEGELUNG_D,
 #if 1
 
 static constexpr bool RHEB_INV = true;
-static constexpr bool RLCK_INV = false;
+static constexpr bool RLCK_INV = true;
 
 RouteLever Rab1(a1, b1, GPIO_HEBEL_A1, RHEB_INV, GPIO_HEBEL_B1, RHEB_INV,
                 GPIO_VERRIEGELUNG_FH_A1B1, RLCK_INV);
@@ -335,7 +335,7 @@ I2CBlock i2c_ab(0x52);
 I2CBlock i2c_cd(0x53);
 
 FelderBlock blk_ab(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
-                   GPIO_BTN_FESTLEGE_AB, false, GPIO_FESTLEGE_AB, false);
+                   GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false);
 const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_ruckblock_taste(GPIO_BTN_ENDFELD_A, true) |
                    blk_ab.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_B, true) |
@@ -349,7 +349,7 @@ const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_streckentastensperre(GPIO_DUMMY, false);
 
 FelderBlock blk_cd(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
-                   GPIO_BTN_FESTLEGE_CD, false, GPIO_FESTLEGE_CD, false);
+                   GPIO_BTN_FESTLEGE_CD, true, GPIO_FESTLEGE_CD, false);
 const auto cdrdy = blk_cd.set_vorblock_taste(GPIO_BTN_ANFANG_C, true) |
                    blk_cd.set_ruckblock_taste(GPIO_BTN_ENDFELD_D, true) |
                    blk_cd.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_C, true) |
