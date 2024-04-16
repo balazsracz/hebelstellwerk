@@ -58,6 +58,8 @@ enum GpioPin : gpio_pin_t {
   GPIO_VERRIEGELUNG_1A,
   GPIO_VERRIEGELUNG_1B,
 
+  GPIO_SERVO_CAL,
+  
   GPIO_KURBEL,
 
   GPIO_DUMMY,
@@ -177,42 +179,40 @@ static constexpr int LOCKSERVO_FH_MAX = 60;
 static constexpr int LCK_TIME_MSEC = 300;
 
 PWM9685 pwm_chip_servo(PWM_CHIP_LOCKSERVO, 0x41);
-ServoGpio gpio_verr_fh_d1c1(GPIO_VERRIEGELUNG_FH_D1C1, PWM_VERRIEGELUNG_FH_D1C1,
-                            LOCKSERVO_FH_MIN, LOCKSERVO_FH_MAX, LCK_TIME_MSEC);
-ServoGpio gpio_verr_fh_d3c3(GPIO_VERRIEGELUNG_FH_D3C3, PWM_VERRIEGELUNG_FH_D3C3,
-                            LOCKSERVO_FH_MIN, LOCKSERVO_FH_MAX, LCK_TIME_MSEC);
-ServoGpio gpio_verr_fh_a3b3(GPIO_VERRIEGELUNG_FH_A3B3, PWM_VERRIEGELUNG_FH_A3B3,
-                            LOCKSERVO_FH_MIN, LOCKSERVO_FH_MAX, LCK_TIME_MSEC);
-ServoGpio gpio_verr_fh_a1b1(GPIO_VERRIEGELUNG_FH_A1B1, PWM_VERRIEGELUNG_FH_A1B1,
-                            LOCKSERVO_FH_MIN, LOCKSERVO_FH_MAX, LCK_TIME_MSEC);
 
-static constexpr int LOCKSERVO_SIG_MIN = 10;
-static constexpr int LOCKSERVO_SIG_MAX = 60;
+ServoGpio gpio_verr_fh_d1c1(GPIO_VERRIEGELUNG_FH_D1C1, PWM_VERRIEGELUNG_FH_D1C1,
+                            usec(2430), usec(2540), 0);
+ServoGpio gpio_verr_fh_d3c3(GPIO_VERRIEGELUNG_FH_D3C3, PWM_VERRIEGELUNG_FH_D3C3,
+                            usec(2150), usec(2360), LCK_TIME_MSEC);
+ServoGpio gpio_verr_fh_a3b3(GPIO_VERRIEGELUNG_FH_A3B3, PWM_VERRIEGELUNG_FH_A3B3,
+                            usec(1057), usec(1367), LCK_TIME_MSEC);
+ServoGpio gpio_verr_fh_a1b1(GPIO_VERRIEGELUNG_FH_A1B1, PWM_VERRIEGELUNG_FH_A1B1,
+                            usec(1583), usec(1967), LCK_TIME_MSEC);
 
 ServoGpio gpio_verr_d(GPIO_VERRIEGELUNG_D, PWM_VERRIEGELUNG_D,  //
-                      LOCKSERVO_SIG_MIN, LOCKSERVO_SIG_MAX, LCK_TIME_MSEC);
+                      usec(1280), usec(1650), LCK_TIME_MSEC);
 ServoGpio gpio_verr_c(GPIO_VERRIEGELUNG_C, PWM_VERRIEGELUNG_C,  //
-                      LOCKSERVO_SIG_MIN, LOCKSERVO_SIG_MAX, LCK_TIME_MSEC);
+                      usec(1073), usec(1413), LCK_TIME_MSEC);
 ServoGpio gpio_verr_b(GPIO_VERRIEGELUNG_B, PWM_VERRIEGELUNG_B,  //
-                      LOCKSERVO_SIG_MIN, LOCKSERVO_SIG_MAX, LCK_TIME_MSEC);
+                      usec(1570), usec(1900), LCK_TIME_MSEC);
 ServoGpio gpio_verr_a(GPIO_VERRIEGELUNG_A, PWM_VERRIEGELUNG_A,  //
-                      LOCKSERVO_SIG_MIN, LOCKSERVO_SIG_MAX, LCK_TIME_MSEC);
-
-static constexpr int LOCKSERVO_W_MIN = 10;
-static constexpr int LOCKSERVO_W_MAX = 60;
+                      usec(1210), usec(1580), LCK_TIME_MSEC);
 
 ServoGpio gpio_verr_10(GPIO_VERRIEGELUNG_10, PWM_VERRIEGELUNG_10,  //
-                       LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                       usec(1553), usec(1850), LCK_TIME_MSEC);
 ServoGpio gpio_verr_9(GPIO_VERRIEGELUNG_9, PWM_VERRIEGELUNG_9,  //
-                      LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                      usec(1600), usec(1983), LCK_TIME_MSEC);
 ServoGpio gpio_verr_7(GPIO_VERRIEGELUNG_7, PWM_VERRIEGELUNG_7,  //
-                      LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                      usec(1153), usec(1530), LCK_TIME_MSEC);
 ServoGpio gpio_verr_2(GPIO_VERRIEGELUNG_2, PWM_VERRIEGELUNG_2,  //
-                      LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                      usec(933), usec(1353), LCK_TIME_MSEC);
 ServoGpio gpio_verr_1a(GPIO_VERRIEGELUNG_1A, PWM_VERRIEGELUNG_1A,  //
-                       LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                       usec(1500), usec(1946), LCK_TIME_MSEC);
 ServoGpio gpio_verr_1b(GPIO_VERRIEGELUNG_1B, PWM_VERRIEGELUNG_1B,  //
-                       LOCKSERVO_W_MIN, LOCKSERVO_W_MAX, LCK_TIME_MSEC);
+                       usec(1453), usec(1840), LCK_TIME_MSEC);
+
+ServoGpio gpio_measure(GPIO_SERVO_CAL, PWM_UNUSED_41_4,  //
+                       usec(1000), usec(1100), 0);
 
 PWM9685 pwm_chip_felder(PWM_CHIP_FELDER, 0x40);
 
@@ -408,6 +408,8 @@ void setup() {
   ex.begin();
   blk_ab.check_setup(abrdy);
   blk_cd.check_setup(cdrdy);
+  //pwm_chip_servo.set_freq(23500000, 111, 458);
+  pwm_chip_servo.set_freq(23500000, 250/4, 1024/4);
 }
 
 /// Arduino loop routine.
