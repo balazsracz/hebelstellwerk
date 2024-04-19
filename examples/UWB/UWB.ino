@@ -431,22 +431,36 @@ void setup() {
   digitalWrite(LED_BUILTIN, true);
   Serial.begin(9600);
   // wait for serial to be up, up to 1.5 seconds.
-  for (int i = 0; i < 30; ++i) {
-    if (Serial) break;
-    delay(50);
-  }
+  //for (int i = 0; i < 30; ++i) {
+  //  if (Serial) break;
+  //  delay(50);
+  //}
   digitalWrite(LED_BUILTIN, false);
-  Serial.println("hello world");
-  // Calls the executor to do begin for all registered objects.
-  ex.begin();
-  blk_ab.check_setup(abrdy);
-  blk_cd.check_setup(cdrdy);
-  //pwm_chip_servo.set_freq(23500000, 111, 458);
-  pwm_chip_servo.set_freq(23500000, 250/4, 1024/4);
 }
 
 /// Arduino loop routine.
 void loop() {
+  static bool started = false;
+  static unsigned next = 50;
+  auto m = millis();
+  if (m < 3000) {
+    if (m > next) {
+      Serial.println(m);
+      next = m + 50;
+    }
+    return;
+  }
+  if (!started) {
+    started = true;
+    Serial.println("hello world");
+
+    // Calls the executor to do begin for all registered objects.
+    ex.begin();
+    blk_ab.check_setup(abrdy);
+    blk_cd.check_setup(cdrdy);
+    // pwm_chip_servo.set_freq(23500000, 111, 458);
+    pwm_chip_servo.set_freq(23500000, 250 / 4, 1024 / 4);
+  }
   // Calls the executor to do loop for all registered objects.
   ex.loop();
 }
