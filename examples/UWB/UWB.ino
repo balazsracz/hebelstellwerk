@@ -185,7 +185,7 @@ static constexpr int LCK_TIME_MSEC = 300;
 PWM9685 pwm_chip_servo(PWM_CHIP_LOCKSERVO, 0x41);
 
 ServoGpio gpio_verr_fh_d1c1(GPIO_VERRIEGELUNG_FH_D1C1, PWM_VERRIEGELUNG_FH_D1C1,
-                            usec(2430), usec(2540), 0);
+                            usec(2430), usec(2550), 0);
 ServoGpio gpio_verr_fh_d3c3(GPIO_VERRIEGELUNG_FH_D3C3, PWM_VERRIEGELUNG_FH_D3C3,
                             usec(2150), usec(2360), LCK_TIME_MSEC);
 ServoGpio gpio_verr_fh_a3b3(GPIO_VERRIEGELUNG_FH_A3B3, PWM_VERRIEGELUNG_FH_A3B3,
