@@ -67,7 +67,9 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   void loop() override {
     if (dirty_) {
       if (!dev_.write((uint8_t *)&last_status_, 2)) {
-        //LOG(LEVEL_INFO, "Failed I2C Block %02x status write.", dev_.address());
+        LOG(LEVEL_INFO, "Failed I2C Block %02x status write (st=%02x).", dev_.address(), last_status_);
+      } else {
+        LOG(LEVEL_INFO, "Success I2C Block %02x status write (st=%02x).", dev_.address(), last_status_);
       }
       dirty_ = false;
     }
