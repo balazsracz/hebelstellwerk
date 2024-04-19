@@ -311,8 +311,8 @@ RouteLever Rcd1(c1, d1, GPIO_HEBEL_C1, RHEB_INV, GPIO_HEBEL_D1, RHEB_INV,
 #if 1
 
 /// @todo check the actual I2C addresses.
-I2CBlock i2c_ab(0x52);
-I2CBlock i2c_cd(0x53);
+I2CBlock i2c_ab(0x28);
+I2CBlock i2c_cd(0x29);
 
 FelderBlock blk_ab(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
                    GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false);
