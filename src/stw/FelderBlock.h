@@ -36,6 +36,7 @@
 #define _STW_FELDERBLOCK_H_
 
 #include "stw/Block.h"
+#include "stw/GlobalCommand.h"
 #include "stw/I2CBlock.h"
 #include "stw/RouteLever.h"
 #include "utils/Timer.h"
@@ -57,6 +58,10 @@ class FelderBlock : public Block {
   // and at the end the resulting bitmask should equal the constant
   // EXPECTED_SETUP.
 
+  uint8_t state() {
+    return (uint8_t)state_;
+  }
+  
   uint16_t set_vorblock_taste(gpio_pin_t pin, bool inverted) {
     vorblock_taste_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 0;
@@ -172,6 +177,14 @@ class FelderBlock : public Block {
     storungsmelder_.write(iface_->get_status() & BlockBits::ERROR);
     /// @todo handle Signalhaltmelder. We should search for all signal levers,
     /// and check whether any of them are set to proceed.
+
+    // We force the ability to send a handoff in any state.
+    if (global_is_unlocked() && abgabe_taste_.read() && kurbel_.read()) {
+      iface_->send_bit(BlockBits::HANDOFF);
+      LOG(LEVEL_INFO, "Block %d: OUT_FREE->IN_FREE (Erlaubnis gesendet)", id_);
+      return wait_for_complete(State::IN_FREE);
+    }
+
     switch (state_) {
       case State::IN_FREE: {
         if (iface_->has_incoming_notify()) {
@@ -199,10 +212,11 @@ class FelderBlock : public Block {
 
         // Check if a train has traveled inbounds through this block, and the
         // route lever matching that has been re-set.
-        if (seen_route_locked_in_ && !have_route_locked_ &&
-            !RouteRegistry::instance()
-                 ->get(locked_route_)
-                 ->is_route_set(locked_route_)) {
+        if ((seen_route_locked_in_ && !have_route_locked_ &&
+             !RouteRegistry::instance()
+                  ->get(locked_route_)
+                  ->is_route_set(locked_route_)) ||
+            global_is_unlocked()) {
           // Now Ruckblocken is possible.
           if (ruckblock_taste_.read() && kurbel_.read()) {
             uint16_t status = iface_->get_status();
@@ -217,7 +231,7 @@ class FelderBlock : public Block {
         break;
       }
       case State::OUT_FREE: {
-        if (!have_route_locked_) {
+        if (!have_route_locked_ || global_is_unlocked()) {
           // Now handoff is possible.
           if (abgabe_taste_.read() && kurbel_.read()) {
             iface_->send_bit(BlockBits::HANDOFF);
@@ -228,10 +242,11 @@ class FelderBlock : public Block {
         }
         // Check if a train has traveled outbounds through this block, and the
         // route lever matching that has been re-set.
-        if (seen_route_locked_out_ && !have_route_locked_ &&
-            !RouteRegistry::instance()
-                 ->get(locked_route_)
-                 ->is_route_set(locked_route_)) {
+        if ((seen_route_locked_out_ && !have_route_locked_ &&
+             !RouteRegistry::instance()
+                  ->get(locked_route_)
+                  ->is_route_set(locked_route_)) ||
+            global_is_unlocked()) {
           // Now Vorblocken is possible.
           if (vorblock_taste_.read() && kurbel_.read()) {
             iface_->send_bit(BlockBits::OUT_BUSY);
