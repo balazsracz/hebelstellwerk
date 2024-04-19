@@ -242,39 +242,6 @@ Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
 GlobalState global_state;
 
-class Report : public Executable {
- public:
-  Report() {
-    Executor::instance()->add(this);
-    tm_.start_periodic(1000);
-  }
-
-  void begin() override {}
-  void loop() override {
-    if (!tm_.check()) return;
-    ++i;
-    if (entsp_a.read() && entsp_b.read() && (i & 1)) {
-      GlobalState::instance()->is_unlocked_ ^= 1;
-      LOG(LEVEL_INFO, "Global unlock %s",
-          GlobalState::instance()->is_unlocked_ ? "true" : "false");
-    }
-    // Serial.print("Hello ");
-    // Serial.println(i);
-    // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
-    // ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(),
-    // ext_detector.ok());
-    LOG(LEVEL_INFO, "hebel %04x fstr %04x taster %04x det %04x",
-        ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(),
-        ext_hebel_taster.input_states(), ext_detector.input_states());
-  }
-
- private:
-  GpioAccessor entsp_a{GPIO_BTN_ANFANG_C, true, GPIO_INPUT};
-  GpioAccessor entsp_b{GPIO_BTN_ENDFELD_D, true, GPIO_INPUT};
-  Timer tm_;
-  int i = 0;
-} reporter;
-
 // ======================== Logical devices =========================
 
 enum SignalId : uint8_t { SIGNAL_A, SIGNAL_B, SIGNAL_C, SIGNAL_D };
@@ -404,6 +371,59 @@ LockTable ltbl({
 });
 
 Blinker blinker2{LED_BUILTIN};
+
+std::string block_to_string(uint16_t blk) {
+  std::string ret;
+  if (blk & BlockBits::STARTUP) ret += "start,";
+  if (blk & BlockBits::NEWOUTPUT) ret += "newout,";
+  if (blk & BlockBits::NEWINPUT) ret += "newin,";
+  if (blk & BlockBits::ERROR) ret += "err,";  
+  if (blk & BlockBits::TRACK_OUT) ret += "erlaubnis,";  
+  if (blk & BlockBits::HANDOFF) ret += "handoff,";  
+  if (blk & BlockBits::IN_BUSY) ret += "in-vorbl,";  
+  if (blk & BlockBits::OUT_BUSY) ret += "out-vorbl,";
+  if (!ret.empty()) ret.pop_back();
+  return ret;
+}
+
+class Report : public Executable {
+ public:
+  Report() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(1000);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    ++i;
+    if (entsp_a.read() && entsp_b.read() && (i & 1)) {
+      GlobalState::instance()->is_unlocked_ ^= 1;
+      LOG(LEVEL_INFO, "Global unlock %s",
+          GlobalState::instance()->is_unlocked_ ? "true" : "false");
+    }
+    // Serial.print("Hello ");
+    // Serial.println(i);
+    // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
+    // ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(),
+    // ext_detector.ok());
+    LOG(LEVEL_INFO,
+        "hebel %04x fstr %04x taster %04x det %04x blkab %d %02x %s blkcd %d "
+        "%02x %s",
+        ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(),
+        ext_hebel_taster.input_states(), ext_detector.input_states(),
+        blk_ab.state(), i2c_ab.get_status(),
+        block_to_string(i2c_ab.get_status()).c_str(), blk_cd.state(),
+        i2c_cd.get_status(), block_to_string(i2c_cd.get_status()).c_str());
+  }
+
+ private:
+  GpioAccessor entsp_a{GPIO_BTN_ANFANG_C, true, GPIO_INPUT};
+  GpioAccessor entsp_b{GPIO_BTN_ENDFELD_D, true, GPIO_INPUT};
+  Timer tm_;
+  int i = 0;
+} reporter;
+
 
 /// Arduino setup routine.
 void setup() {
