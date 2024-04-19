@@ -453,6 +453,14 @@ void loop() {
   if (!started) {
     started = true;
     Serial.println("hello world");
+    // Scans all i2c devices
+    for (unsigned a = 0; a < 128; ++a) {
+      Adafruit_I2CDevice dev(a);
+      if (dev.begin(true)) {
+        LOG(LEVEL_INFO, "Found i2c %02x", a);
+      }
+      delay(10);
+    }
 
     // Calls the executor to do begin for all registered objects.
     ex.begin();
