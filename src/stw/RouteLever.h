@@ -73,7 +73,7 @@ class RouteLever : private Executable {
   }
 
   /// @return true if the lever is locked.
-  bool is_locked() { return up_.is_locked() || dn_.is_locked(); }
+  bool is_locked() { return up_.is_locked() && dn_.is_locked(); }
 
   /// @return true if the route lever is lifted out of neutral position and set
   /// towards the given route. This does not mean that the route is locked in
@@ -166,7 +166,18 @@ class RouteLever : private Executable {
             return false;
           }
           break;
-        case ROUTE_ROW:
+        case ROUTE_ROW: {
+          // Checks for route on opposite side of the same lever.
+          auto id = (RouteId)e.arg_;
+          auto* parent = RouteRegistry::instance()->get(id);
+          if (parent->up_.is(id) && parent->dn_.is_route_set()) {
+            return false;
+          }
+          if (parent->dn_.is(id) && parent->up_.is_route_set()) {
+            return false;
+          }
+          break;
+        }
         case NONE:
           return true;
       }

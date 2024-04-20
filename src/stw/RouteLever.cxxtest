@@ -262,11 +262,12 @@ TEST_F(UWBTest, lock_route_up) {
   EXPECT_TRUE(Rab1.is_route_set(a1));
   EXPECT_FALSE(Rab1.is_route_set(b1));
 
-  // Now the opposing Fstr is not eligible anymore.
+  // The opposing Fstr is still not locked; it could be used for a Durchfahrt,
+  // as that is not excluded by the Verschlusstabelle.
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_FALSE(gpios_.read(LOCK_a1b1));
-  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 
   // Signal levers are still locked.
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
@@ -283,11 +284,11 @@ TEST_F(UWBTest, lock_route_up) {
   EXPECT_TRUE(gpios_.read(LOCK_C_HP2));
   EXPECT_TRUE(gpios_.read(LOCK_D_HP2));
 
-  // and the Fstr lever got locked.
+  // and the Fstr for lever a1b1 got locked.
   EXPECT_TRUE(gpios_.read(LOCK_a3b3));
   EXPECT_TRUE(gpios_.read(LOCK_c3d3));
   EXPECT_TRUE(gpios_.read(LOCK_a1b1));
-  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 }
 
 /// Moves a lever up and locks it.
