@@ -54,24 +54,24 @@ TEST(LockTableTest, get_row) {
 
   auto* ptr = tbl.begin();
   auto ret = tbl.find_route(ROUTE_A1);
-  EXPECT_EQ(ptr + 1, ret.ptr);
-  EXPECT_EQ(2u, ret.size);
+  EXPECT_EQ(ptr, ret.ptr);
+  EXPECT_EQ(3u, ret.size);
 
   ret = tbl.find_route(ROUTE_B1);
-  EXPECT_EQ(ptr + 4, ret.ptr);
-  EXPECT_EQ(2u, ret.size);
+  EXPECT_EQ(ptr + 3, ret.ptr);
+  EXPECT_EQ(3u, ret.size);
 
   ret = tbl.find_route(ROUTE_C1);
   EXPECT_EQ(nullptr, ret.ptr);
   EXPECT_EQ(0u, ret.size);
 
   ret = tbl.find_route(ROUTE_D1);
-  EXPECT_EQ(ptr + 7, ret.ptr);
-  EXPECT_EQ(0u, ret.size);
+  EXPECT_EQ(ptr + 6, ret.ptr);
+  EXPECT_EQ(1u, ret.size);
 
   ret = tbl.find_route(ROUTE_D2);
-  EXPECT_EQ(ptr + 8, ret.ptr);
-  EXPECT_EQ(0u, ret.size);
+  EXPECT_EQ(ptr + 7, ret.ptr);
+  EXPECT_EQ(1u, ret.size);
 }
 
 TEST(LockTableTest, find_block) {

@@ -191,9 +191,8 @@ class LockTable : public Singleton<LockTable> {
     if (ptr == end()) {
       return {nullptr, 0};
     }
-    ++ptr;
     const LockTableEntry* eptr;
-    for (eptr = ptr; eptr != end() && eptr->type_ != ROUTE_ROW; ++eptr)
+    for (eptr = ptr + 1; eptr != end() && eptr->type_ != ROUTE_ROW; ++eptr)
       ;
     return {ptr, eptr - ptr};
   }
