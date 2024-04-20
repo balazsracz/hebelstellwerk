@@ -358,18 +358,19 @@ LockTable ltbl({
     WeicheMinus(W9), WeichePlus(W10), Hp2(SIGNAL_A), Aux(Bue10_750),
     BlockIn(BLOCK_AB), RouteExc(c3), RouteExc(d3),  //
     Route(b1), WeichePlus(W1a), WeichePlus(W1b), WeichePlus(W2), Hp2(SIGNAL_B),
-    Aux(Bue10_750), BlockOut(BLOCK_AB),  //
+    Aux(Bue10_750), BlockOut(BLOCK_AB), RouteExc(c1),  //
     Route(b3), WeichePlus(W1a), WeicheMinus(W1b), Hp2(SIGNAL_B), Aux(Bue10_750),
-    BlockOut(BLOCK_AB),  //
+    BlockOut(BLOCK_AB), RouteExc(c3),  //
     Route(c1), WeichePlus(W9), WeichePlus(W10), Hp2(SIGNAL_C),
-    BlockOut(BLOCK_CD), RouteExc(b1),  //
+    BlockOut(BLOCK_CD), RouteExc(b1), RouteExc(b1),  //
     Route(c3), WeichePlus(W7), WeicheMinus(W9), WeichePlus(W10),
-    BlockOut(BLOCK_CD), Hp2(SIGNAL_C),  //
+    BlockOut(BLOCK_CD), Hp2(SIGNAL_C), RouteExc(b3),  //
     Route(d1), WeichePlus(W1a), WeichePlus(W1b), WeichePlus(W2), WeichePlus(W9),
     WeichePlus(W10), BlockIn(BLOCK_CD), RouteExc(a1), RouteExc(b1),
     Hp2(SIGNAL_D),  //
     Route(d3), WeicheMinus(W1b), WeichePlus(W7), WeicheMinus(W9),
-    WeichePlus(W10), Hp2(SIGNAL_D), BlockIn(BLOCK_CD)  //
+    WeichePlus(W10), Hp2(SIGNAL_D), BlockIn(BLOCK_CD), RouteExc(a3),
+    RouteExc(b3)  //
 });
 
 Blinker blinker2{LED_BUILTIN};
