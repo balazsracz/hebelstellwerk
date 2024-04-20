@@ -280,6 +280,20 @@ TEST_F(FelderBlockTest, recover_in_busy) {
   EXPECT_WHITE(AN_ANFANGSFELD);
 }
 
+TEST_F(FelderBlockTest, startup_err) {
+  line_status_ = 0;
+  set(BlockBits::ERROR);
+  set(BlockBits::NEWINPUT);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+
+  // Still startup state.
+  EXPECT_EQ(4, block_.state());
+}
 
 TEST_F(FelderBlockTest, regular_handoff) {
   // Starting state in+free

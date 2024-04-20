@@ -120,7 +120,10 @@ class FelderBlock : public Block {
 
   // ==========================================
 
-  bool allow_outgoing_train() override { return state_ == State::OUT_FREE; }
+  bool allow_outgoing_train() override {
+    /// @todo also allow if we are in startup state with a block error.
+    return state_ == State::OUT_FREE;
+  }
 
   void notify_route_locked(RouteId id, bool is_out) override
   {
@@ -253,6 +256,7 @@ class FelderBlock : public Block {
       bool has_out = status & BlockBits::TRACK_OUT;
       bool has_in = status & BlockBits::HANDOFF;
       bool has_start = status & BlockBits::STARTUP;
+      bool has_err = status & BlockBits::ERROR;
       if (has_out && has_in) {
         // Confusing.
         LOG(LEVEL_ERROR,
@@ -270,6 +274,12 @@ class FelderBlock : public Block {
             status & BlockBits::IN_BUSY ? State::IN_OCC : State::IN_FREE;
         LOG(LEVEL_INFO, "Block %d: start with block state IN (%02x) - %d", id_,
             status, (int)state_);
+      } else if (has_err) {
+        // We have an error, maybe the block line is not connected.
+        if (status & BlockBits::NEWINPUT) {
+          iface_->clear_incoming_notify();
+        }
+        // We don't leave the startup state. This will show three red fields.
       } else if (has_start) {
         // The block doesn't know the state and we don't know it either. This
         // is a cold start. We set up the state for outgoing track free. In
