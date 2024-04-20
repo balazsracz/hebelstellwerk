@@ -60,7 +60,8 @@ class Block : public Executable {
   Block(BlockId id, gpio_pin_t track_detector_pin, bool track_detector_inverted,
         gpio_pin_t route_lock_button_pin, bool route_lock_button_inverted,
         gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted)
-      : track_detector_(track_detector_pin, track_detector_inverted,
+      : id_(id),
+        track_detector_(track_detector_pin, track_detector_inverted,
                         GPIO_INPUT),
         route_lock_button_(route_lock_button_pin, route_lock_button_inverted,
                            GPIO_INPUT),
