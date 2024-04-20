@@ -52,7 +52,11 @@ class PwmGpio : public Gpio {
   /// @param pct_on percent (0..100) duty cycle to use when the GPIO is
   /// commanded to on.
   PwmGpio(gpio_pin_t gpio_pin, pwm_pin_t pwm_pin, int8_t pct_off, int8_t pct_on)
-      : pwm_pin_(pwm_pin), pct_off_(pct_off), pct_on_(pct_on) {
+      : pwm_pin_(pwm_pin),
+        pct_off_(pct_off),
+        pct_on_(pct_on),
+        last_state_(false),
+        first_(true) {
     GpioRegistry::instance()->register_obj(this, gpio_pin);
     pwm_ = PwmRegistry::instance()->get(pwm_pin);
   }
@@ -62,8 +66,9 @@ class PwmGpio : public Gpio {
   }
 
   void write(gpio_pin_t pin, bool value) const override {
-    if (value != last_state_) {
+    if (first_ || value != last_state_) {
       last_state_ = value;
+      first_ = false;
       uint32_t count = pwm_->tick_per_period();
       if (last_state_) {
         count *= pct_on_;
@@ -87,7 +92,9 @@ class PwmGpio : public Gpio {
   /// Percent duty cycle to drive the PWM pin when the gpio is commanded on.
   int8_t pct_on_;
   /// Last commanded state of the GPIO pin.
-  mutable bool last_state_{false};
+  mutable bool last_state_ : 1;
+  /// True if the state has never been set.
+  mutable bool first_ : 1;
 };
 
 /// Instantiate this class when driving a dual-color object with two LEDs
@@ -112,7 +119,9 @@ class DualPwmGpio : public Gpio {
       : pwm_pin_off_(pwm_pin_off),
         pwm_pin_on_(pwm_pin_on),
         pct_off_(pct_off),
-        pct_on_(pct_on) {
+        pct_on_(pct_on),
+        last_state_(false),
+        first_(true) {
     GpioRegistry::instance()->register_obj(this, gpio_pin);
     pwm_off_ = PwmRegistry::instance()->get(pwm_pin_off_);
     pwm_on_ = PwmRegistry::instance()->get(pwm_pin_on_);
@@ -123,8 +132,9 @@ class DualPwmGpio : public Gpio {
   }
 
   void write(gpio_pin_t pin, bool value) const override {
-    if (value != last_state_) {
+    if (first_ || value != last_state_) {
       last_state_ = value;
+      first_ = false;
       uint32_t count = pwm_on_->tick_per_period();
       if (last_state_) {
         count *= pct_on_;
@@ -156,7 +166,9 @@ class DualPwmGpio : public Gpio {
   /// Percent duty cycle to drive the PWM pin when the gpio is commanded on.
   int8_t pct_on_;
   /// Last commanded state of the GPIO pin.
-  mutable bool last_state_{false};
+  mutable bool last_state_ : 1;
+  /// True if the state has never been set.
+  mutable bool first_ : 1;
 };
 
 #endif  // _UTILS_PWMGPIO_H_
