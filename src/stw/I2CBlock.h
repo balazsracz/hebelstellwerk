@@ -112,7 +112,7 @@ class I2CBlockInterface {
     uint16_t ost = get_status();
     uint16_t nst =
         (ost | (uint16_t)BlockBits::HANDOFF | (uint16_t)BlockBits::NEWOUTPUT) &
-        ~(uint16_t)BlockBits::IN_BUSY;
+        ~uint16_t(BlockBits::IN_BUSY | BlockBits::TRACK_OUT);
     set_status(nst);
   }
   
