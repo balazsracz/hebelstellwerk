@@ -138,6 +138,15 @@ class FelderBlock : public Block {
 
   void loop() override {
     Block::loop();
+
+#if 0
+    anfangsfeld_.write(vorblock_taste_.read());
+    endfeld_.write(ruckblock_taste_.read());
+    erlaubnisfeld_.write(abgabe_taste_.read());
+    storungsmelder_.write(iface_->get_status() & BlockBits::ERROR);
+    return;
+#endif 
+    
     // Sets the output GPIOs.
     switch (state_) {
       case State::IN_FREE: {
@@ -178,28 +187,81 @@ class FelderBlock : public Block {
     /// @todo handle Signalhaltmelder. We should search for all signal levers,
     /// and check whether any of them are set to proceed.
 
-    // We force the ability to send a handoff in any state.
-    if (global_is_unlocked() && abgabe_taste_.read() && kurbel_.read()) {
-      iface_->send_bit(BlockBits::HANDOFF);
-      LOG(LEVEL_INFO, "Block %d: OUT_FREE->IN_FREE (Erlaubnis gesendet)", id_);
-      return wait_for_complete(State::IN_FREE);
+    uint16_t status = iface_->get_status();
+
+    // Abgabe / handoff
+    if (abgabe_taste_.read() && kurbel_.read()) {
+      const char* from = global_is_unlocked() ? "forced" : nullptr;
+      if (state_ == State::OUT_FREE && !have_route_locked_) {
+        // Now handoff is possible.
+        from = "OUT_FREE";
+      } else if (global_is_unlocked()) {
+        from = "forced";
+      }
+      if (from) {
+        iface_->abgabe();
+        LOG(LEVEL_INFO, "Block %d: %02x %s->IN_FREE (Erlaubnis gesendet)", id_,
+            status, from);
+        return wait_for_complete(State::IN_FREE);
+      }
+    }
+
+    // Vorblocken / Out-busy
+    if (vorblock_taste_.read() && kurbel_.read()) {
+      const char* from = global_is_unlocked() ? "forced" : nullptr;
+      // Check if a train has traveled outbounds through this block, and the
+      // route lever matching that has been re-set.
+      if (state_ == State::OUT_FREE && seen_route_locked_out_ &&
+          !have_route_locked_ &&
+          !RouteRegistry::instance()
+               ->get(locked_route_)
+               ->is_route_set(locked_route_)) {
+        from = "OUT_FREE";
+      }
+      if (from) {
+        iface_->vorblocken();
+        LOG(LEVEL_INFO, "Block %d: %02x %s->OUT_OCC (Vorblocken gesendet)", id_,
+            status, from);
+        return wait_for_complete(State::OUT_OCC);
+      }
+    }
+
+    // Ruckblocken / In-free
+    if (ruckblock_taste_.read() && kurbel_.read()) {
+      const char* from = global_is_unlocked() ? "forced" : nullptr;
+      // Check if a train has traveled inbounds through this block, and the
+      // route lever matching that has been re-set.
+      if (state_ == State::IN_OCC && seen_route_locked_in_ &&
+          !have_route_locked_ &&
+          !RouteRegistry::instance()
+               ->get(locked_route_)
+               ->is_route_set(locked_route_)) {
+        from = "IN_OCC";
+      }
+      if (from) {
+        iface_->ruckblocken();
+        LOG(LEVEL_INFO, "Block %d: %02x, %s->IN_FREE (Ruckblocken gesendet)",
+            id_, status, from);
+        return wait_for_complete(State::IN_FREE);
+      }
     }
 
     switch (state_) {
       case State::IN_FREE: {
         if (iface_->has_incoming_notify()) {
-          uint16_t status = iface_->get_status();
           if (status & BlockBits::IN_BUSY) {
             iface_->clear_incoming_notify();
-            LOG(LEVEL_INFO, "Block %d: IN_FREE->IN_OCC (Vorblocken erhalten)",
-                id_);
+            LOG(LEVEL_INFO,
+                "Block %d: %02x IN_FREE->IN_OCC (Vorblocken erhalten)", id_,
+                status);
             state_ = State::IN_OCC;
             return;
           }
           if (status & BlockBits::TRACK_OUT) {
             iface_->clear_incoming_notify();
-            LOG(LEVEL_INFO, "Block %d: IN_FREE->OUT_FREE (Erlaubnis erhalten)",
-                id_);
+            LOG(LEVEL_INFO,
+                "Block %d: %02x IN_FREE->OUT_FREE (Erlaubnis erhalten)", id_,
+                status);
             state_ = State::OUT_FREE;
             return;
           }
@@ -209,60 +271,18 @@ class FelderBlock : public Block {
       case State::IN_OCC: {
         // Handle elektrische Streckentastensperre output.
         streckentastensperre_.write(track_detector().read());
-
-        // Check if a train has traveled inbounds through this block, and the
-        // route lever matching that has been re-set.
-        if ((seen_route_locked_in_ && !have_route_locked_ &&
-             !RouteRegistry::instance()
-                  ->get(locked_route_)
-                  ->is_route_set(locked_route_)) ||
-            global_is_unlocked()) {
-          // Now Ruckblocken is possible.
-          if (ruckblock_taste_.read() && kurbel_.read()) {
-            uint16_t status = iface_->get_status();
-            status &= ~(uint16_t)BlockBits::IN_BUSY;
-            status |= (uint16_t)BlockBits::NEWOUTPUT;
-            iface_->set_status(status);
-            LOG(LEVEL_INFO, "Block %d: IN_OCC->IN_FREE (Ruckblocken gesendet)",
-                id_);
-            return wait_for_complete(State::IN_FREE);
-          }
-        }
         break;
       }
       case State::OUT_FREE: {
-        if (!have_route_locked_ || global_is_unlocked()) {
-          // Now handoff is possible.
-          if (abgabe_taste_.read() && kurbel_.read()) {
-            iface_->send_bit(BlockBits::HANDOFF);
-            LOG(LEVEL_INFO, "Block %d: OUT_FREE->IN_FREE (Erlaubnis gesendet)",
-                id_);
-            return wait_for_complete(State::IN_FREE);
-          }
-        }
-        // Check if a train has traveled outbounds through this block, and the
-        // route lever matching that has been re-set.
-        if ((seen_route_locked_out_ && !have_route_locked_ &&
-             !RouteRegistry::instance()
-                  ->get(locked_route_)
-                  ->is_route_set(locked_route_)) ||
-            global_is_unlocked()) {
-          // Now Vorblocken is possible.
-          if (vorblock_taste_.read() && kurbel_.read()) {
-            iface_->send_bit(BlockBits::OUT_BUSY);
-            LOG(LEVEL_INFO, "Block %d: OUT_FREE->OUT_OCC (Vorblocken gesendet)",
-                id_);
-            return wait_for_complete(State::OUT_OCC);
-          }
-        }
         break;
       }
       case State::OUT_OCC: {
         if (iface_->has_incoming_notify() &&
-            (iface_->get_status() & BlockBits::OUT_BUSY) == 0) {
+            (status & BlockBits::OUT_BUSY) == 0) {
           iface_->clear_incoming_notify();
-          LOG(LEVEL_INFO, "Block %d: OUT_OCC->OUT_FREE (Ruckblocken erhalten)",
-              id_);
+          LOG(LEVEL_INFO,
+              "Block %d: %02x OUT_OCC->OUT_FREE (Ruckblocken erhalten)", id_,
+              status);
           state_ = State::OUT_FREE;
           return;
         }
