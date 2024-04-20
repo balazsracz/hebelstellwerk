@@ -154,10 +154,16 @@ class RouteLever : private Executable {
           /// @todo implement
           break;
         case BLOCK_OUT:
-          /// @todo implement
+          if (!check_block(BlockRegistry::instance()->get((BlockId)e.arg_),
+                           true)) {
+            return false;
+          }
           break;
         case BLOCK_IN:
-          // There are no preconditions for Block In.
+          if (!check_block(BlockRegistry::instance()->get((BlockId)e.arg_),
+                           false)) {
+            return false;
+          }
           break;
         case ROUTE_EXC:
           if (RouteRegistry::instance()
@@ -248,7 +254,10 @@ class RouteLever : private Executable {
   }
 
   static bool check_block(Block* blk, bool out) {
-    /// @todo implement once the block has the necessary APIs.
+    if (out) {
+      return blk->allow_outgoing_train();
+    }
+    // There are no preconditions for Block In.
     return true;
   }
 
