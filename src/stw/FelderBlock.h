@@ -55,8 +55,9 @@ class FelderBlock : public Block {
         route_is_out_(false),
         seen_route_locked_out_(false),
         seen_route_locked_in_(false),
-        kurbel_last_(false) {}
-  
+        kurbel_last_(false),
+        startup_err_(false) {}
+
   // Setup functions. Allows defining the GPIO mapping for this given block in
   // a way that is a bit more readable, than just having a super long list of
   // numbers in the constructor. The return values should be combined with |,
@@ -121,8 +122,7 @@ class FelderBlock : public Block {
   // ==========================================
 
   bool allow_outgoing_train() override {
-    /// @todo also allow if we are in startup state with a block error.
-    return state_ == State::OUT_FREE;
+    return (state_ == State::OUT_FREE) || startup_err_;
   }
 
   void notify_route_locked(RouteId id, bool is_out) override
@@ -246,13 +246,19 @@ class FelderBlock : public Block {
     }
     
     
-    storungsmelder_.write(iface_->get_status() & BlockBits::ERROR);
+    uint16_t status = iface_->get_status();
+
+    if (status & BlockBits::ERROR) {
+        storungsmelder_.write(true);
+    } else {
+        storungsmelder_.write(false);
+        startup_err_ = false;
+    }
+
     /// @todo handle Signalhaltmelder. We should search for all signal levers,
     /// and check whether any of them are set to proceed.
 
-    uint16_t status = iface_->get_status();
 
-    /// @todo handle initialization state
     if (state_ == State::STARTUP && status != 0) {
       bool has_out = status & BlockBits::TRACK_OUT;
       bool has_in = status & BlockBits::HANDOFF;
@@ -280,6 +286,7 @@ class FelderBlock : public Block {
         if (status & BlockBits::NEWINPUT) {
           iface_->clear_incoming_notify();
         }
+        startup_err_ = true;
         // We don't leave the startup state. This will show three red fields.
       } else if (has_start) {
         // The block doesn't know the state and we don't know it either. This
@@ -297,6 +304,7 @@ class FelderBlock : public Block {
     }
 
     if (status & BlockBits::STARTUP) {
+      /// @todo handle initialization state
       // Now we have a state but the block interface has reset and it doesn't.
       
     }
@@ -494,6 +502,10 @@ class FelderBlock : public Block {
   /// Records the state of the kurbel from the last iteration for edge
   /// detection. We only apply kurbel when there is a false to true edge on it.
   bool kurbel_last_ : 1;
+
+  /// True if we've seen error at startup from the block and never exited this
+  /// error. We just never use the block and allow all movements.
+  bool startup_err_ : 1;
 };
 
 #endif  // _STW_FELDERBLOCK_H_

@@ -460,6 +460,78 @@ TEST_F(FelderBlockTest, outgoing_disallow_without_block) {
   EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
 }
 
+// Allow outgoing routes when the block is in startup error state.  This
+// happens when there is no block cable, presumably because the next station on
+// the line is not equipped with block.
+TEST_F(FelderBlockTest, outgoing_allow_when_block_err) {
+  line_status_ = 0;
+  set(BlockBits::ERROR);
+  set(BlockBits::NEWINPUT);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+  EXPECT_TRUE(gpios_.read(AN_STORUNGSMELDER));
+
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+
+  // Tries to set an Ausfahrt
+  gpios_.write(IN_n1, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_RED(AN_LOCK_FIELD);
+  gpios_.write(AN_LOCK_BTN, true);
+  wait();
+  // Success in locking the route.
+  EXPECT_WHITE(AN_LOCK_FIELD);
+  gpios_.write(AN_LOCK_BTN, false);
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+  EXPECT_FALSE(gpios_.read(LOCK_N_HP2));
+  gpios_.write(IN_N_HP2, true);
+  wait();
+
+  // Train goes
+  gpios_.write(AN_DETECTOR, true);
+  wait();
+  gpios_.write(AN_DETECTOR, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+
+  // Signal close
+  gpios_.write(IN_N_HP2, false);
+  EXPECT_WHITE(AN_LOCK_FIELD);
+  wait();
+  EXPECT_RED(AN_LOCK_FIELD);
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  // Fstr lever unlocked.
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  
+  // Route lever reset
+  gpios_.write(IN_n1, false);
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+  EXPECT_TRUE(gpios_.read(AN_STORUNGSMELDER));
+
+  // Vorblock won't work since we are in error.
+  gpios_.write(AN_VORBLOCK_IN, true);
+  gpios_.write(KURBEL, true);
+  wait();
+  gpios_.write(AN_VORBLOCK_IN, false);
+  gpios_.write(KURBEL, false);
+  
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+}
+
 // Starts in out+busy mode, receives a Ruckblock.
 TEST_F(FelderBlockTest, regular_out_ruckblock) {
   line_status_ = 0;
