@@ -143,6 +143,7 @@ class FelderBlock : public Block {
   }
   
   void notify_route_complete(RouteId id) override {
+    Block::notify_route_complete(id);
     if (id == locked_route_) {
       have_route_locked_ = false;
     } else {

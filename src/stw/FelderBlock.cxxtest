@@ -349,8 +349,10 @@ TEST_F(FelderBlockTest, regular_vorblock) {
   wait();
 
   EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_RED(AN_LOCK_FIELD);
   gpios_.write(AN_LOCK_BTN, true);
   wait();
+  EXPECT_WHITE(AN_LOCK_FIELD);
   gpios_.write(AN_LOCK_BTN, false);
 
   EXPECT_WHITE(AN_LOCK_FIELD);
@@ -367,7 +369,9 @@ TEST_F(FelderBlockTest, regular_vorblock) {
 
   // Signal close
   gpios_.write(IN_N_HP2, false);
+  EXPECT_WHITE(AN_LOCK_FIELD);
   wait();
+  EXPECT_RED(AN_LOCK_FIELD);
   EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1n1));
 
