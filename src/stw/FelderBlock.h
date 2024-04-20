@@ -50,18 +50,19 @@ class FelderBlock : public Block {
       : Block(id, track_detector_pin, track_detector_inverted,
               route_lock_button_pin, route_lock_button_inverted,
               route_locked_lamp_pin, route_locked_lamp_inverted),
-        iface_(iface) {}
-
+        iface_(iface),
+        have_route_locked_(false),
+        route_is_out_(false),
+        seen_route_locked_out_(false),
+        seen_route_locked_in_(false),
+        kurbel_last_(false) {}
+  
   // Setup functions. Allows defining the GPIO mapping for this given block in
   // a way that is a bit more readable, than just having a super long list of
   // numbers in the constructor. The return values should be combined with |,
   // and at the end the resulting bitmask should equal the constant
   // EXPECTED_SETUP.
 
-  uint8_t state() {
-    return (uint8_t)state_;
-  }
-  
   uint16_t set_vorblock_taste(gpio_pin_t pin, bool inverted) {
     vorblock_taste_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 0;
@@ -117,6 +118,42 @@ class FelderBlock : public Block {
     }
   }
 
+  // ==========================================
+
+  bool allow_outgoing_train() override { return state_ == State::OUT_FREE; }
+
+  void notify_route_locked(RouteId id, bool is_out) override
+  {
+    Block::notify_route_locked(id, is_out);
+    if (have_route_locked_) {
+      LOG(LEVEL_INFO, "WARN Block %d: two routes locked (old %d, new %d)", id_,
+          locked_route_, id);
+    }
+    have_route_locked_ = true;
+    locked_route_ = id;
+    route_is_out_ = is_out;
+    if (is_out) {
+      seen_route_locked_out_ = true;
+    } else {
+      seen_route_locked_in_ = true;
+    }
+  }
+  
+  void notify_route_complete(RouteId id) override {
+    if (id == locked_route_) {
+      have_route_locked_ = false;
+    } else {
+      LOG(LEVEL_ERROR,
+          "ERR Block %d: unlock (%d) for different route than locked(%d)", id_,
+          id, locked_route_);
+    }
+  }
+  
+  /// @return The current internal state (enum State) as int for debugging.
+  uint8_t state() {
+    return (uint8_t)state_;
+  }
+
   enum class State : uint8_t {
     /// No permission, track is free.
     IN_FREE,
@@ -140,6 +177,8 @@ class FelderBlock : public Block {
     Block::loop();
 
 #if 0
+    // This code can be used to test the hardware connection to the colored
+    // fields.
     anfangsfeld_.write(vorblock_taste_.read());
     endfeld_.write(ruckblock_taste_.read());
     erlaubnisfeld_.write(abgabe_taste_.read());
@@ -183,6 +222,21 @@ class FelderBlock : public Block {
     if (!tm_.check()) {
       return;
     }
+
+    bool kurbel = kurbel_.read();
+    // Performs positive edge detection for kurbel. After this section, the
+    // kurbel variable will be true for only one round after it went positive.
+    if (kurbel) {
+      if (kurbel_last_) {
+        kurbel = false;
+      } else {
+        kurbel_last_ = true;
+      }
+    } else {
+      kurbel_last_ = false;
+    }
+    
+    
     storungsmelder_.write(iface_->get_status() & BlockBits::ERROR);
     /// @todo handle Signalhaltmelder. We should search for all signal levers,
     /// and check whether any of them are set to proceed.
@@ -190,7 +244,7 @@ class FelderBlock : public Block {
     uint16_t status = iface_->get_status();
 
     // Abgabe / handoff
-    if (abgabe_taste_.read() && kurbel_.read()) {
+    if (abgabe_taste_.read() && kurbel) {
       const char* from = global_is_unlocked() ? "forced" : nullptr;
       if (state_ == State::OUT_FREE && !have_route_locked_) {
         // Now handoff is possible.
@@ -199,6 +253,8 @@ class FelderBlock : public Block {
         from = "forced";
       }
       if (from) {
+        seen_route_locked_out_ = false;
+        seen_route_locked_in_ = false;
         iface_->abgabe();
         LOG(LEVEL_INFO, "Block %d: %02x %s->IN_FREE (Erlaubnis gesendet)", id_,
             status, from);
@@ -207,7 +263,7 @@ class FelderBlock : public Block {
     }
 
     // Vorblocken / Out-busy
-    if (vorblock_taste_.read() && kurbel_.read()) {
+    if (vorblock_taste_.read() && kurbel) {
       const char* from = global_is_unlocked() ? "forced" : nullptr;
       // Check if a train has traveled outbounds through this block, and the
       // route lever matching that has been re-set.
@@ -219,6 +275,7 @@ class FelderBlock : public Block {
         from = "OUT_FREE";
       }
       if (from) {
+        seen_route_locked_out_ = false;
         iface_->vorblocken();
         LOG(LEVEL_INFO, "Block %d: %02x %s->OUT_OCC (Vorblocken gesendet)", id_,
             status, from);
@@ -227,7 +284,7 @@ class FelderBlock : public Block {
     }
 
     // Ruckblocken / In-free
-    if (ruckblock_taste_.read() && kurbel_.read()) {
+    if (ruckblock_taste_.read() && kurbel) {
       const char* from = global_is_unlocked() ? "forced" : nullptr;
       // Check if a train has traveled inbounds through this block, and the
       // route lever matching that has been re-set.
@@ -239,6 +296,7 @@ class FelderBlock : public Block {
         from = "IN_OCC";
       }
       if (from) {
+        seen_route_locked_in_ = false;
         iface_->ruckblocken();
         LOG(LEVEL_INFO, "Block %d: %02x, %s->IN_FREE (Ruckblocken gesendet)",
             id_, status, from);
@@ -352,10 +410,10 @@ class FelderBlock : public Block {
   /// Current state of the block.
   State state_{State::IN_OCC};
 
-  /// @todo these need to be initialized
+  /// @todo these need to be reset to zero when appropriate
 
   /// ID of the route that was last locked.
-  RouteId locked_route_;
+  RouteId locked_route_{(RouteId)0};
   /// True if a route is locked through this block.
   bool have_route_locked_ : 1;
   /// True if the last locked route was outbounds.
@@ -364,6 +422,10 @@ class FelderBlock : public Block {
   bool seen_route_locked_out_ : 1;
   /// True if we have seen a route locked inbound through this block.
   bool seen_route_locked_in_ : 1;
+
+  /// Records the state of the kurbel from the last iteration for edge
+  /// detection. We only apply kurbel when there is a false to true edge on it.
+  bool kurbel_last_ : 1;
 };
 
 #endif  // _STW_FELDERBLOCK_H_
