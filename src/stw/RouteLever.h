@@ -314,6 +314,12 @@ class RouteLever : private Executable {
     bool is_locked() {
       switch (state_) {
         case State::NEUTRAL_LOCKED:
+          if (error_unexpected_set_) {
+            // We should support returning to neutral position if the lever was
+            // set at an unexpected time or in an unexpected direction.
+            return false;
+          }
+          return true;
         case State::SET_LOCKED:
           return true;
         default:

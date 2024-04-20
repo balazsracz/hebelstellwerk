@@ -33,6 +33,9 @@ enum GpioId : gpio_pin_t {
   IN_N_HP2,
   LOCK_A_HP2,
   LOCK_N_HP2,
+
+  IN_W1,
+  LOCK_W1,
   
   NUM_GPIO  // always last.
 
@@ -44,6 +47,8 @@ enum SignalId : uint8_t {
   SIGNAL_A, // Einfahrt
   SIGNAL_N  // Ausfahrt
 };
+
+enum TurnoutId : uint8_t { W1 };
 
 /// Fake implementation of the I2C block interface. It does not communicate via
 /// I2C, but exposes the raw status bits to the owner.
@@ -113,8 +118,8 @@ class FelderBlockTest : public TestBase {
   GlobalState g_cmd_;
 
   LockTable ltbl_{{
-      Route(a1), Hp2(SIGNAL_A), BlockIn(BLOCK_AN),  //
-      Route(n1), Hp2(SIGNAL_N), BlockOut(BLOCK_AN)  //
+      Route(a1), Hp2(SIGNAL_A), TurnoutMinus(W1), BlockIn(BLOCK_AN),  // Einf
+      Route(n1), Hp2(SIGNAL_N), BlockOut(BLOCK_AN)  // Ausfahrt
   }};
 
   uint16_t line_status_{0};
@@ -126,6 +131,7 @@ class FelderBlockTest : public TestBase {
   RouteLever Ran1{a1, n1, IN_a1, false, IN_n1, false, LOCK_a1n1, false};
   SignalLever Sa{SIGNAL_A, HP2, IN_A_HP2, false, LOCK_A_HP2, false};
   SignalLever Sn{SIGNAL_N, HP2, IN_N_HP2, false, LOCK_N_HP2, false};
+  TurnoutLever TW1{W1, IN_W1, true, LOCK_W1, false};
   const uint16_t block_setup_ = 
       block_.set_vorblock_taste(AN_VORBLOCK_IN, false) |
       block_.set_ruckblock_taste(AN_RUCKBLOCK_IN, false) |
@@ -407,6 +413,53 @@ TEST_F(FelderBlockTest, regular_vorblock) {
   EXPECT_FALSE(has(BlockBits::NEWINPUT));
 }
 
+// Prevent an outgoing route when the block is inbounds.
+TEST_F(FelderBlockTest, outgoing_disallow_without_block) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+
+  // Route lever is locked because outbounds are blocked by the block, and
+  // inbounds by W1. We fix W1 state.
+  gpios_.write(IN_W1, true);
+  wait();
+
+  // Now the lever is unlocked.
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  
+  // Tries to set an Ausfahrt
+  gpios_.write(IN_n1, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_RED(AN_LOCK_FIELD);
+  gpios_.write(AN_LOCK_BTN, true);
+  wait();
+  // Failed to lock in the route.
+  EXPECT_RED(AN_LOCK_FIELD);
+  gpios_.write(AN_LOCK_BTN, false);
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+
+  // We change the turnout state.
+  EXPECT_FALSE(gpios_.read(LOCK_W1));
+  gpios_.write(IN_W1, false);
+  wait();
+
+  // We should still be able to return the lever to the middle state.
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+}
+
 // Starts in out+busy mode, receives a Ruckblock.
 TEST_F(FelderBlockTest, regular_out_ruckblock) {
   line_status_ = 0;
@@ -469,6 +522,9 @@ TEST_F(FelderBlockTest, regular_ruckblock) {
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
 
+  gpios_.write(IN_W1, true);
+  wait();
+  
   // Sets an Einfahrt
   gpios_.write(IN_a1, true);
   wait();
