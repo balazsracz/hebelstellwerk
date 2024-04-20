@@ -88,7 +88,7 @@ class FelderBlockTest : public TestBase {
   }
 
   void wait() {
-    for (unsigned i = 0; i < 100; ++i) {
+    for (unsigned i = 0; i < 1500; ++i) {
       ex_.advance(1);
       ex_.loop();
     }
@@ -96,6 +96,14 @@ class FelderBlockTest : public TestBase {
 
 #define EXPECT_RED(x) EXPECT_FALSE(gpios_.read(x))
 #define EXPECT_WHITE(x) EXPECT_TRUE(gpios_.read(x))
+
+  void test_no_handoff() {
+    /// @todo implement
+  }
+
+  void test_no_vorblock() {
+    /// @todo implement
+  }
   
   GpioRegistry gpio_reg_;
   TurnoutRegistry turnout_reg_;
@@ -308,6 +316,8 @@ TEST_F(FelderBlockTest, regular_handoff) {
   EXPECT_WHITE(AN_ANFANGSFELD);
 }
 
+// Starts in out+free mode, sends a train, sends a Vorblock, receives a
+// Ruckblock.
 TEST_F(FelderBlockTest, regular_vorblock) {
   line_status_ = 0;
   set(BlockBits::TRACK_OUT);
@@ -318,5 +328,185 @@ TEST_F(FelderBlockTest, regular_vorblock) {
   EXPECT_WHITE(AN_ENDFELD);
   EXPECT_WHITE(AN_ANFANGSFELD);
 
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+
+  // Sets an Ausfahrt
+  gpios_.write(IN_n1, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  gpios_.write(AN_LOCK_BTN, true);
+  wait();
+  gpios_.write(AN_LOCK_BTN, false);
+
+  EXPECT_WHITE(AN_LOCK_FIELD);
+  EXPECT_FALSE(gpios_.read(LOCK_N_HP2));
+  gpios_.write(IN_N_HP2, true);
+  wait();
   
+  // Train goes
+  gpios_.write(AN_DETECTOR, true);
+  wait();
+  gpios_.write(AN_DETECTOR, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+
+  // Signal close
+  gpios_.write(IN_N_HP2, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+
+  // Route lever reset
+  gpios_.write(IN_n1, false);
+  wait();
+
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+  
+  // Now we can do the Vorblock.
+  gpios_.write(AN_VORBLOCK_IN, true);
+  gpios_.write(KURBEL, true);
+  wait();
+  gpios_.write(AN_VORBLOCK_IN, false);
+  gpios_.write(KURBEL, false);
+  
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+
+  // Test ruckblock receive.
+  wait();
+  set(BlockBits::NEWINPUT);
+  clr(BlockBits::OUT_BUSY);
+
+  wait();
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+  
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
+}
+
+// Starts in out+busy mode, receives a Ruckblock.
+TEST_F(FelderBlockTest, regular_out_ruckblock) {
+  line_status_ = 0;
+  set(BlockBits::TRACK_OUT);
+  set(BlockBits::OUT_BUSY);
+  begin();
+  wait();
+
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
+
+  // Test ruckblock receive.
+  wait();
+  set(BlockBits::NEWINPUT);
+  clr(BlockBits::OUT_BUSY);
+
+  wait();
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
+}
+
+// Starts in in+free mode, receives a Vorblock.
+TEST_F(FelderBlockTest, regular_in_vorblock) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  // Test vorblock receive.
+  wait();
+  set(BlockBits::NEWINPUT);
+  set(BlockBits::IN_BUSY);
+
+  wait();
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
+}
+
+TEST_F(FelderBlockTest, regular_ruckblock) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  set(BlockBits::IN_BUSY);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+
+  // Sets an Einfahrt
+  gpios_.write(IN_a1, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  gpios_.write(AN_LOCK_BTN, true);
+  wait();
+  gpios_.write(AN_LOCK_BTN, false);
+
+  EXPECT_WHITE(AN_LOCK_FIELD);
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  gpios_.write(IN_A_HP2, true);
+  wait();
+  
+  // Train goes
+  gpios_.write(AN_DETECTOR, true);
+  wait();
+  gpios_.write(AN_DETECTOR, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+
+  // Signal close
+  gpios_.write(IN_A_HP2, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+
+  // Route lever reset
+  gpios_.write(IN_a1, false);
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+  
+  // Now we can do the Ruckblock.
+  gpios_.write(AN_RUCKBLOCK_IN, true);
+  gpios_.write(KURBEL, true);
+  wait();
+  gpios_.write(AN_RUCKBLOCK_IN, false);
+  gpios_.write(KURBEL, false);
+  
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  // Test Erlaubnis receive.
+  wait();
+  set(BlockBits::NEWINPUT);
+  clr(BlockBits::HANDOFF);
+  set(BlockBits::TRACK_OUT);
+
+  wait();
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
 }
