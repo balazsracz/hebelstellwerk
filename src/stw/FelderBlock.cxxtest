@@ -4,30 +4,45 @@
 #include "utils/MockPin.h"
 
 enum BlockId : uint8_t {
-  BLOCK_AB,
-  BLOCK_CD,
+  BLOCK_AN,
 };
 
 /// These identifiers are used for fake GPIO registration.
 enum GpioId : gpio_pin_t {
   MIN_GPIO = 35,
-  AB_LOCK_BTN,
-  AB_LOCK_FIELD,
-  AB_DETECTOR,
-  AB_VORBLOCK_IN,
-  AB_ENDFELD,
-  AB_RUCKBLOCK_IN,
-  AB_ANFANGSFELD,
-  AB_ABGABE_IN,
-  AB_ERLAUBNISFELD,
-  AB_STORUNGSMELDER,
-  AB_HALTSTELLMELDER,
-  AB_STRECKENTASTENSPERRE,
+  AN_LOCK_BTN,
+  AN_LOCK_FIELD,
+  AN_DETECTOR,
+  AN_VORBLOCK_IN,
+  AN_ENDFELD,
+  AN_RUCKBLOCK_IN,
+  AN_ANFANGSFELD,
+  AN_ABGABE_IN,
+  AN_ERLAUBNISFELD,
+  AN_STORUNGSMELDER,
+  AN_HALTSTELLMELDER,
+  AN_STRECKENTASTENSPERRE,
   
   KURBEL,
 
+  IN_a1,
+  IN_n1,
+  LOCK_a1n1,
+
+  IN_A_HP2,
+  IN_N_HP2,
+  LOCK_A_HP2,
+  LOCK_N_HP2,
+  
   NUM_GPIO  // always last.
 
+};
+
+enum RouteId : uint8_t { a1, n1 };
+
+enum SignalId : uint8_t {
+  SIGNAL_A, // Einfahrt
+  SIGNAL_N  // Ausfahrt
 };
 
 /// Fake implementation of the I2C block interface. It does not communicate via
@@ -89,23 +104,31 @@ class FelderBlockTest : public TestBase {
   BlockRegistry block_reg_;
   GlobalState g_cmd_;
 
+  LockTable ltbl_{{
+      Route(a1), Hp2(SIGNAL_A), BlockIn(BLOCK_AN),  //
+      Route(n1), Hp2(SIGNAL_N), BlockOut(BLOCK_AN)  //
+  }};
+
   uint16_t line_status_{0};
   FakeI2CBlock i2c_blk_{&line_status_};
   
   FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
-  FelderBlock block_{&i2c_blk_, BLOCK_AB, AB_DETECTOR,   false, AB_LOCK_BTN,
-                     false,    AB_LOCK_FIELD, false};
+  FelderBlock block_{&i2c_blk_, BLOCK_AN, AN_DETECTOR,   false, AN_LOCK_BTN,
+                     false,    AN_LOCK_FIELD, false};
+  RouteLever Ran1{a1, n1, IN_a1, false, IN_n1, false, LOCK_a1n1, false};
+  SignalLever Sa{SIGNAL_A, HP2, IN_A_HP2, false, LOCK_A_HP2, false};
+  SignalLever Sn{SIGNAL_N, HP2, IN_N_HP2, false, LOCK_N_HP2, false};
   const uint16_t block_setup_ = 
-      block_.set_vorblock_taste(AB_VORBLOCK_IN, false) |
-      block_.set_ruckblock_taste(AB_RUCKBLOCK_IN, false) |
-      block_.set_abgabe_taste(AB_ABGABE_IN, false) |
+      block_.set_vorblock_taste(AN_VORBLOCK_IN, false) |
+      block_.set_ruckblock_taste(AN_RUCKBLOCK_IN, false) |
+      block_.set_abgabe_taste(AN_ABGABE_IN, false) |
       block_.set_kurbel(KURBEL, false) |
-      block_.set_anfangsfeld(AB_ANFANGSFELD, false) |
-      block_.set_endfeld(AB_ENDFELD, false) |
-      block_.set_erlaubnisfeld(AB_ERLAUBNISFELD, false) |
-      block_.set_storungsmelder(AB_STORUNGSMELDER, false) |
-      block_.set_signalhaltmelder(AB_HALTSTELLMELDER, false) |
-      block_.set_streckentastensperre(AB_STRECKENTASTENSPERRE, false);
+      block_.set_anfangsfeld(AN_ANFANGSFELD, false) |
+      block_.set_endfeld(AN_ENDFELD, false) |
+      block_.set_erlaubnisfeld(AN_ERLAUBNISFELD, false) |
+      block_.set_storungsmelder(AN_STORUNGSMELDER, false) |
+      block_.set_signalhaltmelder(AN_HALTSTELLMELDER, false) |
+      block_.set_streckentastensperre(AN_STRECKENTASTENSPERRE, false);
 };
 
 TEST_F(FelderBlockTest, create) {}
@@ -118,9 +141,9 @@ TEST_F(FelderBlockTest, create2) {
 TEST_F(FelderBlockTest, cold_start_startup_state) {
   begin();
   wait();
-  EXPECT_WHITE(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 
   // Output state
   EXPECT_TRUE(has(BlockBits::TRACK_OUT));
@@ -139,7 +162,7 @@ TEST_F(FelderBlockTest, unlocked_ruckblock) {
   g_cmd_.is_unlocked_ = true;
   begin();
   wait();
-  gpios_.write(AB_RUCKBLOCK_IN, true);
+  gpios_.write(AN_RUCKBLOCK_IN, true);
   gpios_.write(KURBEL, true);
   wait();
   EXPECT_FALSE(has(BlockBits::TRACK_OUT));
@@ -147,11 +170,11 @@ TEST_F(FelderBlockTest, unlocked_ruckblock) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_TRUE(has(BlockBits::NEWOUTPUT));
 
-  EXPECT_RED(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 
-  gpios_.write(AB_RUCKBLOCK_IN, false);
+  gpios_.write(AN_RUCKBLOCK_IN, false);
   gpios_.write(KURBEL, false);
   clr(BlockBits::NEWOUTPUT);
   wait();
@@ -161,7 +184,7 @@ TEST_F(FelderBlockTest, unlocked_handoff) {
   g_cmd_.is_unlocked_ = true;
   begin();
   wait();
-  gpios_.write(AB_ABGABE_IN, true);
+  gpios_.write(AN_ABGABE_IN, true);
   gpios_.write(KURBEL, true);
   wait();
   EXPECT_FALSE(has(BlockBits::TRACK_OUT));
@@ -170,11 +193,11 @@ TEST_F(FelderBlockTest, unlocked_handoff) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_FALSE(has(BlockBits::OUT_BUSY));
 
-  EXPECT_RED(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 
-  gpios_.write(AB_ABGABE_IN, false);
+  gpios_.write(AN_ABGABE_IN, false);
   gpios_.write(KURBEL, false);
   clr(BlockBits::NEWOUTPUT);
   wait();
@@ -184,7 +207,7 @@ TEST_F(FelderBlockTest, unlocked_vorblock) {
   g_cmd_.is_unlocked_ = true;
   begin();
   wait();
-  gpios_.write(AB_VORBLOCK_IN, true);
+  gpios_.write(AN_VORBLOCK_IN, true);
   gpios_.write(KURBEL, true);
   wait();
   EXPECT_TRUE(has(BlockBits::TRACK_OUT));
@@ -193,11 +216,11 @@ TEST_F(FelderBlockTest, unlocked_vorblock) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_TRUE(has(BlockBits::OUT_BUSY));
 
-  EXPECT_WHITE(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_RED(AB_ANFANGSFELD);
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
   
-  gpios_.write(AB_ABGABE_IN, false);
+  gpios_.write(AN_ABGABE_IN, false);
   gpios_.write(KURBEL, false);
   clr(BlockBits::NEWOUTPUT);
   wait();
@@ -209,9 +232,9 @@ TEST_F(FelderBlockTest, recover_out_free) {
   begin();
   wait();
 
-  EXPECT_WHITE(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 }
 
 TEST_F(FelderBlockTest, recover_out_busy) {
@@ -221,9 +244,9 @@ TEST_F(FelderBlockTest, recover_out_busy) {
   begin();
   wait();
 
-  EXPECT_WHITE(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_RED(AB_ANFANGSFELD);
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_RED(AN_ANFANGSFELD);
 }
 
 TEST_F(FelderBlockTest, recover_in_free) {
@@ -232,9 +255,9 @@ TEST_F(FelderBlockTest, recover_in_free) {
   begin();
   wait();
 
-  EXPECT_RED(AB_ERLAUBNISFELD);
-  EXPECT_WHITE(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 }
 
 TEST_F(FelderBlockTest, recover_in_busy) {
@@ -244,7 +267,56 @@ TEST_F(FelderBlockTest, recover_in_busy) {
   begin();
   wait();
 
-  EXPECT_RED(AB_ERLAUBNISFELD);
-  EXPECT_RED(AB_ENDFELD);
-  EXPECT_WHITE(AB_ANFANGSFELD);
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+}
+
+
+TEST_F(FelderBlockTest, regular_handoff) {
+  // Starting state in+free
+  line_status_ = 0;
+  set(BlockBits::TRACK_OUT);
+  begin();
+  wait();
+
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  // Now we press the buttons
+  gpios_.write(AN_ABGABE_IN, true);
+  gpios_.write(KURBEL, true);
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_FALSE(has(BlockBits::TRACK_OUT));
+  EXPECT_TRUE(has(BlockBits::HANDOFF));
+  EXPECT_TRUE(has(BlockBits::NEWOUTPUT));
+  EXPECT_FALSE(has(BlockBits::IN_BUSY));
+  EXPECT_FALSE(has(BlockBits::OUT_BUSY));
+
+  // Block responds
+  clr(BlockBits::NEWOUTPUT);
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+}
+
+TEST_F(FelderBlockTest, regular_vorblock) {
+  line_status_ = 0;
+  set(BlockBits::TRACK_OUT);
+  begin();
+  wait();
+
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  
 }
