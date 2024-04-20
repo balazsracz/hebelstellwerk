@@ -162,7 +162,9 @@ class FelderBlock : public Block {
     /// Have permission, track is free.
     OUT_FREE,
     /// Have permission, track is occupied.
-    OUT_OCC
+    OUT_OCC,
+    /// We don't know the state.
+    STARTUP,
   };
 
  private:
@@ -170,7 +172,6 @@ class FelderBlock : public Block {
     Block::begin();
     tm_.start_drifting(13);
     /// @todo  Search for signal levers for this block.
-    // asdsadsa
   }
 
   void loop() override {
@@ -214,9 +215,13 @@ class FelderBlock : public Block {
         erlaubnisfeld_.write(WHITE);
         break;
       }
+      case State::STARTUP: {
+        anfangsfeld_.write(RED);
+        endfeld_.write(RED);
+        erlaubnisfeld_.write(RED);
+        break;
+      }
     }
-
-    /// @todo handle initialization state
 
     // The rest of the logic we only do occasionally.
     if (!tm_.check()) {
@@ -243,6 +248,48 @@ class FelderBlock : public Block {
 
     uint16_t status = iface_->get_status();
 
+    /// @todo handle initialization state
+    if (state_ == State::STARTUP && status != 0) {
+      bool has_out = status & BlockBits::TRACK_OUT;
+      bool has_in = status & BlockBits::HANDOFF;
+      bool has_start = status & BlockBits::STARTUP;
+      if (has_out && has_in) {
+        // Confusing.
+        LOG(LEVEL_ERROR,
+            "ERR Block %d startup: both out and in is set in status (%02x), "
+            "resetting to out+free",
+            id_, status);
+        cold_start();
+      } else if (has_out) {
+        state_ =
+            status & BlockBits::OUT_BUSY ? State::OUT_OCC : State::OUT_FREE;
+        LOG(LEVEL_INFO, "Block %d: start with block state OUT (%02x) - %d", id_,
+            status, (int)state_);
+      } else if (has_in) {
+        state_ =
+            status & BlockBits::IN_BUSY ? State::IN_OCC : State::IN_FREE;
+        LOG(LEVEL_INFO, "Block %d: start with block state IN (%02x) - %d", id_,
+            status, (int)state_);
+      } else if (has_start) {
+        // The block doesn't know the state and we don't know it either. This
+        // is a cold start. We set up the state for outgoing track free. In
+        // this state the operator can do a handoff (Erlaubnisabgabe).
+        LOG(LEVEL_INFO, "Block %d: cold start(%02x) - setting out+free", id_,
+            status);
+        cold_start();
+        return;
+      } else {
+        LOG(LEVEL_INFO, "Block %d (state %d): unknown start(%02x) - setting out+free", id_, (int)state_, status);
+        cold_start();
+        return;
+      }
+    }
+
+    if (status & BlockBits::STARTUP) {
+      // Now we have a state but the block interface has reset and it doesn't.
+      
+    }
+    
     // Abgabe / handoff
     if (abgabe_taste_.read() && kurbel) {
       const char* from = global_is_unlocked() ? "forced" : nullptr;
@@ -346,12 +393,22 @@ class FelderBlock : public Block {
         }
         break;
       }
+      case State::STARTUP: {
+        break;
+      }
     }
   }
 
   void wait_for_complete(State s) {
     /// @todo implement some way to delay until a block operation completes.
     state_ = s;
+  }
+
+  /// Setup both the block and the local state for a cold start.
+  void cold_start() {
+    state_ = State::OUT_FREE;
+    auto nst = BlockBits::TRACK_OUT | BlockBits::NEWOUTPUT;
+    iface_->set_status((uint16_t)nst);
   }
 
   struct SignalLeverPtr {
@@ -408,7 +465,7 @@ class FelderBlock : public Block {
   Timer tm_;
 
   /// Current state of the block.
-  State state_{State::IN_OCC};
+  State state_{State::STARTUP};
 
   /// @todo these need to be reset to zero when appropriate
 

@@ -78,6 +78,9 @@ class FelderBlockTest : public TestBase {
       ex_.loop();
     }
   }
+
+#define EXPECT_RED(x) EXPECT_FALSE(gpios_.read(x))
+#define EXPECT_WHITE(x) EXPECT_TRUE(gpios_.read(x))
   
   GpioRegistry gpio_reg_;
   TurnoutRegistry turnout_reg_;
@@ -112,10 +115,24 @@ TEST_F(FelderBlockTest, create2) {
   wait();
 }
 
-TEST_F(FelderBlockTest, startup_state) {
+TEST_F(FelderBlockTest, cold_start_startup_state) {
   begin();
   wait();
-  EXPECT_FALSE(gpios_.read(AB_ENDFELD));
+  EXPECT_WHITE(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
+
+  // Output state
+  EXPECT_TRUE(has(BlockBits::TRACK_OUT));
+  EXPECT_FALSE(has(BlockBits::HANDOFF));
+  EXPECT_FALSE(has(BlockBits::OUT_BUSY));
+  EXPECT_FALSE(has(BlockBits::IN_BUSY));
+  
+  // Cold start should be cleared.
+  EXPECT_FALSE(has(BlockBits::STARTUP));
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
+  // Signaled output.
+  EXPECT_TRUE(has(BlockBits::NEWOUTPUT));
 }
 
 TEST_F(FelderBlockTest, unlocked_ruckblock) {
@@ -130,9 +147,9 @@ TEST_F(FelderBlockTest, unlocked_ruckblock) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_TRUE(has(BlockBits::NEWOUTPUT));
 
-  EXPECT_FALSE(gpios_.read(AB_ERLAUBNISFELD));
-  EXPECT_TRUE(gpios_.read(AB_ENDFELD));
-  EXPECT_TRUE(gpios_.read(AB_ANFANGSFELD));
+  EXPECT_RED(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
 
   gpios_.write(AB_RUCKBLOCK_IN, false);
   gpios_.write(KURBEL, false);
@@ -153,9 +170,9 @@ TEST_F(FelderBlockTest, unlocked_handoff) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_FALSE(has(BlockBits::OUT_BUSY));
 
-  EXPECT_FALSE(gpios_.read(AB_ERLAUBNISFELD));
-  EXPECT_TRUE(gpios_.read(AB_ENDFELD));
-  EXPECT_TRUE(gpios_.read(AB_ANFANGSFELD));
+  EXPECT_RED(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
 
   gpios_.write(AB_ABGABE_IN, false);
   gpios_.write(KURBEL, false);
@@ -176,9 +193,9 @@ TEST_F(FelderBlockTest, unlocked_vorblock) {
   EXPECT_FALSE(has(BlockBits::IN_BUSY));
   EXPECT_TRUE(has(BlockBits::OUT_BUSY));
 
-  EXPECT_TRUE(gpios_.read(AB_ERLAUBNISFELD));
-  EXPECT_TRUE(gpios_.read(AB_ENDFELD));
-  EXPECT_FALSE(gpios_.read(AB_ANFANGSFELD));
+  EXPECT_WHITE(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_RED(AB_ANFANGSFELD);
   
   gpios_.write(AB_ABGABE_IN, false);
   gpios_.write(KURBEL, false);
@@ -186,3 +203,48 @@ TEST_F(FelderBlockTest, unlocked_vorblock) {
   wait();
 }
 
+TEST_F(FelderBlockTest, recover_out_free) {
+  line_status_ = 0;
+  set(BlockBits::TRACK_OUT);
+  begin();
+  wait();
+
+  EXPECT_WHITE(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
+}
+
+TEST_F(FelderBlockTest, recover_out_busy) {
+  line_status_ = 0;
+  set(BlockBits::TRACK_OUT);
+  set(BlockBits::OUT_BUSY);
+  begin();
+  wait();
+
+  EXPECT_WHITE(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_RED(AB_ANFANGSFELD);
+}
+
+TEST_F(FelderBlockTest, recover_in_free) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  begin();
+  wait();
+
+  EXPECT_RED(AB_ERLAUBNISFELD);
+  EXPECT_WHITE(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
+}
+
+TEST_F(FelderBlockTest, recover_in_busy) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  set(BlockBits::IN_BUSY);
+  begin();
+  wait();
+
+  EXPECT_RED(AB_ERLAUBNISFELD);
+  EXPECT_RED(AB_ENDFELD);
+  EXPECT_WHITE(AB_ANFANGSFELD);
+}
