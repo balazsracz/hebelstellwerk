@@ -93,6 +93,29 @@ class I2CBlockInterface {
     return get_status() & (uint16_t)BlockBits::NEWINPUT;
   }
 
+  /// Requests the handoff (Erlaubnisabgabe).
+  void abgabe() {
+    uint16_t ost = get_status();
+    uint16_t nst =
+        (ost | (uint16_t)BlockBits::HANDOFF | (uint16_t)BlockBits::NEWOUTPUT) &
+        ~(uint16_t)BlockBits::TRACK_OUT;
+    set_status(nst);
+  }
+
+  /// Requests the out_busy state (Vorblocken)
+  void vorblocken() {
+    send_bit(BlockBits::OUT_BUSY | BlockBits::TRACK_OUT);
+  }
+
+  /// Requests the in_free state (Rückblocken)
+  void ruckblocken() {
+    uint16_t ost = get_status();
+    uint16_t nst =
+        (ost | (uint16_t)BlockBits::HANDOFF | (uint16_t)BlockBits::NEWOUTPUT) &
+        ~(uint16_t)BlockBits::IN_BUSY;
+    set_status(nst);
+  }
+  
   /// Gets the current status bits.
   /// @return the last known status bits from the block interface module.
   virtual uint16_t get_status() = 0;
