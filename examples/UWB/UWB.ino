@@ -129,10 +129,9 @@ static_assert(GPIO_EXT_HEBEL_FSTR + 15 == GPIO_HEBEL_A1,
 static_assert(GPIO_EXT_TASTER + 15 == GPIO_BTN_ENDFELD_A,
               "misaligned ext taster");
 
-///@todo add kubel analog gpio
-DummyGpio kurbel(GPIO_KURBEL);
+AnalogGpio kurbel(GPIO_KURBEL, A1, -450 /*count*/, 1000 /*msec*/);
 
-static constexpr auto GPIO_XKURBEL = GPIO_BTN_FESTLEGE_CD;
+static constexpr auto GPIO_XKURBEL = GPIO_KURBEL;
 
 DummyGpio dummy(GPIO_DUMMY);
 
@@ -321,7 +320,7 @@ FelderBlock blk_ab(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
 const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_ruckblock_taste(GPIO_BTN_ENDFELD_A, true) |
                    blk_ab.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_B, true) |
-                   blk_ab.set_kurbel(GPIO_XKURBEL, true) |
+                   blk_ab.set_kurbel(GPIO_KURBEL, false) |
                    blk_ab.set_anfangsfeld(GPIO_ANFANGS_B, false) |
                    blk_ab.set_endfeld(GPIO_ENDFELD_A, false) |
                    blk_ab.set_erlaubnisfeld(GPIO_ERLAUBNIS_B, false) |
@@ -335,7 +334,7 @@ FelderBlock blk_cd(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
 const auto cdrdy = blk_cd.set_vorblock_taste(GPIO_BTN_ANFANG_C, true) |
                    blk_cd.set_ruckblock_taste(GPIO_BTN_ENDFELD_D, true) |
                    blk_cd.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_C, true) |
-                   blk_cd.set_kurbel(GPIO_XKURBEL, true) |
+                   blk_cd.set_kurbel(GPIO_KURBEL, false) |
                    blk_cd.set_anfangsfeld(GPIO_ANFANGS_C, false) |
                    blk_cd.set_endfeld(GPIO_ENDFELD_D, false) |
                    blk_cd.set_erlaubnisfeld(GPIO_ERLAUBNIS_C, false) |
