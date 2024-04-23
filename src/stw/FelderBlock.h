@@ -175,7 +175,39 @@ class FelderBlock : public Block {
   void begin() override {
     Block::begin();
     tm_.start_drifting(13);
-    /// @todo  Search for signal levers for this block.
+    // Searches for entry signal levers for this block.
+    SignalLever* lever = nullptr;
+    bool ours = false;
+    for (const LockTableEntry& e : *LockTable::instance()) {
+      if (e.type_ == ROUTE_ROW) {
+        register_signal_lever(ours, lever);
+        lever = nullptr;
+        ours = false;
+      } else if (e.type_ == SIGNAL_HP1) {
+        auto id = signal_registry_idx(SignalId(e.arg_), HP1);
+        lever = SignalRegistry::instance()->get(id);
+      } else if (e.type_ == SIGNAL_HP2) {
+        auto id = signal_registry_idx(SignalId(e.arg_), HP2);
+        lever = SignalRegistry::instance()->get(id);
+      } else if (e == BlockIn(id_)) {
+        // This route uses our block inbound.
+        ours = true;
+      }
+    }
+    // Last row.
+    register_signal_lever(ours, lever);
+  }
+
+  void register_signal_lever(bool ours, SignalLever* lever) {
+    if (!ours) return;
+    if (!lever) {
+      LOG(LEVER_ERROR, "Found route for block %d, but no signal lever.", id_);
+      return;
+    }
+    auto* p = new SignalLeverPtr;
+    p->lever = lever;
+    p->next = signals_in_;
+    signals_in_ = p;
   }
 
   void loop() override {
@@ -232,6 +264,7 @@ class FelderBlock : public Block {
       return;
     }
 
+    // ==== Handle Crank ====
     bool kurbel = kurbel_.read();
     // Performs positive edge detection for kurbel. After this section, the
     // kurbel variable will be true for only one round after it went positive.
@@ -248,6 +281,7 @@ class FelderBlock : public Block {
     
     uint16_t status = iface_->get_status();
 
+    // ==== Handle Störungsmelder ====
     if (status & BlockBits::ERROR) {
         storungsmelder_.write(true);
     } else {
@@ -255,10 +289,14 @@ class FelderBlock : public Block {
         startup_err_ = false;
     }
 
-    /// @todo handle Signalhaltmelder. We should search for all signal levers,
-    /// and check whether any of them are set to proceed.
-
-
+    // ==== Handle Signalhaltmelder ====
+    bool halt = true;
+    for (const auto* p = signals_in_; p; p = p->next) {
+      if (p->lever->is_proceed()) halt = false;
+    }
+    signalhaltmelder_.write(halt);
+    
+    // ==== Handle Startup of the Arduino ====
     if (state_ == State::STARTUP && status != 0) {
       bool has_out = status & BlockBits::TRACK_OUT;
       bool has_in = status & BlockBits::HANDOFF;
@@ -303,6 +341,7 @@ class FelderBlock : public Block {
       }
     }
 
+    // ==== Handle Startup of the Block I2C interface ====
     if (status & BlockBits::STARTUP) {
       /// @todo handle initialization state
       // Now we have a state but the block interface has reset and it doesn't.
