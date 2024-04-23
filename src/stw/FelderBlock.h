@@ -310,12 +310,20 @@ class FelderBlock : public Block {
     }
     
     // Abgabe / handoff
-    if (abgabe_taste_.read() && kurbel) {
-      const char* from = global_is_unlocked() ? "forced" : nullptr;
+    if (abgabe_taste_.read() && kurbel_.read()) {
+      // We purposefully are not using the edge-detected `kurbel` variable
+      // above. There is a bug in the I2C block that sometimes makes the block
+      // state flip back to "ErlaubWir" the next tick after we performed
+      // handoff ("ErlaubAnd"). We can fix this by performing the handoff a
+      // second time. So long as the user is still holding the button and
+      // turning the crank, we will re-enter the condition here.
+
+      const char* from = nullptr;
       if (state_ == State::OUT_FREE && !have_route_locked_) {
         // Now handoff is possible.
         from = "OUT_FREE";
-      } else if (global_is_unlocked()) {
+      } else if (global_is_unlocked() && kurbel) {
+        // For global unlocked, we do use the edge-detected kurbel condition.
         from = "forced";
       }
       if (from) {
