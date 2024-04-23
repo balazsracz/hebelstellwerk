@@ -376,14 +376,14 @@ Blinker blinker2{LED_BUILTIN};
 
 std::string block_to_string(uint16_t blk) {
   std::string ret;
-  if (blk & BlockBits::STARTUP) ret += "start,";
-  if (blk & BlockBits::NEWOUTPUT) ret += "newout,";
-  if (blk & BlockBits::NEWINPUT) ret += "newin,";
-  if (blk & BlockBits::ERROR) ret += "err,";  
-  if (blk & BlockBits::TRACK_OUT) ret += "erlaubnis,";  
-  if (blk & BlockBits::HANDOFF) ret += "handoff,";  
-  if (blk & BlockBits::IN_BUSY) ret += "in-vorbl,";  
-  if (blk & BlockBits::OUT_BUSY) ret += "out-vorbl,";
+  if (blk & BlockBits::STARTUP) ret += "Start,";
+  if (blk & BlockBits::NEWOUTPUT) ret += "DatNeuFeld,";
+  if (blk & BlockBits::NEWINPUT) ret += "DatNeuBlock,";
+  if (blk & BlockBits::ERROR) ret += "Störung,";  
+  if (blk & BlockBits::TRACK_OUT) ret += "ErlaubWir,";  
+  if (blk & BlockBits::HANDOFF) ret += "ErlaubAnd,";  
+  if (blk & BlockBits::IN_BUSY) ret += "EndeRot,";  
+  if (blk & BlockBits::OUT_BUSY) ret += "AnfangRot,";
   if (!ret.empty()) ret.pop_back();
   return ret;
 }
