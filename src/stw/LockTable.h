@@ -68,6 +68,9 @@ struct LockTableEntry {
   bool operator!=(const LockTableEntry o) const {
     return type_ != o.type_ || arg_ != o.arg_;
   }
+  bool operator==(const LockTableEntry o) const {
+    return type_ == o.type_ && arg_ == o.arg_;
+  }
 };
 
 static_assert(sizeof(LockTableEntry) == 2,
