@@ -44,8 +44,8 @@
 #if defined(ANALOGGPIO_TEST) || defined(ARDUINO)
 
 #include "utils/Gpio.h"
-#include "utils/Timer.h"
 #include "utils/Logging.h"
+#include "utils/Timer.h"
 
 /// Analog input GPIO. Simulates a digital input pin by performing analog reads
 /// of an arduino input. The input has to be above a given threshold of voltage
@@ -61,7 +61,8 @@ class AnalogGpio : public Gpio, private Executable {
   /// which we will be reading as input.
   /// @param threshold_analog is the minimum value of analogRead() output to
   /// consider the pin as active. This is usually in the range of 0..1023, but
-  /// might depends on the MCU platform.
+  /// might depends on the MCU platform. If negative, then the threshold is
+  /// below, i.e. analogRead() < -threshold.
   /// @param length_msec. How many msec long the input has to be above the
   /// threshold to consider it active.
   AnalogGpio(gpio_pin_t register_pin, int arduino_pin, int16_t threshold_analog,
@@ -81,9 +82,22 @@ class AnalogGpio : public Gpio, private Executable {
   void loop() override {
     while (tm_.check()) {
       auto current = analogRead(arduino_pin_);
-      if (current >= threshold_analog_) {
+      bool active = false;
+      if (threshold_analog_ >= 0) {
+        active = (current >= threshold_analog_);
+      } else {
+        active = (current <= -threshold_analog_);
+      }
+      if (active) {
+        if (msec_above_ < length_msec_ &&
+            msec_above_ + POLL_MSEC >= length_msec_) {
+          LOG(LEVEL_INFO, "Kurbel on");
+        }
         msec_above_ += POLL_MSEC;
       } else {
+        if (msec_above_ > 0) {
+          LOG(LEVEL_INFO, "Kurbel off");
+        }
         msec_above_ = 0;
       }
     }
@@ -93,7 +107,8 @@ class AnalogGpio : public Gpio, private Executable {
     DIE("Analog Pin does not support write.");
   }
   bool read(gpio_pin_t pin) const override {
-    LOG(LEVEL_VERBOSE, "analog_gpio read %d >= %d", msec_above_, length_msec_);
+    // LOG(LEVEL_VERBOSE, "analog_gpio read %d >= %d", msec_above_,
+    // length_msec_);
     return msec_above_ >= length_msec_;
   }
   void set_output(gpio_pin_t pin) const override {

@@ -6,7 +6,7 @@ int analogRead(int pin) {
   EXPECT_EQ(READ_PIN, pin);
   return g_read_value;
 }
-static constexpr unsigned THRESHOLD = 103;
+static constexpr int THRESHOLD = 103;
 
 static constexpr unsigned INPUT = 0;
 void pinMode(int, int) {}
@@ -82,6 +82,22 @@ TEST_F(AnalogGpioTest, many_toggle) {
     wait();
     EXPECT_FALSE(acc.read());
     g_read_value = THRESHOLD + 1;
+    wait();
+    EXPECT_TRUE(acc.read());
+  }
+  
+}
+
+
+TEST_F(AnalogGpioTest, negative) {
+  AnalogGpio gpio{13, READ_PIN, -THRESHOLD, 450};
+  GpioAccessor acc{13, false, GPIO_INPUT};
+
+  for(int cnt = 0; cnt < 100; ++cnt) {
+    g_read_value = THRESHOLD + 1;
+    wait();
+    EXPECT_FALSE(acc.read());
+    g_read_value = THRESHOLD - 1;
     wait();
     EXPECT_TRUE(acc.read());
   }
