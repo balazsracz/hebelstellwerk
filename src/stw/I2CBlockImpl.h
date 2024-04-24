@@ -72,6 +72,8 @@ class I2CBlock : public I2CBlockInterface, private Executable {
         LOG(LEVEL_INFO, "Success I2C Block %02x status write (st=%02x).", dev_.address(), last_status_);
       }
       dirty_ = false;
+      // Prevents a race condition where we query the state again too quickly.
+      tm_.start_drifting(POLL_MSEC);
     }
     if (tm_.check()) {
       refresh();
