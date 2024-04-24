@@ -56,7 +56,8 @@ class FelderBlock : public Block {
         seen_route_locked_out_(false),
         seen_route_locked_in_(false),
         kurbel_last_(false),
-        startup_err_(false) {}
+        startup_err_(false),
+        defer_operations_(0) {}
 
   // Setup functions. Allows defining the GPIO mapping for this given block in
   // a way that is a bit more readable, than just having a super long list of
@@ -264,6 +265,11 @@ class FelderBlock : public Block {
       return;
     }
 
+    if (defer_operations_) {
+      --defer_operations_;
+      return;
+    }
+
     // ==== Handle Crank ====
     bool kurbel = kurbel_.read();
     // Performs positive edge detection for kurbel. After this section, the
@@ -398,7 +404,7 @@ class FelderBlock : public Block {
 
     // Ruckblocken / In-free
     if (ruckblock_taste_.read() && kurbel) {
-      const char* from = global_is_unlocked() ? "forced" : nullptr;
+      const char* from = nullptr;
       // Check if a train has traveled inbounds through this block, and the
       // route lever matching that has been re-set.
       if (state_ == State::IN_OCC && seen_route_locked_in_ &&
@@ -407,6 +413,21 @@ class FelderBlock : public Block {
                ->get(locked_route_)
                ->is_route_set(locked_route_)) {
         from = "IN_OCC";
+      } else if (global_is_unlocked()) {
+        // In order to send forced "Rückblocken" we have to ensure first that
+        // the I2C Block believes that "EndeRot" is set.
+        if (status & BlockBits::IN_BUSY) {
+          // We can send back the signal.
+          from = "forced";
+        } else {
+          // We have to reset the block status first.
+          iface_->reset_endfeld_rot();
+          state_ = State::IN_OCC;
+          // We need to wait a bit to ensure that the block is settled.
+          defer_operations_ = 63;
+          // This will make us go into this branch again.
+          kurbel_last_ = false;
+        }
       }
       if (from) {
         seen_route_locked_in_ = false;
@@ -556,6 +577,9 @@ class FelderBlock : public Block {
   /// True if we've seen error at startup from the block and never exited this
   /// error. We just never use the block and allow all movements.
   bool startup_err_ : 1;
+
+  /// If non-zero, we defer block operations for this many ticks.
+  uint8_t defer_operations_ : 6;
 };
 
 #endif  // _STW_FELDERBLOCK_H_
