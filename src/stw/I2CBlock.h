@@ -107,6 +107,13 @@ class I2CBlockInterface {
     send_bit(BlockBits::OUT_BUSY | BlockBits::TRACK_OUT);
   }
 
+  /// Resets the block state to in_busy, in which state it is possible to send
+  /// a Rückblocken message.
+  void reset_endfeld_rot() {
+    set_status((uint16_t)(BlockBits::HANDOFF | BlockBits::IN_BUSY |
+                          BlockBits::NEWOUTPUT));
+  }
+  
   /// Requests the in_free state (Rückblocken)
   void ruckblocken() {
     uint16_t ost = get_status();
