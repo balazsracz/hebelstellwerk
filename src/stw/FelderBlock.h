@@ -174,7 +174,7 @@ class FelderBlock : public Block {
  private:
   void begin() override {
     Block::begin();
-    tm_.start_drifting(13);
+    tm_.start_drifting(POLL_MSEC);
     // Searches for entry signal levers for this block.
     SignalLever* lever = nullptr;
     bool ours = false;
@@ -482,6 +482,9 @@ class FelderBlock : public Block {
     SignalLeverPtr* next;
   };
 
+  /// How often we should evaluate the internal state machine.
+  static constexpr uint16_t POLL_MSEC = 13;
+  
   /// Hardware connection for the actual block PCB.
   I2CBlockInterface* iface_{nullptr};
 
