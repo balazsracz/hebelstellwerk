@@ -301,7 +301,12 @@ class FelderBlock : public Block {
       if (p->lever->is_proceed()) halt = false;
     }
     signalhaltmelder_.write(halt);
-    
+
+    // ==== Handle elektrische Streckentastensperre
+    streckentastensperre_.write(
+        state_ == State::IN_OCC && have_route_locked_ &&
+        locked_route()->streckentastensperre(locked_route_));
+
     // ==== Handle Startup of the Arduino ====
     if (state_ == State::STARTUP && status != 0) {
       bool has_out = status & BlockBits::TRACK_OUT;
@@ -348,12 +353,28 @@ class FelderBlock : public Block {
     }
 
     // ==== Handle Startup of the Block I2C interface ====
-    if (status & BlockBits::STARTUP) {
-      /// @todo handle initialization state
-      // Now we have a state but the block interface has reset and it doesn't.
-      
+    if ((status & (BlockBits::STARTUP | BlockBits::TRACK_OUT |
+                   BlockBits::HANDOFF)) == (uint16_t)BlockBits::STARTUP) {
+      // Now we have a state but the block interface has reset and it doesn't
+      // have a state.
+      switch(state_) {
+        case State::IN_FREE:
+          iface_->reset_in();
+          return;
+        case State::IN_OCC:
+          iface_->reset_endfeld_rot();
+          return;
+        case State::OUT_FREE:
+          iface_->reset_out();
+          return;
+        case State::OUT_OCC:
+          iface_->reset_anf_rot();
+          return;
+        case State::STARTUP:
+          break;
+      }
     }
-    
+
     // Abgabe / handoff
     if (abgabe_taste_.read() && kurbel_.read()) {
       // We purposefully are not using the edge-detected `kurbel` variable
@@ -387,10 +408,7 @@ class FelderBlock : public Block {
       // Check if a train has traveled outbounds through this block, and the
       // route lever matching that has been re-set.
       if (state_ == State::OUT_FREE && seen_route_locked_out_ &&
-          !have_route_locked_ &&
-          !RouteRegistry::instance()
-               ->get(locked_route_)
-               ->is_route_set(locked_route_)) {
+          !have_route_locked_ && !locked_route()->is_route_set(locked_route_)) {
         from = "OUT_FREE";
       }
       if (from) {
@@ -406,12 +424,9 @@ class FelderBlock : public Block {
     if (ruckblock_taste_.read() && kurbel) {
       const char* from = nullptr;
       // Check if a train has traveled inbounds through this block, and the
-      // route lever matching that has been re-set.
+      // route lever matching that has been unlocked (route traveled).
       if (state_ == State::IN_OCC && seen_route_locked_in_ &&
-          !have_route_locked_ &&
-          !RouteRegistry::instance()
-               ->get(locked_route_)
-               ->is_route_set(locked_route_)) {
+          !have_route_locked_) {
         from = "IN_OCC";
       } else if (global_is_unlocked()) {
         // In order to send forced "Rückblocken" we have to ensure first that
@@ -461,8 +476,6 @@ class FelderBlock : public Block {
         break;
       }
       case State::IN_OCC: {
-        // Handle elektrische Streckentastensperre output.
-        streckentastensperre_.write(track_detector().read());
         break;
       }
       case State::OUT_FREE: {
@@ -498,6 +511,12 @@ class FelderBlock : public Block {
     iface_->set_status((uint16_t)nst);
   }
 
+  /// Call this only when have_route_locked == true.
+  /// @return the route lever that is locked in.
+  RouteLever* locked_route() {
+    return RouteRegistry::instance()->get(locked_route_);
+  }
+  
   struct SignalLeverPtr {
     SignalLever* lever;
     SignalLeverPtr* next;

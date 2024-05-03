@@ -594,6 +594,8 @@ TEST_F(FelderBlockTest, regular_ruckblock) {
 
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
 
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  
   gpios_.write(IN_W1, true);
   wait();
   
@@ -601,6 +603,7 @@ TEST_F(FelderBlockTest, regular_ruckblock) {
   gpios_.write(IN_a1, true);
   wait();
 
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   gpios_.write(AN_LOCK_BTN, true);
   wait();
@@ -608,8 +611,10 @@ TEST_F(FelderBlockTest, regular_ruckblock) {
 
   EXPECT_WHITE(AN_LOCK_FIELD);
   EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
   gpios_.write(IN_A_HP2, true);
   wait();
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
   
   // Train goes
   gpios_.write(AN_DETECTOR, true);
@@ -623,11 +628,106 @@ TEST_F(FelderBlockTest, regular_ruckblock) {
   wait();
   EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
   EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
 
   // Route lever reset
   gpios_.write(IN_a1, false);
   wait();
+  
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+  
+  // Now we can do the Ruckblock.
+  gpios_.write(AN_RUCKBLOCK_IN, true);
+  gpios_.write(KURBEL, true);
+  wait();
+  gpios_.write(AN_RUCKBLOCK_IN, false);
+  gpios_.write(KURBEL, false);
+  
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
 
+  // Test Erlaubnis receive.
+  wait();
+  set(BlockBits::NEWINPUT);
+  clr(BlockBits::HANDOFF);
+  set(BlockBits::TRACK_OUT);
+
+  wait();
+  EXPECT_WHITE(AN_ERLAUBNISFELD);
+  EXPECT_WHITE(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_FALSE(has(BlockBits::NEWINPUT));
+}
+
+
+TEST_F(FelderBlockTest, streckentastensperre) {
+  line_status_ = 0;
+  set(BlockBits::HANDOFF);
+  set(BlockBits::IN_BUSY);
+  begin();
+  wait();
+
+  EXPECT_RED(AN_ERLAUBNISFELD);
+  EXPECT_RED(AN_ENDFELD);
+  EXPECT_WHITE(AN_ANFANGSFELD);
+
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  gpios_.write(IN_W1, true);
+  wait();
+  
+  // Sets an Einfahrt
+  gpios_.write(IN_a1, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  gpios_.write(AN_LOCK_BTN, true);
+  wait();
+  gpios_.write(AN_LOCK_BTN, false);
+
+  EXPECT_WHITE(AN_LOCK_FIELD);
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  gpios_.write(IN_A_HP2, true);
+  wait();
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_FALSE(gpios_.read(AN_HALTSTELLMELDER));
+
+  // Signal close
+  gpios_.write(IN_A_HP2, false);
+  wait();
+  EXPECT_FALSE(gpios_.read(LOCK_A_HP2)); // can still be set again
+  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+  EXPECT_TRUE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_TRUE(gpios_.read(AN_HALTSTELLMELDER));
+  wait();
+  
+  // Train goes
+  gpios_.write(AN_DETECTOR, true);
+  wait();
+
+  EXPECT_TRUE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_WHITE(AN_LOCK_FIELD);
+
+  gpios_.write(AN_DETECTOR, false);
+  wait();
+  EXPECT_TRUE(gpios_.read(LOCK_A_HP2));
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
+  EXPECT_RED(AN_LOCK_FIELD);
+
+  // Route lever reset
+  gpios_.write(IN_a1, false);
+  wait();
+  
+  EXPECT_FALSE(gpios_.read(AN_STRECKENTASTENSPERRE));
   EXPECT_RED(AN_ERLAUBNISFELD);
   EXPECT_RED(AN_ENDFELD);
   EXPECT_WHITE(AN_ANFANGSFELD);

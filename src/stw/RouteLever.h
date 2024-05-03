@@ -89,6 +89,17 @@ class RouteLever : private Executable {
     }
   }
 
+  /// @return true if this route should have the streckentastensperre lit.
+  bool streckentastensperre(RouteId id) {
+    if (up_.is(id)) {
+      return up_.streckentastensperre_;
+    } else if (dn_.is(id)) {
+      return dn_.streckentastensperre_;
+    } else {
+      DIE("Asked about a route we don't own.");
+    }
+  }
+  
   void begin() override {
     up_.begin();
     dn_.begin();
@@ -346,6 +357,8 @@ class RouteLever : private Executable {
     /// This function is called every 10 msec by the parent.
     void loop() {
       auto* signal_lever = find_signal_lever(row_);
+      streckentastensperre_ = seen_proceed_ &&
+                              !signal_lever->is_proceed();
       switch (state_) {
         case State::NEUTRAL_LOCKED: {
           if (check_preconditions(row_)) {
@@ -413,6 +426,7 @@ class RouteLever : private Executable {
             //
             // seen_proceed_ = false;
             signal_lever->unlock();
+            LOG(INFO, "streckentastensperre %d", streckentastensperre_);
           }
           if (seen_proceed_ && seen_train_ &&
               !signal_lever->is_proceed() &&
@@ -455,6 +469,9 @@ class RouteLever : private Executable {
 
     /// Prevents repeating unexpected set error.
     bool error_unexpected_set_ : 1;
+
+    /// true if the streckentastensperre should be lit for this route.
+    bool streckentastensperre_ : 1;
     
     /// Internal route state.
     State state_;
