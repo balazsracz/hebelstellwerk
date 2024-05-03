@@ -94,8 +94,14 @@ class I2CBlock : public I2CBlockInterface, private Executable {
 
   /// Reloads the status word from the i2c device.
   void refresh() {
-    if (!dev_.read((uint8_t *)&last_status_, 2)) {
+    uint16_t new_status = 0;
+    if (!dev_.read((uint8_t *)&new_status, 2)) {
       LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
+    }
+    if (new_status != last_status_) {
+      LOG(LEVEL_INFO, "I2C Block %02x status %02x->%02x: %s", dev_.address(),
+          last_status_, new_status, block_to_string(new_status).c_str());
+      last_status_ = new_status;
     }
 #if 0    
     if (last_status_ & BlockBits::STARTUP) {

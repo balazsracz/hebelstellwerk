@@ -35,6 +35,8 @@
 #ifndef _STW_I2CBLOCK_H_
 #define _STW_I2CBLOCK_H_
 
+#include <string>
+
 enum class BlockBits : uint16_t {
   /// The block is in startup mode and it does not know what the status bits
   /// should be.
@@ -68,6 +70,20 @@ static inline BlockBits operator|(BlockBits a, BlockBits b) {
 static inline uint16_t operator&(uint16_t a, BlockBits b) {
   uint16_t r =  a & ((uint16_t)b);
   return r;
+}
+
+static inline std::string block_to_string(uint16_t blk) {
+  std::string ret;
+  if (blk & BlockBits::STARTUP) ret += "Start,";
+  if (blk & BlockBits::NEWOUTPUT) ret += "DatNeuFeld,";
+  if (blk & BlockBits::NEWINPUT) ret += "DatNeuBlock,";
+  if (blk & BlockBits::ERROR) ret += "Störung,";  
+  if (blk & BlockBits::TRACK_OUT) ret += "ErlaubWir,";  
+  if (blk & BlockBits::HANDOFF) ret += "ErlaubAnd,";  
+  if (blk & BlockBits::IN_BUSY) ret += "EndeRot,";  
+  if (blk & BlockBits::OUT_BUSY) ret += "AnfangRot,";
+  if (!ret.empty()) ret.pop_back();
+  return ret;
 }
 
 class I2CBlockInterface {
@@ -112,6 +128,22 @@ class I2CBlockInterface {
   void reset_endfeld_rot() {
     set_status((uint16_t)(BlockBits::HANDOFF | BlockBits::IN_BUSY |
                           BlockBits::NEWOUTPUT));
+  }
+
+  /// Resets the block state to in_free.
+  void reset_in() {
+    set_status((uint16_t)(BlockBits::HANDOFF | BlockBits::NEWOUTPUT));
+  }
+  
+  /// Resets the block state to out_busy.
+  void reset_anf_rot() {
+    set_status((uint16_t)(BlockBits::TRACK_OUT | BlockBits::OUT_BUSY |
+                          BlockBits::NEWOUTPUT));
+  }
+
+  /// Resets the block state to out_free.
+  void reset_out() {
+    set_status((uint16_t)(BlockBits::TRACK_OUT | BlockBits::NEWOUTPUT));
   }
   
   /// Requests the in_free state (Rückblocken)
