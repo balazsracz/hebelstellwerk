@@ -40,8 +40,9 @@
 // ============== Declarations related to the physical pinout =================
 
 enum GpioPin : gpio_pin_t {
-  /// @todo these are wrong. Check the wiring instead.
-
+  // This is an arduino pin.
+  GPIO_GLOBAL_UNLOCK = 7,
+  
   ARDUINO_MIN = 99,
   GPIO_VERRIEGELUNG_FH_D1C1,
   GPIO_VERRIEGELUNG_FH_D3C3,
@@ -378,6 +379,28 @@ LockTable ltbl({
 
 Blinker blinker2{LED_BUILTIN};
 
+class Unlocker : public Executable {
+ public:
+  Unlocker() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(10);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    if (global_unlock.read() != GlobalState::instance()->is_unlocked_) {
+      GlobalState::instance()->is_unlocked_ = global_unlock.read();
+      LOG(LEVEL_INFO, "Global unlock %s",
+          GlobalState::instance()->is_unlocked_ ? "true" : "false");
+    }
+  }
+  
+ private:
+  GpioAccessor global_unlock{GPIO_GLOBAL_UNLOCK, true, GPIO_INPUT};
+  Timer tm_;
+} unlocker;
+
 class Report : public Executable {
  public:
   Report() {
@@ -388,12 +411,14 @@ class Report : public Executable {
   void begin() override {}
   void loop() override {
     if (!tm_.check()) return;
+#if 0    
     ++i;
     if (entsp_a.read() && entsp_b.read() && (i & 1)) {
       GlobalState::instance()->is_unlocked_ ^= 1;
       LOG(LEVEL_INFO, "Global unlock %s",
           GlobalState::instance()->is_unlocked_ ? "true" : "false");
     }
+#endif
     // Serial.print("Hello ");
     // Serial.println(i);
     // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
@@ -416,10 +441,29 @@ class Report : public Executable {
   int i = 0;
 } reporter;
 
+class Analog : public Executable {
+ public:
+  Analog() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(50);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    auto v = analogRead(A1);
+    LOG(LEVEL_INFO, "kurbel %d", v);
+  }
+
+ private:
+  Timer tm_;
+};// reporter2;
+
 
 /// Arduino setup routine.
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(GPIO_GLOBAL_UNLOCK, INPUT_PULLUP);
   digitalWrite(LED_BUILTIN, true);
   Serial.begin(9600);
   // wait for serial to be up, up to 1.5 seconds.
