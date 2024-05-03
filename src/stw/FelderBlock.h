@@ -46,10 +46,12 @@ class FelderBlock : public Block {
   FelderBlock(I2CBlockInterface* iface, BlockId id,
               gpio_pin_t track_detector_pin, bool track_detector_inverted,
               gpio_pin_t route_lock_button_pin, bool route_lock_button_inverted,
-              gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted)
+              gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted,
+              gpio_pin_t route_unlocked_btn_pin, bool route_unlock_btn_inverted)
       : Block(id, track_detector_pin, track_detector_inverted,
               route_lock_button_pin, route_lock_button_inverted,
-              route_locked_lamp_pin, route_locked_lamp_inverted),
+              route_locked_lamp_pin, route_locked_lamp_inverted,
+              route_unlocked_btn_pin, route_unlock_btn_inverted),
         iface_(iface),
         have_route_locked_(false),
         route_is_out_(false),

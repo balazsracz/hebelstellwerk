@@ -146,6 +146,10 @@ class DelayedGpioAccessor : public GpioAccessor {
     new (this) GpioAccessor(pin, inverted, dir);
   }
 
+  bool has() {
+    return gpio_ != nullptr;
+  }
+  
   void write(bool value) const {
     ASSERT(gpio_);
     GpioAccessor::write(value);

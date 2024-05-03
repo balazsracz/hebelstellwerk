@@ -59,12 +59,15 @@ class Block : public Executable {
  public:
   Block(BlockId id, gpio_pin_t track_detector_pin, bool track_detector_inverted,
         gpio_pin_t route_lock_button_pin, bool route_lock_button_inverted,
-        gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted)
+        gpio_pin_t route_locked_lamp_pin, bool route_locked_lamp_inverted,
+        gpio_pin_t unlock_button_pin, bool unlock_button_inverted)
       : id_(id),
         track_detector_(track_detector_pin, track_detector_inverted,
                         GPIO_INPUT),
         route_lock_button_(route_lock_button_pin, route_lock_button_inverted,
                            GPIO_INPUT),
+        route_em_unlock_button_(unlock_button_pin, unlock_button_inverted,
+                                GPIO_INPUT),
         route_locked_lamp_(route_locked_lamp_pin, route_locked_lamp_inverted,
                            GPIO_OUTPUT) {
     BlockRegistry::instance()->register_obj(this, id);
@@ -83,6 +86,10 @@ class Block : public Executable {
   const GpioAccessor& route_lock_button() { return route_lock_button_; }
 
   const GpioAccessor& route_locked_lamp() { return route_locked_lamp_; }
+
+  const GpioAccessor& route_em_unlock_button() {
+    return route_em_unlock_button_;
+  }
 
   /// @return true if an outgoing train is allowed to go towards this
   /// block. This means that we have permission for the track and the track is
@@ -120,6 +127,10 @@ class Block : public Executable {
   /// means the button is pressed.
   GpioAccessor route_lock_button_;
 
+  /// Emergency unlock button on the user interface. When inverted = false,
+  /// HIGH means the button is pressed.
+  GpioAccessor route_em_unlock_button_;
+  
   /// A red/white lamp showing whether there is a route locked for this
   /// block. When inverted = false, HIGH means there is a route locked (output
   /// red), LOW means there is no route locked (output white).

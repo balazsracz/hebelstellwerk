@@ -104,8 +104,8 @@ enum GpioPin : gpio_pin_t {
   GPIO_AB_HALTSTELLMELDER,
   GPIO_CD_HALTSTELLMELDER,
   GPIO_CD_STRECKENTASTENSPERRE,
-  GPIO_AB_FHT,
-  GPIO_CD_FHT,
+  GPIO_BTN_AB_FHT,
+  GPIO_BTN_CD_FHT,
   GPIO_BTN_ENDFELD_D = GPIO_EXT_TASTER + 8,
   GPIO_BTN_ERLAUBNIS_C,
   GPIO_BTN_ANFANG_C,
@@ -318,7 +318,8 @@ I2CBlock i2c_ab(0x28);
 I2CBlock i2c_cd(0x29);
 
 FelderBlock blk_ab(&i2c_ab, BLOCK_AB, GPIO_AB_DETECTOR, false,
-                   GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false);
+                   GPIO_BTN_FESTLEGE_AB, true, GPIO_FESTLEGE_AB, false,
+                   GPIO_BTN_AB_FHT, true);
 const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_ruckblock_taste(GPIO_BTN_ENDFELD_A, true) |
                    blk_ab.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_B, true) |
@@ -332,7 +333,8 @@ const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_streckentastensperre(GPIO_AB_STRECKENTASTENSPERRE, false);
 
 FelderBlock blk_cd(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
-                   GPIO_BTN_FESTLEGE_CD, true, GPIO_FESTLEGE_CD, false);
+                   GPIO_BTN_FESTLEGE_CD, true, GPIO_FESTLEGE_CD, false,
+                   GPIO_BTN_CD_FHT, true);
 const auto cdrdy = blk_cd.set_vorblock_taste(GPIO_BTN_ANFANG_C, true) |
                    blk_cd.set_ruckblock_taste(GPIO_BTN_ENDFELD_D, true) |
                    blk_cd.set_abgabe_taste(GPIO_BTN_ERLAUBNIS_C, true) |

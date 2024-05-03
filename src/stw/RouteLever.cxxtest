@@ -60,9 +60,11 @@ enum GpioId : gpio_pin_t {
   LOCK_D_HP2,
   AB_LOCK_BTN,
   AB_LOCK_FIELD,
+  AB_FHT,
   AB_DETECTOR,
   CD_LOCK_BTN,
   CD_LOCK_FIELD,
+  CD_FHT,
   CD_DETECTOR,
   NUM_GPIO
 };
@@ -119,10 +121,10 @@ class UWB {
   RouteLever Rab3{a3, b3, IN_a3, false, IN_b3, false, LOCK_a3b3, false};
   RouteLever Rcd3{c3, d3, IN_c3, false, IN_d3, false, LOCK_c3d3, false};
   RouteLever Rcd1{c1, d1, IN_c1, false, IN_d1, false, LOCK_c1d1, false};
-  Block BlkAB{BLOCK_AB, AB_DETECTOR,   false, AB_LOCK_BTN,
-              false,    AB_LOCK_FIELD, false};
-  Block BlkCD{BLOCK_CD, CD_DETECTOR,   false, CD_LOCK_BTN,
-              false,    CD_LOCK_FIELD, false};
+  Block BlkAB{BLOCK_AB,      AB_DETECTOR, false,  AB_LOCK_BTN, false,
+              AB_LOCK_FIELD, false,       AB_FHT, false};
+  Block BlkCD{BLOCK_CD,      CD_DETECTOR, false,  CD_LOCK_BTN, false,
+              CD_LOCK_FIELD, false,       CD_FHT, false};
 };
 
 class UWBTest : public TestBase, public UWB {

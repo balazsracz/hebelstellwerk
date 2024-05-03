@@ -12,6 +12,7 @@ enum GpioId : gpio_pin_t {
   MIN_GPIO = 35,
   AN_LOCK_BTN,
   AN_LOCK_FIELD,
+  AN_FHT,
   AN_DETECTOR,
   AN_VORBLOCK_IN,
   AN_ENDFELD,
@@ -127,7 +128,7 @@ class FelderBlockTest : public TestBase {
   
   FakeGpio gpios_{MIN_GPIO, NUM_GPIO - MIN_GPIO};
   FelderBlock block_{&i2c_blk_, BLOCK_AN, AN_DETECTOR,   false, AN_LOCK_BTN,
-                     false,    AN_LOCK_FIELD, false};
+    false,    AN_LOCK_FIELD, false, AN_FHT, false};
   RouteLever Ran1{a1, n1, IN_a1, false, IN_n1, false, LOCK_a1n1, false};
   SignalLever Sa{SIGNAL_A, HP2, IN_A_HP2, false, LOCK_A_HP2, false};
   SignalLever Sn{SIGNAL_N, HP2, IN_N_HP2, false, LOCK_N_HP2, false};
