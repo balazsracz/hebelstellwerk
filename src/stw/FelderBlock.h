@@ -409,6 +409,7 @@ class FelderBlock : public Block {
       const char* from = global_is_unlocked() ? "forced" : nullptr;
       // Check if a train has traveled outbounds through this block, and the
       // route lever matching that has been re-set.
+      /// @todo does the route lever really have to be re-set here?
       if (state_ == State::OUT_FREE && seen_route_locked_out_ &&
           !have_route_locked_ && !locked_route()->is_route_set(locked_route_)) {
         from = "OUT_FREE";
