@@ -83,6 +83,10 @@ build-gpioinfra:
 build-uwb:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/UWB
 
+build-blocktest:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,upload_method=swdMethod $(APP_PATH)/examples/BlockTest
+
 
 tests: run-tests build-examples
 
+block: build-blocktest
