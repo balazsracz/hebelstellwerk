@@ -64,7 +64,8 @@ class FakeGpio : public Gpio {
  public:
   FakeGpio(gpio_pin_t start_pin, uint16_t num_pins = 1)
       : start_pin_(start_pin), num_pins_(num_pins) {
-    state_.resize(num_pins_);
+    state_.reset(new bool[num_pins]);
+    memset(state_.get(), 0, num_pins);
     is_output_.resize(num_pins_);
     GpioRegistry::instance()->register_obj(this, start_pin_, Count{num_pins_});
   }
@@ -99,7 +100,7 @@ class FakeGpio : public Gpio {
     return is_output_[pin - start_pin_];
   }
 
-  mutable std::vector<bool> state_;
+  std::unique_ptr<bool[]> state_;
   mutable std::vector<bool> is_output_;
 
  private:
