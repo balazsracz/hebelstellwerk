@@ -1,9 +1,9 @@
 /** \copyright
- * Copyright (c) 2024, Balazs Racz
+ * Copyright (c) 2015, Balazs Racz
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
+ * modification, are  permitted provided that the following conditions are met:
  *
  *  - Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
@@ -24,43 +24,35 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Logging.h
+ * \file StringPrintf.cpp
  *
- * Mechanism to output log entries to the console
+ * Utility for creating c++ strings on demand with a printf-like structure.
  *
  * @author Balazs Racz
- * @date 19 Mar 2024
+ * @date 10 May 2015
  */
 
-#ifndef _UTILS_LOGGING_H_
-#define _UTILS_LOGGING_H_
-
-#define LEVEL_INFO 2
-#define LEVEL_ERROR 3
-
-#ifdef GTEST
+#include <string>
+#include <stdarg.h>
 #include <stdio.h>
 
-#define LOG(level, fmt...) \
-  do {                     \
-    fprintf(stderr, fmt);  \
-    fprintf(stderr, "\n"); \
-  } while (0)
-
-#elif defined(ARDUINO)
-
-#define LOG(level, fmt...)           \
-  do {                               \
-    static char buf[300];            \
-    snprintf(buf, sizeof(buf), fmt); \
-    Serial.println(buf);             \
-  } while (0)
-
-#endif // Arduino
-
-#include <string>
-
 std::string StringPrintf(const char *format, ...)
-    __attribute__((format(printf, 1, 2)));
+{
+    static const int kBufSize = 300;
+    char buffer[kBufSize];
+    va_list ap;
 
-#endif  // _UTILS_LOGGING_H_
+    va_start(ap, format);
+    int n = vsnprintf(buffer, kBufSize, format, ap);
+    va_end(ap);
+    if (n < kBufSize)
+    {
+      return std::string(buffer, n);
+    }
+    std::string ret(n + 1, 0);
+    va_start(ap, format);
+    n = vsnprintf(&ret[0], ret.size(), format, ap);
+    va_end(ap);
+    ret.resize(n);
+    return ret;
+}
