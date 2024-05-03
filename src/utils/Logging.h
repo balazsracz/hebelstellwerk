@@ -49,11 +49,12 @@
 
 #elif defined(ARDUINO)
 
-#define LOG(level, fmt...)           \
-  do {                               \
-    static char buf[300];            \
-    snprintf(buf, sizeof(buf), fmt); \
-    Serial.println(buf);             \
+static char logbuf__[300];
+
+#define LOG(level, fmt...)                     \
+  do {                                         \
+    snprintf(logbuf__, sizeof(logbuf__), fmt); \
+    Serial.println(logbuf__);                  \
   } while (0)
 
 #endif // Arduino
