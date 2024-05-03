@@ -37,7 +37,7 @@
 
 #include "utils/Blinker.h"
 
-// ============== Declarations related to the phycial pinout =================
+// ============== Declarations related to the physical pinout =================
 
 enum GpioPin : gpio_pin_t {
   /// @todo these are wrong. Check the wiring instead.
@@ -100,10 +100,12 @@ enum GpioPin : gpio_pin_t {
   GPIO_HEBEL_A1,
 
   GPIO_EXT_TASTER,
-  GPIO_AB_STORUNSMELDER = GPIO_EXT_TASTER + 0,
+  GPIO_AB_STRECKENTASTENSPERRE = GPIO_EXT_TASTER + 0,
   GPIO_AB_HALTSTELLMELDER,
   GPIO_CD_HALTSTELLMELDER,
-  GPIO_CD_STORUNSMELDER,
+  GPIO_CD_STRECKENTASTENSPERRE,
+  GPIO_AB_FHT,
+  GPIO_CD_FHT,
   GPIO_BTN_ENDFELD_D = GPIO_EXT_TASTER + 8,
   GPIO_BTN_ERLAUBNIS_C,
   GPIO_BTN_ANFANG_C,
@@ -326,8 +328,8 @@ const auto abrdy = blk_ab.set_vorblock_taste(GPIO_BTN_ANFANG_B, true) |
                    blk_ab.set_erlaubnisfeld(GPIO_ERLAUBNIS_B, false) |
                    /// @todo figure out these GPIO assignments
                    blk_ab.set_signalhaltmelder(GPIO_AB_HALTSTELLMELDER, false) |
-                   blk_ab.set_storungsmelder(GPIO_AB_STORUNSMELDER, false) |
-                   blk_ab.set_streckentastensperre(GPIO_DUMMY, false);
+                   blk_ab.set_storungsmelder(GPIO_DUMMY, false) |
+                   blk_ab.set_streckentastensperre(GPIO_AB_STRECKENTASTENSPERRE, false);
 
 FelderBlock blk_cd(&i2c_cd, BLOCK_CD, GPIO_CD_DETECTOR, false,
                    GPIO_BTN_FESTLEGE_CD, true, GPIO_FESTLEGE_CD, false);
@@ -340,8 +342,8 @@ const auto cdrdy = blk_cd.set_vorblock_taste(GPIO_BTN_ANFANG_C, true) |
                    blk_cd.set_erlaubnisfeld(GPIO_ERLAUBNIS_C, false) |
                    /// @todo figure out these GPIO assignments
                    blk_cd.set_signalhaltmelder(GPIO_CD_HALTSTELLMELDER, false) |
-                   blk_cd.set_storungsmelder(GPIO_CD_STORUNSMELDER, false) |
-                   blk_cd.set_streckentastensperre(GPIO_DUMMY, false);
+                   blk_cd.set_storungsmelder(GPIO_DUMMY, false) |
+                   blk_cd.set_streckentastensperre(GPIO_CD_STRECKENTASTENSPERRE, false);
 
 #endif
 
