@@ -108,12 +108,19 @@ class Block : public Executable {
   /// Called by the route lever state machine when a route was set & locked for
   /// this block, and a train has traversed it.
   /// @param id the route that was set, locked and is now unlocked.
-  /// @param is_out true if the route is outbounds (towards the block).
   virtual void notify_route_complete(RouteId id) {
     LOG(LEVEL_INFO, "Route %d locked lamp off", id); 
     route_locked_lamp_.write(false);
   }
 
+  /// Called by the route lever state machine when a route was set & locked for
+  /// this block, but it was cancelled with the FHT.
+  /// @param id the route that was set, locked and is now unlocked.
+  virtual void notify_route_cancelled(RouteId id) {
+    LOG(LEVEL_INFO, "Route %d locked lamp off", id); 
+    route_locked_lamp_.write(false);
+  }
+  
  protected:
   BlockId id_;
 

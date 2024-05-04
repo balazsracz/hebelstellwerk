@@ -406,9 +406,13 @@ class RouteLever : private Executable {
         }
         case State::SET_LOCKED: {
           // Checks for emergency release (FHT)
-          if (block_ && block_->route_em_unlock_button().read()) {
+          if (!signal_lever->is_proceed() && block_ &&
+              block_->route_em_unlock_button().read()) {
             LOG(LEVEL_INFO, "Fstr %d Hilfsauflösung", id_);
+            signal_lever->lock();
+            block_->notify_route_cancelled(id_);
             state_ = State::SET;
+            break;
           }
           // Checks for signal lever on proceed.
           if (!seen_proceed_ && signal_lever->is_proceed()) {

@@ -144,6 +144,15 @@ class FelderBlock : public Block {
       seen_route_locked_in_ = true;
     }
   }
+
+  void notify_route_cancelled(RouteId id) override {
+    Block::notify_route_cancelled(id);
+    if (id == locked_route_) {
+      have_route_locked_ = false;
+      seen_route_locked_in_ = false;
+      seen_route_locked_out_ = false;
+    }
+  }
   
   void notify_route_complete(RouteId id) override {
     Block::notify_route_complete(id);
@@ -411,7 +420,7 @@ class FelderBlock : public Block {
       // route lever matching that has been re-set.
       /// @todo does the route lever really have to be re-set here?
       if (state_ == State::OUT_FREE && seen_route_locked_out_ &&
-          !have_route_locked_ && !locked_route()->is_route_set(locked_route_)) {
+          !have_route_locked_) {
         from = "OUT_FREE";
       }
       if (from) {
