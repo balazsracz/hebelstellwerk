@@ -286,6 +286,7 @@ TurnoutLever TW10{W10, GPIO_HEBEL_10, WHEB_INV, GPIO_VERRIEGELUNG_10, WLCK_INV};
 
 // Gleissperren
 LeverKey Gsp1{WeicheMinus(W2), GPIO_GSP_I, true};
+LeverKey Gsp2{WeicheMinus(W1a), GPIO_GSP_II, true};
 
 static constexpr bool SHEB_INV = true;
 static constexpr bool SLCK_INV = false;
