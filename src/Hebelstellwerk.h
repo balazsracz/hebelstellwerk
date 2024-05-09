@@ -46,6 +46,7 @@
 #include "stw/SignalLever.h"
 #include "stw/RouteLever.h"
 #include "stw/LockTable.h"
+#include "stw/LeverKey.h"
 #include "stw/I2CBlockImpl.h"
 #include "stw/FelderBlock.h"
 

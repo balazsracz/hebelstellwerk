@@ -117,10 +117,13 @@ enum GpioPin : gpio_pin_t {
   GPIO_BTN_ENDFELD_A,
 
   GPIO_EXT_DETECTOR,
-  GPIO_AB_DETECTOR = GPIO_EXT_DETECTOR + 3,
-  GPIO_CD_DETECTOR = GPIO_EXT_DETECTOR + 1,
+  GPIO_AB_BTN_DETECTOR = GPIO_EXT_DETECTOR + 3,
+  GPIO_CD_BTN_DETECTOR = GPIO_EXT_DETECTOR + 1,
   GPIO_EXT_DETECTOR_END = GPIO_EXT_DETECTOR + 15,
 
+  /// Virtual detector for button OR real detector.
+  GPIO_AB_DETECTOR,
+  GPIO_CD_DETECTOR,
 };
 
 static_assert(GPIO_EXT_HEBEL_SIG_W + 15 == GPIO_HEBEL_D,
@@ -246,6 +249,10 @@ Gpio23017 ext_detector(GPIO_EXT_DETECTOR, 0x20);
 
 GlobalState global_state;
 
+// Virtual Gpio for Btn detector OR real detector
+OrGpio gpio_det_ab(GPIO_AB_DETECTOR, GPIO_AB_BTN_DETECTOR, false);
+OrGpio gpio_det_cd(GPIO_CD_DETECTOR, GPIO_CD_BTN_DETECTOR, false);
+
 // ======================== Logical devices =========================
 
 enum SignalId : uint8_t { SIGNAL_A, SIGNAL_B, SIGNAL_C, SIGNAL_D };
@@ -274,6 +281,9 @@ TurnoutLever TW2{W2, GPIO_HEBEL_2, WHEB_INV, GPIO_VERRIEGELUNG_2, WLCK_INV};
 TurnoutLever TW7{W7, GPIO_HEBEL_7, WHEB_INV, GPIO_VERRIEGELUNG_7, WLCK_INV};
 TurnoutLever TW9{W9, GPIO_HEBEL_9, WHEB_INV, GPIO_VERRIEGELUNG_9, WLCK_INV};
 TurnoutLever TW10{W10, GPIO_HEBEL_10, WHEB_INV, GPIO_VERRIEGELUNG_10, WLCK_INV};
+
+// Gleissperren
+LeverKey Gsp1{WeicheMinus(W2), GPIO_GSP_I, false};
 
 static constexpr bool SHEB_INV = true;
 static constexpr bool SLCK_INV = false;
