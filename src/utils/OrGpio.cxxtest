@@ -1,6 +1,9 @@
+#include "utils/OrGpio.h"
+
+//
+
 #include "test_main.h"
 #include "utils/MockPin.h"
-#include "utils/OrGpio.h"
 
 /// These identifiers are used for fake GPIO registration.
 enum GpioId : gpio_pin_t {
