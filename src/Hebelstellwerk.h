@@ -38,6 +38,7 @@
 #include "utils/PwmGpio.h"
 #include "utils/ServoGpio.h"
 #include "utils/AnalogGpio.h"
+#include "utils/OrGpio.h"
 #include "utils/Executor.h"
 #include "utils/Timer.h"
 
