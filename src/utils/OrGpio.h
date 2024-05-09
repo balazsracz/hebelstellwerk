@@ -35,6 +35,8 @@
 #ifndef _UTILS_GPIOOR_H_
 #define _UTILS_GPIOOR_H_
 
+#include "utils/Gpio.h"
+
 /// OrGpio is an input-only virtual Gpio object. It reads multiple input pins,
 /// and returns TRUE if any of the inputs are TRUE.
 ///
@@ -59,16 +61,16 @@ class OrGpio : public Gpio {
     }
   }
   
-  bool read() const override {
+  bool read(gpio_pin_t pin) const override {
     for (const Entry* e = first_; e; e = e->next) {
-      if (e->obj->read(e->pin)) {
+      if (!e->obj->read(e->pin) == e->inverted) {
         return true;
       }
     }
     return false;
   }
 
-  void write(bool value) const override {
+  void write(gpio_pin_t pin, bool value) const override {
     // Does nothing.
   }
 
@@ -88,6 +90,7 @@ class OrGpio : public Gpio {
     e->obj = GpioRegistry::instance()->get(pin);
   }
 
+  template <typename... Args>
   void add(gpio_pin_t pin, bool inverted, Args... args) {
     add(args...);
     add_one(pin, inverted);
@@ -98,7 +101,7 @@ class OrGpio : public Gpio {
   /// Keeps track of an entry to be OR'ed.
   struct Entry {
     Entry* next{nullptr};
-    Gpio* obj{nullptr};
+    const Gpio* obj{nullptr};
     gpio_pin_t pin{NO_PIN};
     bool inverted{false};
   };

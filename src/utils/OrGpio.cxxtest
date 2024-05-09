@@ -1,0 +1,128 @@
+#include "test_main.h"
+#include "utils/MockPin.h"
+#include "utils/OrGpio.h"
+
+/// These identifiers are used for fake GPIO registration.
+enum GpioId : gpio_pin_t {
+  MIN_GPIO = 35,
+
+  GPIO_A,
+  GPIO_B,
+  GPIO_C,
+
+  NUM_FAKE_GPIO,
+
+  GPIO_OR,
+  GPIO_OR2,
+
+};
+
+class OrGpioTest : public ::testing::Test {
+ protected:
+  GpioRegistry gpio_reg_;
+
+  FakeGpio gpios_{MIN_GPIO, NUM_FAKE_GPIO - MIN_GPIO};
+};
+
+TEST_F(OrGpioTest, create) {
+  OrGpio or1{GPIO_OR, GPIO_A, false};
+
+  EXPECT_EQ(&or1, GpioRegistry::instance()->get(GPIO_OR));
+  EXPECT_EQ(nullptr, GpioRegistry::instance()->get_or_null(GPIO_OR2));
+}
+
+TEST_F(OrGpioTest, one_input) {
+  OrGpio or1{GPIO_OR, GPIO_A, false};
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_A, true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_B, true);
+  EXPECT_FALSE(or1.read(0));
+}
+
+TEST_F(OrGpioTest, one_input_invert) {
+  OrGpio or1{GPIO_OR, GPIO_A, true};
+
+  gpios_.write(GPIO_A, true);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, true);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_B, false);
+  EXPECT_FALSE(or1.read(0));
+}
+
+TEST_F(OrGpioTest, two_input) {
+  OrGpio or1{GPIO_OR, GPIO_A, false, GPIO_B, false};
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_A, true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_B, true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_B, false);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, false);
+  EXPECT_FALSE(or1.read(0));
+}
+
+TEST_F(OrGpioTest, two_input_inverted) {
+  OrGpio or1{GPIO_OR, GPIO_A, true, GPIO_B, true};
+
+  gpios_.write(GPIO_B, 1 ^ false);
+  gpios_.write(GPIO_A, 1 ^ false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_A, 1 ^ true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, 1 ^ false);
+  EXPECT_FALSE(or1.read(0));
+
+  gpios_.write(GPIO_B, 1 ^ true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, 1 ^ true);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_B, 1 ^ false);
+  EXPECT_TRUE(or1.read(0));
+
+  gpios_.write(GPIO_A, 1 ^ false);
+  EXPECT_FALSE(or1.read(0));
+}
+
+TEST_F(OrGpioTest, three_input_all) {
+  OrGpio or1{GPIO_OR, GPIO_A, false, GPIO_B, false, GPIO_C, false};
+
+  for (bool a : {false, true})
+    for (bool b : {false, true})
+      for (bool c : {false, true}) {
+        gpios_.write(GPIO_A, a);
+        gpios_.write(GPIO_B, b);
+        gpios_.write(GPIO_C, c);
+        EXPECT_EQ(a || b || c, or1.read(0));
+      }
+}
