@@ -1,0 +1,83 @@
+#include "stw/LeverKey.h"
+
+//
+
+#include "test_main.h"
+#include "utils/MockPin.h"
+
+
+/// These identifiers are used for fake GPIO registration.
+enum GpioId : gpio_pin_t {
+  MIN_GPIO = 35,
+
+  TO_LEVER,
+  TO_LOCK,
+  EXT_KEY,
+
+  NUM_FAKE_GPIO,
+
+  GPIO_OR,
+  GPIO_OR2,
+
+};
+
+enum TurnoutId : uint8_t { TO_1, TO_2a, TO_2b };
+
+class LeverKeyTest : public TestBase {
+ protected:
+  GpioRegistry gpio_reg_;
+  TurnoutRegistry to_reg_;
+  FakeGpio gpios_{MIN_GPIO, NUM_FAKE_GPIO - MIN_GPIO};
+  
+
+  TurnoutLever tol_{TO_2a, TO_LEVER, false, TO_LOCK, false};
+  LeverKey key_{TurnoutPlus(TO_2a), EXT_KEY, false};
+
+  void wait() {
+    for (unsigned i = 0; i < 101; ++i) {
+      ex_.loop();
+      ex_.advance(5);
+    }
+  }
+};
+
+TEST_F(LeverKeyTest, create) {}
+
+
+TEST_F(LeverKeyTest, lock_unlock) {
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+  gpios_.write(TO_LEVER, true);
+
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+  
+  gpios_.write(EXT_KEY, true);
+
+  wait();
+  EXPECT_TRUE(tol_.is_locked());
+
+  gpios_.write(EXT_KEY, false);
+  
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+}
+
+TEST_F(LeverKeyTest, unexpected) {
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+  gpios_.write(TO_LEVER, false);
+
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+  
+  gpios_.write(EXT_KEY, true);
+
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+
+  gpios_.write(EXT_KEY, false);
+  
+  wait();
+  EXPECT_FALSE(tol_.is_locked());
+}
