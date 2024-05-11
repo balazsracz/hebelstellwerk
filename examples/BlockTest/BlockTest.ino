@@ -38,6 +38,7 @@
 
 #include "utils/Blinker.h"
 #include "utils/ArduinoArmPixel.h"
+#include "utils/ArduinoStm32SpiPixel.h"
 
 #ifndef ARDUINO
 #error baaa
@@ -49,7 +50,7 @@ Blinker blinker2{LED_TO_USE, 750};
 
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 
-PixelStrip strip(3, PA7);
+SpiPixelStrip strip(3, PA7, PB4, PB3);
 
 class PxGpio : public DummyGpio {
  public:
