@@ -40,6 +40,7 @@
 #include "utils/ArduinoArmPixel.h"
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
+#include "utils/PixelGpio.h"
 
 #ifndef ARDUINO
 #error baaa
@@ -51,33 +52,25 @@ Blinker blinker2{LED_TO_USE, 750};
 
 static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
 AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
-
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 
 SpiPixelStrip strip(9, PA7, PB4, PB3);
 
-class PxGpio : public DummyGpio {
- public:
-  PxGpio() { GpioRegistry::instance()->register_obj(this, 101); }
+const uint32_t kOutputParams[] = {
+  0, Pixel::BLACK, Pixel::GREEN, //
+  1, Pixel::RED, Pixel::WHITE, //
+  2, Pixel::BLACK, Pixel::RED, //
+  3, Pixel::BLACK, Pixel::RED, //
+  4, Pixel::RED, Pixel::WHITE, //
+  5, Pixel::BLACK, Pixel::GREEN, //
+  6, Pixel::BLACK, Pixel::GREEN, //
+  7, Pixel::RED, Pixel::WHITE, //
+  8, Pixel::BLACK, Pixel::RED, //
+};
 
-  void write(gpio_pin_t, bool value) const override {
-    if (value) {
-      for (int i = 0; i < 9; i++) {
-        strip.set(i, i % 3, 0x3f);
-        strip.set(i, (i + 1) % 3, 0);
-        strip.set(i, (i + 2) % 3, 0);
-      }
-    } else {
-      for (int i = 0; i < 9; i++) {
-        strip.set(i, i % 3, 0);
-        strip.set(i, (i + 1) % 3, 0x3f);
-        strip.set(i, (i + 2) % 3, 0);
-      }
-    }
-  }
-} pxgpio_;
+PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
-Blinker blinker3{101, 350};
+//Blinker blinker3{101, 350};
 
 /// Arduino setup routine.
 void setup() {
@@ -88,6 +81,7 @@ void setup() {
   // delay(100);
   Serial.println("Hello, world");
   Executor::instance()->begin();
+  strip.set_brightness(0x20);
 }
 
 #include <vector>
@@ -149,6 +143,29 @@ class Analog : public Executable {
  private:
   Timer tm_;
 } reporter2;
+
+
+class Copier : public Executable {
+ public:
+  Copier() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(10);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    auto* s = GpioRegistry::instance()->get(110);
+    auto* d = GpioRegistry::instance()->get(120);
+    for (unsigned i = 0; i < 9; i++) {
+      d->write(120 + i, s->read(110 + i));
+    }
+  }
+
+ private:
+  Timer tm_;
+} copier;
+
 
 /// Arduino loop routine.
 void loop() {
