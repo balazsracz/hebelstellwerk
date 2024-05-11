@@ -58,7 +58,7 @@ class AnalogDemux : public Gpio, private Executable {
   /// rest of the values have to be decreasing ordered.
   /// @param count how many buttons
   AnalogDemux(gpio_pin_t register_pin, int arduino_pin, const int16_t* centers,
-              size_t count)
+              int16_t count)
       : count_(count),
         register_pin_(register_pin),
         arduino_pin_(arduino_pin),
