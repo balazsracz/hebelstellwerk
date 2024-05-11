@@ -41,13 +41,12 @@
 
 #include "utils/Executor.h"
 #include "utils/Macros.h"
+#include "utils/Pixel.h"
 
-class PixelStrip : public Executable {
+class PixelStrip : public Pixel, public Executable {
  public:
-  PixelStrip(int num_pixels, int pin) : num_pixels_(num_pixels), pin_(pin) {
+  PixelStrip(int num_pixels, int pin) : Pixel(new uint8_t[num_pixels * 3], num_pixels), pin_(pin) {
     Executor::instance()->add(this);
-    data_ = new uint8_t[num_pixels_ * 3];
-    memset(data_, 0, num_pixels_ * 3);
   }
 
   ~PixelStrip() {
@@ -70,12 +69,10 @@ class PixelStrip : public Executable {
     }
   }
 
-  void invalidate() { valid_ = false; }
-
   static constexpr uint32_t SETHIGH = (1u<<7);
   static constexpr uint32_t SETLOW = (1u<<7)<<16;
   
-  void __attribute__((optimize("O3"))) flush() {
+  void __attribute__((optimize("O3"))) flush() override {
     noInterrupts();
     digitalWrite(pin_, LOW);
     clear_clock();
@@ -99,16 +96,6 @@ class PixelStrip : public Executable {
     //digitalWrite(pin_, LOW);
     valid_ = true;
     interrupts();
-  }
-
-  void set(int px, int dim, uint8_t value) {
-    ASSERT(px < num_pixels_);
-    ASSERT(dim < 3);
-    uint8_t& p = data_[px * 3 + dim];
-    if (p != value) {
-      p = value;
-      invalidate();
-    }
   }
 
  private:
@@ -152,8 +139,6 @@ class PixelStrip : public Executable {
     return f;
   }
 
-  uint16_t num_pixels_;
-  bool valid_{false};
   bool rollover_needed_;
   int pin_;
   uint8_t* data_;
