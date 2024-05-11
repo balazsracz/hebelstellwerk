@@ -132,6 +132,24 @@ class BlockDebug : public Executable {
   std::vector<uint8_t> packet_;
 } block_debug(&BlockASerial);
 
+class Analog : public Executable {
+ public:
+  Analog() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(100);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    auto v = analogRead(PB0);
+    LOG(LEVEL_INFO, "analog %d", v);
+  }
+
+ private:
+  Timer tm_;
+} reporter2;
+
 /// Arduino loop routine.
 void loop() {
   // Calls the executor to do loop for all registered objects.
