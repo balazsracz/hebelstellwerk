@@ -46,13 +46,11 @@
 #include "utils/Executor.h"
 #include "utils/Macros.h"
 
-class SpiPixelStrip : public Executable {
+class SpiPixelStrip : public Pixel, public Executable {
  public:
   SpiPixelStrip(int num_pixels, int mosi, int miso, int sclk)
-      : num_pixels_(num_pixels), pin_(mosi), spi_(mosi, miso, sclk) {
+      : Pixel(new uint8_t[num_pixels * 3], num_pixels), pin_(mosi), spi_(mosi, miso, sclk) {
     Executor::instance()->add(this);
-    data_ = new uint8_t[num_pixels_ * 3];
-    memset(data_, 0, num_pixels_ * 3);
   }
 
   ~SpiPixelStrip() { delete[] data_; }
@@ -75,9 +73,7 @@ class SpiPixelStrip : public Executable {
     }
   }
 
-  void invalidate() { valid_ = false; }
-
-  void __attribute__((optimize("O3"))) flush() {
+  void __attribute__((optimize("O3"))) flush() override {
     spi_.beginTransaction(SPISettings{SPI_FREQ, LSBFIRST, mode});
     auto* inst = spi_.getHandle()->Instance;
     clear_iteration();
@@ -112,16 +108,6 @@ class SpiPixelStrip : public Executable {
       ;
   }
 
-  void set(int px, int dim, uint8_t value) {
-    ASSERT(px < num_pixels_);
-    ASSERT(dim < 3);
-    uint8_t& p = data_[px * 3 + dim];
-    if (p != value) {
-      p = value;
-      invalidate();
-    }
-  }
-
  private:
   /// Starts a new iteration over the strip. Call next_bit() repeatedly to get
   /// the bits in transmission order.
@@ -142,9 +128,6 @@ class SpiPixelStrip : public Executable {
   /// @return true when the iteration is at eof of the string.
   bool eof() { return current_byte_ >= num_pixels_ * 3; }
 
-  uint8_t* data_;
-  uint16_t num_pixels_;
-  bool valid_{false};
   int pin_;
   SPIClass spi_;
   /// Controls iteration over the data sequence when producing the output. This
