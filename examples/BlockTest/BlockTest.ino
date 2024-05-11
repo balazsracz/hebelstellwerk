@@ -37,6 +37,7 @@
 #include <Hebelstellwerk.h>
 
 #include "utils/Blinker.h"
+#include "utils/ArduinoArmPixel.h"
 
 #ifndef ARDUINO
 #error baaa
@@ -47,6 +48,41 @@
 Blinker blinker2{LED_TO_USE, 750};
 
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
+
+PixelStrip strip(3, PA7);
+
+class PxGpio : public DummyGpio {
+ public:
+  PxGpio() {
+    GpioRegistry::instance()->register_obj(this, 101);
+  }
+
+  void write(gpio_pin_t, bool value) const override {
+    if (value) {
+      strip.set(0, 0, 0x3F);
+      strip.set(0, 1, 0x00);
+      strip.set(0, 2, 0x00);
+      strip.set(1, 0, 0x00);
+      strip.set(1, 1, 0x3F);
+      strip.set(1, 2, 0x00);
+      strip.set(2, 0, 0x00);
+      strip.set(2, 1, 0x3f);
+      strip.set(2, 2, 0x00);
+    } else {
+      strip.set(0, 0, 0x00);
+      strip.set(0, 1, 0x00);
+      strip.set(0, 2, 0x3F);
+      strip.set(1, 0, 0x00);
+      strip.set(1, 1, 0x00);
+      strip.set(1, 2, 0x3F);
+      strip.set(2, 0, 0x3f);
+      strip.set(2, 1, 0x3F);
+      strip.set(2, 2, 0x3f);
+    }
+  }
+} pxgpio_;
+
+Blinker blinker3{101, 350};
 
 /// Arduino setup routine.
 void setup() {
