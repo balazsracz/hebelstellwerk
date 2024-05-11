@@ -84,6 +84,7 @@ class Pixel {
   static constexpr uint32_t GREEN = 0x00ff00;
   static constexpr uint32_t BLUE = 0x0000ff;
   static constexpr uint32_t WHITE = 0xffffff;
+  static constexpr uint32_t BLACK = 0x000000;
  protected:
   uint16_t num_pixels_;
   uint8_t brightness_ = 255;
