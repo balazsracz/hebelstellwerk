@@ -36,9 +36,10 @@
 #include <Arduino.h>
 #include <Hebelstellwerk.h>
 
-#include "utils/Blinker.h"
+#include "utils/AnalogDemux.h"
 #include "utils/ArduinoArmPixel.h"
 #include "utils/ArduinoStm32SpiPixel.h"
+#include "utils/Blinker.h"
 
 #ifndef ARDUINO
 #error baaa
@@ -48,37 +49,30 @@
 
 Blinker blinker2{LED_TO_USE, 750};
 
+static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
+AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
+
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 
-SpiPixelStrip strip(3, PA7, PB4, PB3);
+SpiPixelStrip strip(9, PA7, PB4, PB3);
 
 class PxGpio : public DummyGpio {
  public:
-  PxGpio() {
-    GpioRegistry::instance()->register_obj(this, 101);
-  }
+  PxGpio() { GpioRegistry::instance()->register_obj(this, 101); }
 
   void write(gpio_pin_t, bool value) const override {
     if (value) {
-      strip.set(0, 0, 0x3F);
-      strip.set(0, 1, 0x00);
-      strip.set(0, 2, 0x00);
-      strip.set(1, 0, 0x00);
-      strip.set(1, 1, 0x3F);
-      strip.set(1, 2, 0x00);
-      strip.set(2, 0, 0x00);
-      strip.set(2, 1, 0x3f);
-      strip.set(2, 2, 0x00);
+      for (int i = 0; i < 9; i++) {
+        strip.set(i, i % 3, 0x3f);
+        strip.set(i, (i + 1) % 3, 0);
+        strip.set(i, (i + 2) % 3, 0);
+      }
     } else {
-      strip.set(0, 0, 0x00);
-      strip.set(0, 1, 0x00);
-      strip.set(0, 2, 0x3F);
-      strip.set(1, 0, 0x00);
-      strip.set(1, 1, 0x00);
-      strip.set(1, 2, 0x3F);
-      strip.set(2, 0, 0x3f);
-      strip.set(2, 1, 0x3F);
-      strip.set(2, 2, 0x3f);
+      for (int i = 0; i < 9; i++) {
+        strip.set(i, i % 3, 0);
+        strip.set(i, (i + 1) % 3, 0x3f);
+        strip.set(i, (i + 2) % 3, 0);
+      }
     }
   }
 } pxgpio_;
@@ -89,7 +83,7 @@ Blinker blinker3{101, 350};
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(USER_BTN, INPUT_PULLUP);
-  
+
   Serial.begin(115200);
   // delay(100);
   Serial.println("Hello, world");
@@ -130,7 +124,7 @@ class BlockDebug : public Executable {
       tmAb_.start_oneshot(2000);
     }
   }
- 
+
  private:
   Timer tm_;
   Timer tmAb_;
