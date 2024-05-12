@@ -45,8 +45,9 @@
 
 class DirectBlock : public I2CBlockInterface, private Executable {
  public:
-  DirectBlock(HardwareSerial* serial)
+  DirectBlock(const char* name, HardwareSerial* serial)
       : serial_(serial),
+        name_(name),
         pending_vorblocken_(false),
         pending_ruckblocken_(false),
         pending_abgabe_(false),
@@ -100,16 +101,19 @@ class DirectBlock : public I2CBlockInterface, private Executable {
       pending_abgabe_ = 0;
       clear_bit(BlockBits::TRACK_OUT);
       set_bit(BlockBits::HANDOFF);
+      LOG(INFO, "Block %s sent Abgabe", name_);
     }
     if (pending_vorblocken_) {
       serial_->write(kVorblock, 3);
       pending_vorblocken_ = 0;
       set_bit(BlockBits::OUT_BUSY);
+      LOG(INFO, "Block %s sent Vorblocken", name_);
     }
     if (pending_ruckblocken_) {
       serial_->write(kRuckblock, 3);
       pending_ruckblocken_ = 0;
       clear_bit(BlockBits::IN_BUSY);
+      LOG(INFO, "Block %s sent Ruckblocken", name_);
     }
     if (!pending_vorblocken_ && !pending_ruckblocken_ && !pending_abgabe_) {
       clear_bit(BlockBits::NEWOUTPUT);
@@ -169,7 +173,7 @@ class DirectBlock : public I2CBlockInterface, private Executable {
     if (packet_overflow_) {
       p += "OVERFLOW";
     }
-    LOG(INFO, "Block IN: %s", p.c_str());
+    LOG(INFO, "Block %s IN: %s", name_, p.c_str());
 
     if (packet_len_ == 1) {
       switch (incoming_packet_[0]) {
@@ -232,9 +236,11 @@ class DirectBlock : public I2CBlockInterface, private Executable {
   /// station.
   static constexpr uint16_t RECV_RUCKBLOCK_STATUS =
       uint16_t(BlockBits::NEWINPUT | BlockBits::TRACK_OUT);
-  
+
   /// Serial port for TX and RX of packets.
   HardwareSerial* serial_;
+  /// User-visible name of the block for debug output.
+  const char* name_;
   /// Status word exposed to the client via API.
   uint16_t status_{STARTUP_STATUS};
   /// True if we need to send a Vorblocken to the remote station.
