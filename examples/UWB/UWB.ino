@@ -392,27 +392,7 @@ LockTable ltbl({
 
 Blinker blinker2{LED_BUILTIN};
 
-class Unlocker : public Executable {
- public:
-  Unlocker() {
-    Executor::instance()->add(this);
-    tm_.start_periodic(10);
-  }
-
-  void begin() override {}
-  void loop() override {
-    if (!tm_.check()) return;
-    if (global_unlock.read() != GlobalState::instance()->is_unlocked_) {
-      GlobalState::instance()->is_unlocked_ = global_unlock.read();
-      LOG(LEVEL_INFO, "Global unlock %s",
-          GlobalState::instance()->is_unlocked_ ? "true" : "false");
-    }
-  }
-  
- private:
-  GpioAccessor global_unlock{GPIO_GLOBAL_UNLOCK, true, GPIO_INPUT};
-  Timer tm_;
-} unlocker;
+GlobalUnlocker unlocker{GPIO_GLOBAL_UNLOCK, true};
 
 class Report : public Executable {
  public:

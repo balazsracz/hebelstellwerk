@@ -24,46 +24,41 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file Hebelstellwerk.h
+ * \file GlobalUnlocker.h
  *
- * Main include file for the Hebelstellwerk library.
+ * Implements a GPIO button that triggersthe global unlock.
  *
  * @author Balazs Racz
- * @date 9 Mar 2024
+ * @date 12 May 2024
  */
 
-#include "utils/GpioRegistry.h"
-#include "utils/Gpio.h"
-#include "utils/Pwm.h"
-#include "utils/PwmGpio.h"
-#include "utils/ServoGpio.h"
-#include "utils/AnalogGpio.h"
-#include "utils/OrGpio.h"
+#ifndef _STW_GLOBALUNLOCKER_H_
+#define _STW_GLOBALUNLOCKER_H_
+
+#include "stw/GlobalCommand.h"
 #include "utils/Executor.h"
-#include "utils/Timer.h"
 
-#include "stw/TurnoutLever.h"
-#include "stw/SignalLever.h"
-#include "stw/RouteLever.h"
-#include "stw/LockTable.h"
-#include "stw/LeverKey.h"
-#include "stw/I2CBlockImpl.h"
-#include "stw/FelderBlock.h"
-#include "stw/GlobalUnlocker.h"
+class GlobalUnlocker : public Executable {
+ public:
+  GlobalUnlocker(gpio_pin_t pin, bool inverted)
+      : global_unlock(pin, inverted, GPIO_INPUT) {
+    Executor::instance()->add(this);
+    tm_.start_periodic(10);
+  }
 
-GpioRegistry g_gpio_registry;
-PwmRegistry g_pwm_registry;
-TurnoutRegistry g_turnout_registry;
-SignalRegistry g_signal_registry;
-RouteRegistry g_route_registry;
-BlockRegistry g_block_registry;
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+    if (global_unlock.read() != GlobalState::instance()->is_unlocked_) {
+      GlobalState::instance()->is_unlocked_ = global_unlock.read();
+      LOG(LEVEL_INFO, "Global unlock %s",
+          GlobalState::instance()->is_unlocked_ ? "true" : "false");
+    }
+  }
+  
+ private:
+  GpioAccessor global_unlock;
+  Timer tm_;
+};
 
-Executor ex;
-
-#ifdef ARDUINO
-#include "utils/ArduinoGpio.h"
-#include "utils/Pwm9685.h"
-#include "utils/Gpio23017.h"
-
-ArduinoGpio g_arduino_gpio;
-#endif
+#endif // _STW_GLOBALUNLOCKER_H_

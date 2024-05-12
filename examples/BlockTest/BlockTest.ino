@@ -80,6 +80,9 @@ enum GpioPin : gpio_pin_t {
 
 Blinker blinker2{LED_TO_USE, 750};
 
+GlobalState st;
+GlobalUnlocker unlocker{ONBOARD_BTN, true};
+
 static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
 AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
