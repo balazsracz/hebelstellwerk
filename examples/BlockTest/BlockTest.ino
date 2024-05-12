@@ -41,10 +41,40 @@
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
 #include "utils/PixelGpio.h"
+#include "stw/SimpleBlockUi.h"
+#include "stw/DirectBlock.h"
 
 #ifndef ARDUINO
 #error baaa
 #endif
+
+
+enum GpioPin : gpio_pin_t {
+  ONBOARD_LED = 13,
+  ONBOARD_BTN = USER_BTN,
+
+  ANALOG_BTN_START = 110,
+  BTN_C_VORBLOCK = ANALOG_BTN_START,
+  BTN_C_ABGABE,
+  BTN_C_RUCKBLOCK,
+  BTN_A_RUCKBLOCK,
+  BTN_A_ABGABE,
+  BTN_A_VORBLOCK,
+  BTN_B_VORBLOCK,
+  BTN_B_ABGABE,
+  BTN_B_RUCKBLOCK,
+
+  PIXEL_START = 120,
+  PX_C_ANFANGSFELD = PIXEL_START,
+  PX_C_ERLAUBNISFELD,
+  PX_C_ENDFELD,
+  PX_A_ENDFELD,
+  PX_A_ERLAUBNISFELD,
+  PX_A_ANFANGSFELD,
+  PX_B_ANFANGSFELD,
+  PX_B_ERLAUBNISFELD,
+  PX_B_ENDFELD,
+};
 
 #define LED_TO_USE 13
 
@@ -57,20 +87,28 @@ HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 SpiPixelStrip strip(9, PA7, PB4, PB3);
 
 const uint32_t kOutputParams[] = {
-  0, Pixel::BLACK, Pixel::GREEN, //
+  0, Pixel::RED, Pixel::WHITE, //
   1, Pixel::RED, Pixel::WHITE, //
-  2, Pixel::BLACK, Pixel::RED, //
-  3, Pixel::BLACK, Pixel::RED, //
+  2, Pixel::RED, Pixel::WHITE, //
+  3, Pixel::RED, Pixel::WHITE, //
   4, Pixel::RED, Pixel::WHITE, //
-  5, Pixel::BLACK, Pixel::GREEN, //
-  6, Pixel::BLACK, Pixel::GREEN, //
+  5, Pixel::RED, Pixel::WHITE, //
+  6, Pixel::RED, Pixel::WHITE, //
   7, Pixel::RED, Pixel::WHITE, //
-  8, Pixel::BLACK, Pixel::RED, //
+  8, Pixel::RED, Pixel::WHITE, //
 };
 
 PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
-//Blinker blinker3{101, 350};
+DirectBlock block_a{"A", &BlockASerial};
+SimpleBlockUi a_ui{&block_a};
+
+const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
+                          a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, false) |
+                          a_ui.set_abgabe_taste(BTN_A_ABGABE, false) |
+                          a_ui.set_anfangsfeld(PX_A_ANFANGSFELD, false) |
+                          a_ui.set_endfeld(PX_A_ENDFELD, false) |
+                          a_ui.set_erlaubnisfeld(PX_A_ERLAUBNISFELD, false);
 
 /// Arduino setup routine.
 void setup() {
@@ -82,6 +120,8 @@ void setup() {
   Serial.println("Hello, world");
   Executor::instance()->begin();
   strip.set_brightness(0x20);
+
+  ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
 }
 
 #include <vector>
@@ -124,7 +164,7 @@ class BlockDebug : public Executable {
   Timer tmAb_;
   HardwareSerial* s_;
   std::vector<uint8_t> packet_;
-} block_debug(&BlockASerial);
+};// block_debug(&BlockASerial);
 
 class Analog : public Executable {
  public:
@@ -142,7 +182,7 @@ class Analog : public Executable {
 
  private:
   Timer tm_;
-} reporter2;
+};// reporter2;
 
 
 class Copier : public Executable {
@@ -164,7 +204,7 @@ class Copier : public Executable {
 
  private:
   Timer tm_;
-} copier;
+};// copier;
 
 
 /// Arduino loop routine.
