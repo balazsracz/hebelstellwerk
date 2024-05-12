@@ -35,16 +35,14 @@
 #ifndef _STW_SIMPLEBLOCKUI_H_
 #define _STW_SIMPLEBLOCKUI_H_
 
-
-#include "utils/Executor.h"
-#include "utils/Timer.h"
-#include "utils/Gpio.h"
 #include "stw/I2CBlock.h"
+#include "utils/Executor.h"
+#include "utils/Gpio.h"
+#include "utils/Timer.h"
 
 class SimpleBlockUi : public Executable {
  public:
-  SimpleBlockUi(I2CBlockInterface* block)
-      : block_(block) {
+  SimpleBlockUi(I2CBlockInterface* block) : block_(block) {
     Executor::instance()->add(this);
   }
 
@@ -74,8 +72,7 @@ class SimpleBlockUi : public Executable {
     return 1u << 5;
   }
 
-  void begin() override {
-  }
+  void begin() override {}
 
   void loop() override {
     auto m = Executor::instance()->millis();
@@ -111,9 +108,9 @@ class SimpleBlockUi : public Executable {
     } else if (ruckblock_taste_.read()) {
       current = BTN_RUCKBLOCK;
     }
-    
+
     // Runs debouncing state machine.
-    switch(state_) {
+    switch (state_) {
       case IDLE: {
         if (current != BTN_NONE) {
           state_ = BUTTON_PRESS_WAITING;
@@ -146,11 +143,11 @@ class SimpleBlockUi : public Executable {
 
   /// These bits should be set after all the setup is done.
   static constexpr uint16_t EXPECTED_SETUP = (1u << 6) - 1;
-  
+
  private:
   /// Performs the action denoted by the current button press.
   void perform_action() {
-    switch(btn_pressed_) {
+    switch (btn_pressed_) {
       case BTN_VORBLOCK:
         block_->vorblocken();
         break;
@@ -175,20 +172,11 @@ class SimpleBlockUi : public Executable {
   /// How long the user has to release all buttons for us to take use input
   /// again.
   static constexpr unsigned BTN_CLEAR_MSEC = 300;
-  
-  enum State : uint8_t {
-    IDLE,
-    BUTTON_PRESS_WAITING,
-    BUTTON_RELEASE_WAITING
-  };
 
-  enum Button : uint8_t {
-    BTN_VORBLOCK,
-    BTN_ABGABE,
-    BTN_RUCKBLOCK,
-    BTN_NONE
-  };
-  
+  enum State : uint8_t { IDLE, BUTTON_PRESS_WAITING, BUTTON_RELEASE_WAITING };
+
+  enum Button : uint8_t { BTN_VORBLOCK, BTN_ABGABE, BTN_RUCKBLOCK, BTN_NONE };
+
   /// Button to signal an outgoing train to the next station, i.e., set the
   /// track to busy with an outgoing train. True when the user presses the
   /// button.
@@ -211,7 +199,6 @@ class SimpleBlockUi : public Executable {
   /// Output for a red/white field showing that we have the permission to send
   /// trains to the track. Value is 1 for white, 0 for red.
   DelayedGpioAccessor erlaubnisfeld_;
-  
 
   /// Block accecssor interface.
   I2CBlockInterface* block_;
@@ -225,5 +212,4 @@ class SimpleBlockUi : public Executable {
   State state_{IDLE};
 };
 
-
-#endif // _STW_SIMPLEBLOCKUI_H_
+#endif  // _STW_SIMPLEBLOCKUI_H_
