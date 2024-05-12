@@ -36,6 +36,7 @@
 #define _STW_I2CBLOCK_H_
 
 #include <string>
+#include <stdint.h>
 
 enum class BlockBits : uint16_t {
   /// The block is in startup mode and it does not know what the status bits
@@ -62,12 +63,12 @@ enum class BlockBits : uint16_t {
   IN_BUSY = 0x80,
 };
 
-static inline BlockBits operator|(BlockBits a, BlockBits b) {
+static inline constexpr BlockBits operator|(BlockBits a, BlockBits b) {
   uint16_t r = ((uint16_t)a) | ((uint16_t)b);
   return BlockBits(r);
 }
 
-static inline uint16_t operator&(uint16_t a, BlockBits b) {
+static inline constexpr uint16_t operator&(uint16_t a, BlockBits b) {
   uint16_t r =  a & ((uint16_t)b);
   return r;
 }
