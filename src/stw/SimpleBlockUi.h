@@ -98,7 +98,12 @@ class SimpleBlockUi : public Executable {
     } else {
       endfeld_.write(WHITE);
     }
-    
+    // Handles unknown startup status.
+    if ((state & BlockBits::STARTUP) && !(state & BlockBits::TRACK_OUT) &&
+        !(state & BlockBits::HANDOFF)) {
+      block_->reset_out();
+    }
+
     // Checks which button is pressed.
     Button current = BTN_NONE;
     if (abgabe_taste_.read()) {
