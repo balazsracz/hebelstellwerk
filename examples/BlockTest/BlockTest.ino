@@ -83,6 +83,8 @@ Blinker blinker2{LED_TO_USE, 750};
 static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
 AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
+HardwareSerial BlockBSerial(PD2 /*rx*/, PC12 /*tx*/);
+HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
 
 SpiPixelStrip strip(9, PA7, PB4, PB3);
 
@@ -102,6 +104,10 @@ PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
 DirectBlock block_a{"A", &BlockASerial};
 SimpleBlockUi a_ui{&block_a};
+DirectBlock block_b{"B", &BlockBSerial};
+SimpleBlockUi b_ui{&block_b};
+DirectBlock block_c{"C", &BlockCSerial};
+SimpleBlockUi c_ui{&block_c};
 
 const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
                           a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, false) |
@@ -109,6 +115,20 @@ const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
                           a_ui.set_anfangsfeld(PX_A_ANFANGSFELD, false) |
                           a_ui.set_endfeld(PX_A_ENDFELD, false) |
                           a_ui.set_erlaubnisfeld(PX_A_ERLAUBNISFELD, false);
+
+const uint16_t b_ui_rdy = b_ui.set_vorblock_taste(BTN_B_VORBLOCK, false) |
+                          b_ui.set_ruckblock_taste(BTN_B_RUCKBLOCK, false) |
+                          b_ui.set_abgabe_taste(BTN_B_ABGABE, false) |
+                          b_ui.set_anfangsfeld(PX_B_ANFANGSFELD, false) |
+                          b_ui.set_endfeld(PX_B_ENDFELD, false) |
+                          b_ui.set_erlaubnisfeld(PX_B_ERLAUBNISFELD, false);
+
+const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
+                          c_ui.set_ruckblock_taste(BTN_C_RUCKBLOCK, false) |
+                          c_ui.set_abgabe_taste(BTN_C_ABGABE, false) |
+                          c_ui.set_anfangsfeld(PX_C_ANFANGSFELD, false) |
+                          c_ui.set_endfeld(PX_C_ENDFELD, false) |
+                          c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
 /// Arduino setup routine.
 void setup() {
@@ -122,6 +142,8 @@ void setup() {
   strip.set_brightness(0x20);
 
   ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
+  ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
+  ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
 }
 
 #include <vector>
