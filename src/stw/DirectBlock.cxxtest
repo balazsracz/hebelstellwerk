@@ -1,0 +1,28 @@
+
+#include <stdint.h>
+
+#define SERIAL_8N1 111
+
+class HardwareSerial {
+ public:
+  int available() { return 0; }
+
+  void write(const uint8_t* data, unsigned num) {}
+
+  void begin(unsigned baudrate, int mode);
+
+  uint8_t read() {
+    return 0;
+  }
+};
+
+#include "stw/DirectBlock.h"
+
+//
+
+#include "test_main.h"
+
+void HardwareSerial::begin(unsigned baudrate, int mode) {
+  EXPECT_EQ(9600u, baudrate);
+  EXPECT_EQ(111, mode);
+}
