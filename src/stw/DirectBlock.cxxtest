@@ -17,6 +17,7 @@ class HardwareSerial {
 };
 
 #include "stw/DirectBlock.h"
+#include "stw/SimpleBlockUi.h"
 
 //
 
