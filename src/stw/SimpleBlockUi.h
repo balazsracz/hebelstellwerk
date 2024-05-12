@@ -35,6 +35,7 @@
 #ifndef _STW_SIMPLEBLOCKUI_H_
 #define _STW_SIMPLEBLOCKUI_H_
 
+#include "stw/GlobalCommand.h"
 #include "stw/I2CBlock.h"
 #include "utils/Executor.h"
 #include "utils/Gpio.h"
@@ -154,14 +155,40 @@ class SimpleBlockUi : public Executable {
   void perform_action() {
     switch (btn_pressed_) {
       case BTN_VORBLOCK:
-        block_->vorblocken();
+        if (global_is_unlocked() ||
+            (block_->get_status() & BlockBits::TRACK_OUT)) {
+          // We didn't check the busy bit, because it does not matter. We
+          // should be able to repeat a Vorblocken even if we just sent one.
+          block_->vorblocken();
+        }
         break;
       case BTN_RUCKBLOCK:
-        block_->ruckblocken();
+        if (global_is_unlocked() ||
+            (block_->get_status() & BlockBits::HANDOFF)) {
+          // We didn't check the busy bit, because it does not matter. We
+          // should be able to repeat a Ruckblocken even if we just sent one.
+          block_->ruckblocken();
+        }
         break;
-      case BTN_ABGABE:
-        block_->abgabe();
+      case BTN_ABGABE: {
+        auto status = block_->get_status();
+        bool okay = false;
+        if (global_is_unlocked()) okay = true;
+        // Regular handoff, when we have the track and it is free.
+        if ((status & BlockBits::TRACK_OUT) &&
+            !(status & BlockBits::OUT_BUSY)) {
+          okay = true;
+        }
+        // Repeat handoff, when we just handed off and the track is still free.
+        if ((status & BlockBits::HANDOFF) &&
+            !(status & BlockBits::IN_BUSY)) {
+          okay = true;
+        }
+        if (okay) {
+          block_->abgabe();
+        }
         break;
+      }
       default:
         // no nothing
         break;
