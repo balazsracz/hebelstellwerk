@@ -105,11 +105,11 @@ const uint32_t kOutputParams[] = {
 
 PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
-DirectBlock block_a{"A", &BlockASerial};
+DirectBlock block_a{"A", &BlockASerial, PC11, PC1};
 SimpleBlockUi a_ui{&block_a};
-DirectBlock block_b{"B", &BlockBSerial};
+DirectBlock block_b{"B", &BlockBSerial, PD2, PA1};
 SimpleBlockUi b_ui{&block_b};
-DirectBlock block_c{"C", &BlockCSerial};
+DirectBlock block_c{"C", &BlockCSerial, PB11, PA15};
 SimpleBlockUi c_ui{&block_c};
 
 const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |

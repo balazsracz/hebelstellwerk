@@ -45,14 +45,17 @@
 
 class DirectBlock : public I2CBlockInterface, private Executable {
  public:
-  DirectBlock(const char* name, HardwareSerial* serial)
+  DirectBlock(const char* name, HardwareSerial* serial, int ard_pin,
+              int ard_rev_pin)
       : serial_(serial),
         name_(name),
         pending_vorblocken_(false),
         pending_ruckblocken_(false),
         pending_abgabe_(false),
         pending_esc_(false),
-        packet_overflow_(false) {
+        packet_overflow_(false),
+        arduino_rx_pin_(ard_pin),
+        arduino_det_pin_(ard_rev_pin) {
     Executor::instance()->add(this);
     clear_packet();
   }
@@ -90,9 +93,21 @@ class DirectBlock : public I2CBlockInterface, private Executable {
     I2CBlockInterface::abgabe();
   }
 
-  void begin() override { serial_->begin(9600, SERIAL_8N1); }
+  void begin() override {
+    serial_->begin(9600, SERIAL_8N1);
+    pinMode(arduino_det_pin_, INPUT_PULLUP);
+    error_tm_.start_oneshot(100);    
+  }
 
   void loop() override {
+    if (digitalRead(arduino_rx_pin_) == LOW ||
+        digitalRead(arduino_det_pin_) == LOW) {
+      error_tm_.start_oneshot(100);
+      clear_bit(BlockBits::ERROR);
+    } else if (error_tm_.check()) {
+      set_bit(BlockBits::ERROR);
+      LOG(INFO, "Block %s CABLE ERROR", name_);
+    }
     while (serial_->available()) {
       process_byte(serial_->read());
     }
@@ -241,6 +256,8 @@ class DirectBlock : public I2CBlockInterface, private Executable {
   HardwareSerial* serial_;
   /// User-visible name of the block for debug output.
   const char* name_;
+  /// Timer used for error detection.
+  Timer error_tm_;
   /// Status word exposed to the client via API.
   uint16_t status_{STARTUP_STATUS};
   /// True if we need to send a Vorblocken to the remote station.
@@ -257,6 +274,12 @@ class DirectBlock : public I2CBlockInterface, private Executable {
   uint8_t incoming_packet_[32];
   /// Number of bytes filled in in incoming_packet_.
   uint8_t packet_len_{0};
+  /// GPIO pin that will be checked for block cable detection. This will be
+  /// used with digitalRead().
+  int16_t arduino_rx_pin_;
+  /// GPIO pin that will be checked for block cable detection. This will be
+  /// used with digitalRead(). This pin is the reverse of the block RX.
+  int16_t arduino_det_pin_;
 };  // class directblock
 
 #endif  // _STW_DIRECTBLOCK_H_

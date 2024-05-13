@@ -84,20 +84,26 @@ class SimpleBlockUi : public Executable {
     }
     // Updates output fields.
     auto state = block_->get_status();
-    if (state & BlockBits::TRACK_OUT) {
-      erlaubnisfeld_.write(WHITE);
-    } else {
+    if (state & BlockBits::ERROR) {
       erlaubnisfeld_.write(RED);
-    }
-    if (state & BlockBits::OUT_BUSY) {
       anfangsfeld_.write(RED);
-    } else {
-      anfangsfeld_.write(WHITE);
-    }
-    if (state & BlockBits::IN_BUSY) {
       endfeld_.write(RED);
     } else {
-      endfeld_.write(WHITE);
+      if (state & BlockBits::TRACK_OUT) {
+        erlaubnisfeld_.write(WHITE);
+      } else {
+        erlaubnisfeld_.write(RED);
+      }
+      if (state & BlockBits::OUT_BUSY) {
+        anfangsfeld_.write(RED);
+      } else {
+        anfangsfeld_.write(WHITE);
+      }
+      if (state & BlockBits::IN_BUSY) {
+        endfeld_.write(RED);
+      } else {
+        endfeld_.write(WHITE);
+      }
     }
     // Handles unknown startup status.
     if ((state & BlockBits::STARTUP) && !(state & BlockBits::TRACK_OUT) &&
