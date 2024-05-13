@@ -89,6 +89,9 @@ HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 HardwareSerial BlockBSerial(PD2 /*rx*/, PC12 /*tx*/);
 HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
 
+HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
+
+
 SpiPixelStrip strip(9, PA7, PB4, PB3);
 
 const uint32_t kOutputParams[] = {
@@ -159,8 +162,8 @@ class BlockDebug : public Executable {
   }
 
   void begin() override {
-    s_->begin(9600, SERIAL_8N1);
     tmAb_.start_oneshot(1);
+    s_->begin(16660, SERIAL_8N1);
   }
 
   void loop() override {
@@ -173,14 +176,14 @@ class BlockDebug : public Executable {
       for (uint8_t e : packet_) {
         p += StringPrintf("0x%02x ", e);
       }
-      LOG(INFO, "Block IN: %s", p.c_str());
+      LOG(INFO, "LocoNet IN: %s", p.c_str());
       packet_.clear();
     }
     if (!digitalRead(USER_BTN) && tmAb_.check()) {
-      LOG(INFO, "Abgabe");
-      uint8_t abgabe[3] = {0xC0, 0x2C, 0xC0};
-      s_->write(abgabe, 3);
       tmAb_.start_oneshot(2000);
+      LOG(INFO, "Sensor message");
+      uint8_t abgabe[] = {0xB2,0x39,0x46,0x32};
+      s_->write(abgabe, sizeof(abgabe));
     }
   }
 
@@ -189,7 +192,7 @@ class BlockDebug : public Executable {
   Timer tmAb_;
   HardwareSerial* s_;
   std::vector<uint8_t> packet_;
-};// block_debug(&BlockASerial);
+} ln_debug(&LnSerial);
 
 class Analog : public Executable {
  public:
