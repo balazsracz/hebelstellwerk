@@ -67,3 +67,8 @@ Executor ex;
 
 ArduinoGpio g_arduino_gpio;
 #endif
+
+#if defined(USE_LOCONET) || defined(LOCONET_INCLUDED)
+#include "utils/LnGpio.h"
+
+#endif
