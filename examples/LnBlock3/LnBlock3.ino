@@ -34,6 +34,7 @@
  */
 
 #include <Arduino.h>
+#include <LocoNet.h>
 #include <Hebelstellwerk.h>
 
 #include "utils/AnalogDemux.h"
@@ -74,6 +75,15 @@ enum GpioPin : gpio_pin_t {
   PX_B_ANFANGSFELD,
   PX_B_ERLAUBNISFELD,
   PX_B_ENDFELD,
+
+  LN_GPIO_START = 140,
+  LN_TURNOUT_SENSOR = LN_GPIO_START,
+  LN_SW_TEST,
+  LN_SW_RED,
+  LN_SW_GREEN,
+  LN_A_DIRECTION,
+  LN_B_DIRECTION,
+  LN_C_DIRECTION,
 };
 
 #define LED_TO_USE 13
@@ -89,11 +99,11 @@ HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 HardwareSerial BlockBSerial(PD2 /*rx*/, PC12 /*tx*/);
 HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
 
-HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
+//HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
 
 
-//SpiPixelStrip strip(9, PA7, PB4, PB3);
-SpiPixelStrip strip(9, PB5, PB4, PB3);
+SpiPixelStrip strip(9, PA7, PB4, PB3);
+//SpiPixelStrip strip(9, PB5, PB4, PB3);
 
 const uint32_t kOutputParams[] = {
   0, Pixel::RED, Pixel::WHITE, //
@@ -137,20 +147,44 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
                           c_ui.set_endfeld(PX_C_ENDFELD, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
+const LnGpioDefn ln_defs[] = {
+  {LNGPIO_SENSOR, 55},
+  {LNGPIO_SWITCH, 13},
+  {LNGPIO_SWITCH_RED, 13},
+  {LNGPIO_SWITCH_GREEN, 13},
+};
+
+LnGpio ln_gpio{LN_GPIO_START, &LocoNet, ln_defs, ARRAYSIZE(ln_defs)};
+
+
+//Blinker blinkerln{LN_GPIO_START, 2000};
+
+
 /// Arduino setup routine.
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(USER_BTN, INPUT_PULLUP);
 
+  pinMode(PC2, INPUT_PULLUP);
+  pinMode(PA9, INPUT_PULLUP);
+  //digitalWrite(PA9, HIGH);
+  pinMode(PC5, OUTPUT);
+  digitalWrite(PC5, LOW);
+  
+  
   Serial.begin(115200);
   // delay(100);
   Serial.println("Hello, world");
+
+  LocoNet.init(PC5);
+  
   Executor::instance()->begin();
   strip.set_brightness(0x20);
 
   ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
   ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
   ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
+
 }
 
 #include <vector>
@@ -193,7 +227,7 @@ class BlockDebug : public Executable {
   Timer tmAb_;
   HardwareSerial* s_;
   std::vector<uint8_t> packet_;
-} ln_debug(&LnSerial);
+};// ln_debug(&LnSerial);
 
 class Analog : public Executable {
  public:
@@ -218,7 +252,7 @@ class Copier : public Executable {
  public:
   Copier() {
     Executor::instance()->add(this);
-    tm_.start_periodic(10);
+    tm_.start_periodic(1);
   }
 
   void begin() override {}
@@ -226,14 +260,19 @@ class Copier : public Executable {
     if (!tm_.check()) return;
     auto* s = GpioRegistry::instance()->get(110);
     auto* d = GpioRegistry::instance()->get(120);
+    auto* l = GpioRegistry::instance()->get(LN_GPIO_START);
     for (unsigned i = 0; i < 9; i++) {
-      d->write(120 + i, s->read(110 + i));
+      //d->write(120 + i, s->read(110 + i));
     }
+    l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
+    //l->write(LN_SW_TEST, s->read(110 + 1));
+    //d->write(120 + 0, l->read(LN_SW_RED));
+    //d->write(120 + 1, l->read(LN_SW_GREEN));
   }
 
  private:
   Timer tm_;
-};// copier;
+} copier;
 
 
 /// Arduino loop routine.
