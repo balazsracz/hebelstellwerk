@@ -37,6 +37,8 @@
 
 #include <assert.h>
 
+#define ARRAYSIZE(x) (sizeof(x) / sizeof(x[0]))
+
 #if defined(ARDUINO) && defined(LED_BUILTIN)
 
 #define DIE(x)                                         \
