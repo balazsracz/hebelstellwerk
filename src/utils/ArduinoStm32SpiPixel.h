@@ -49,7 +49,10 @@
 class SpiPixelStrip : public Pixel, public Executable {
  public:
   SpiPixelStrip(int num_pixels, int mosi, int miso, int sclk)
-      : Pixel(new uint8_t[num_pixels * 3], num_pixels), pin_(mosi), spi_(mosi, miso, sclk) {
+      : Pixel(new uint8_t[num_pixels * 3], num_pixels),
+        pin_(mosi),
+        pin_name_(digitalPinToPinName(mosi)),
+        spi_(mosi, miso, sclk) {
     Executor::instance()->add(this);
   }
 
@@ -57,13 +60,13 @@ class SpiPixelStrip : public Pixel, public Executable {
 
   static constexpr uint32_t SPI_FREQ = 72000000 / 32;
 
-  static constexpr auto mode = SPI_MODE1;
+  static constexpr auto MODE = SPI_MODE1;
 
   void begin() override {
     pinMode(pin_, OUTPUT);
     digitalWrite(pin_, LOW);
     spi_.begin();
-    spi_.beginTransaction(SPISettings{SPI_FREQ, LSBFIRST, mode});
+    spi_.beginTransaction(SPISettings{SPI_FREQ, LSBFIRST, MODE});
     ASSERT(spi_.getHandle()->Instance != nullptr);
   }
 
@@ -74,7 +77,10 @@ class SpiPixelStrip : public Pixel, public Executable {
   }
 
   void __attribute__((optimize("O3"))) flush() override {
-    spi_.beginTransaction(SPISettings{SPI_FREQ, LSBFIRST, mode});
+    // Set pin to SPI output.
+    pinmap_pinout(pin_name_, PinMap_SPI_MOSI);
+
+    spi_.beginTransaction(SPISettings{SPI_FREQ, LSBFIRST, MODE});
     auto* inst = spi_.getHandle()->Instance;
     clear_iteration();
     delayMicroseconds(200);
@@ -106,6 +112,11 @@ class SpiPixelStrip : public Pixel, public Executable {
     // Wait for transfer to complete.
     while (LL_SPI_IsActiveFlag_BSY(inst))
       ;
+
+    // Reset pin to GPIO and drive low.
+    digitalWrite(pin_name_, LOW);
+    pinMode(pin_name_, OUTPUT);
+    digitalWrite(pin_name_, LOW);
   }
 
  private:
@@ -129,6 +140,7 @@ class SpiPixelStrip : public Pixel, public Executable {
   bool eof() { return current_byte_ >= num_pixels_ * 3; }
 
   int pin_;
+  PinName pin_name_;
   SPIClass spi_;
   /// Controls iteration over the data sequence when producing the output. This
   /// is the index if the current byte.
