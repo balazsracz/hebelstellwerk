@@ -35,8 +35,23 @@
 #ifndef _UTILS_LNGPIO_H_
 #define _UTILS_LNGPIO_H_
 
+#include <LocoNet.h>
+#include <utility>
+
+#include "utils/Gpio.h"
+#include "utils/Executor.h"
+#include "utils/Logging.h"
+
 enum LnGpioType : uint8_t {
+  LNGPIO_NONE,
+  /// Listens to or generates switch requests on closed/thrown. Value is true
+  /// (high) sends Closed / GREEN, value of False (low) sends Thrown /
+  /// RED. Sends or detects only Output ON messages.
   LNGPIO_SWITCH,
+  /// Sends on/off messages for Switch RED button (thrown).
+  LNGPIO_SWITCH_RED,
+  /// Sends on/off messages for Switch GREEN button (closed).
+  LNGPIO_SWITCH_GREEN,
   LNGPIO_SENSOR,
 };
 
@@ -57,25 +72,32 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
   LnGpio(gpio_pin_t pin, LocoNetClass* ln, const LnGpioDefn* defs,
          unsigned count)
       : pin_(pin), count_(count), ln_(ln), defs_(defs) {
-    last_state_ = new uint32_t[(2 * count + 31) / 32];
-    memset(last_state_, 0, (2 * count + 7) / 8);
-    Exeuctor::instance()->add(this);
+    GpioRegistry::instance()->register_obj(this, pin_, Count{count});
+    unsigned slen = (2 * count + 31) / 32;
+    state_ = new uint32_t[slen];
+    memset(state_, 0, slen * 4);
+    Executor::instance()->add(this);
   }
 
-  ~LnGpio() { delete[] last_state_; }
+  ~LnGpio() { delete[] state_; }
 
+  void begin() override {}
+  void loop() override;
+  
   void write(gpio_pin_t pin, bool value) const override {
     uint16_t ofs = (pin - pin_);
     auto pos = get_pos(ofs);
-    if (set_bit(pos, bit, value)) {
+    if (set_bit(pos.first, pos.second, value)) {
+      LOG(LEVEL_INFO, "Ln write %d to %d", ofs, value);
       // changed: set dirty
-      set_bit(pos, bit << 1, true);  // dirty
+      set_bit(pos.first, pos.second << 1, true);
+      any_dirty_ = true;
     }
   }
   bool read(gpio_pin_t pin) const override {
     uint16_t ofs = (pin - pin_);
     auto pos = get_pos(ofs);
-    return *(pos->first) & pos->second;
+    return *(pos.first) & pos.second;
   }
   void set_output(gpio_pin_t pin) const override {
     // noop really. Loconet stuff is always input-output.
@@ -87,27 +109,42 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
  private:
   void set_state(unsigned ofs, bool value) {}
 
-  std::pair<uint32_t*, uint32_t> get_pos(unsigned ofs) {
+  std::pair<uint32_t*, uint32_t> get_pos(unsigned ofs) const {
     ofs <<= 1;
-    uint32_t* p = state_ + (ofs >> 5);
-    uint32_t bit = ofs & 31;
+    uint32_t* p = state_ + (ofs >> 4);
+    uint32_t bit = 1u << ((ofs & 15) << 1);
     return {p, bit};
   }
 
   inline static bool set_bit(uint32_t* pos, uint32_t bit, bool value) {
-    bool ret = value != ((*pos & bit) != 0);
+    bool old_value = (*pos) & bit;
+    if (value == old_value) return false;
     if (value) {
       *pos |= bit;
     } else {
       *pos &= ~bit;
     }
-    return ret;
+    return true;
   }
+
+  inline static bool get_bit(uint32_t* pos, uint32_t bit) {
+    return *pos & bit;
+  }
+
+  /// Sends out an update to the loconet bus.
+  /// @param def is the definition of what to send out
+  /// @param value is the new state of the bit.
+  /// @return true if the message was successfully sent, false if there was a
+  /// collision etc.
+  bool send_ln_update(const LnGpioDefn* def, bool value);
 
   /// First GPIO pin number.
   gpio_pin_t pin_;
   /// How many pins we are simulating.
   uint16_t count_;
+
+  /// True if any dirty bit was set.
+  mutable bool any_dirty_{false};
 
   /// Pointer to the loconet instance.
   LocoNetClass* ln_;
