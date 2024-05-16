@@ -89,6 +89,9 @@ build-blocktest:
 build-lnex:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod ~/Arduino/libraries/LocoNet/examples/LocoNetMonitor
 
+build-lnblk:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod $(APP_PATH)/examples/LnBlock3
+
 
 tests: run-tests build-examples
 
