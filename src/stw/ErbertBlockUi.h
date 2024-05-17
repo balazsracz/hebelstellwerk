@@ -53,7 +53,8 @@ class ErbertBlockUi : public Executable {
 
   void loop() override {
     if (!tm_.check()) return;
-
+    tm_.start_drifting(16);
+    
     // Updates output fields.
     auto state = block_->get_status();
 
@@ -86,7 +87,13 @@ class ErbertBlockUi : public Executable {
     }
     // Checks if the UI reversed the handoff when it should not have.
     if ((state & BlockBits::HANDOFF) && erlaubnis_out_.read()) {
-      set_erlaubnis_out_ui(false);
+      if (need_force_erlaubnis_) {
+        set_erlaubnis_out_ui(false);
+      } else {
+        need_force_erlaubnis_ = true;
+        // delay a while with our reaction.
+        tm_.start_oneshot(300);
+      }
       return;
     }
 
@@ -139,7 +146,8 @@ class ErbertBlockUi : public Executable {
   }
 
   /// Sets a GPIO which is linked to a loconet magnetartikel (both for input
-  /// and output) for controlling the trackage direction LED.
+  /// and output) for controlling the trackage direction LED. True (normally
+  /// closed/green) means OUT, false (normally thrown / red) means IN/handoff.
   uint16_t set_erlaubnis_magnetart(gpio_pin_t pin, bool inverted) {
     erlaubnis_out_.setup(pin, inverted, GPIO_OUTPUT);
     return 1u << 0;
@@ -221,6 +229,7 @@ class ErbertBlockUi : public Executable {
     shadow_erlaubnis_ = has_out;
     erlaubnis_out_.write(has_out);
     erlaubnis_blocked_.write(!has_out);
+    need_force_erlaubnis_ = false;
   }
 
   /// I-O that determines whether we have the right to send a train
@@ -276,6 +285,7 @@ class ErbertBlockUi : public Executable {
   bool seen_route_out_ : 1;
   bool seen_route_in_ : 1;
   bool seen_train_ : 1;
+  bool need_force_erlaubnis_ : 1;
 };
 
 #endif  // _STW_ERBERTBLOCKUI_H_
