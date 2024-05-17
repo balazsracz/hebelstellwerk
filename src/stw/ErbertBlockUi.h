@@ -112,14 +112,12 @@ class ErbertBlockUi : public Executable {
     }
     if (!(state & BlockBits::OUT_BUSY) && seen_route_out_ && detector_.read()) {
       block_->vorblocken();
-      block_busy_.write(true);
       seen_route_out_ = false;
     }
 
     // ====== RECV RÜCKBLOCKEN ======
     if ((state & BlockBits::TRACK_OUT) && !(state & BlockBits::OUT_BUSY) &&
         (state & BlockBits::NEWINPUT)) { 
-      block_busy_.write(false);
       seen_route_out_ = false;
       block_->clear_incoming_notify();
     }
@@ -127,7 +125,6 @@ class ErbertBlockUi : public Executable {
     // ====== RECV VORBLOCKEN ======
     if ((state & BlockBits::HANDOFF) && (state & BlockBits::IN_BUSY) &&
         (state & BlockBits::NEWINPUT)) { 
-      block_busy_.write(true);
       seen_route_in_ = false;
       seen_train_ = false;
       block_->clear_incoming_notify();
@@ -139,10 +136,12 @@ class ErbertBlockUi : public Executable {
     }
     if ((state & BlockBits::IN_BUSY) && seen_route_in_ && seen_train_ && rbt_.read() && blgt_.read()) {
       block_->ruckblocken();
-      block_busy_.write(false);
       seen_route_in_ = false;
       seen_train_ = false;
     }
+
+    block_busy_.write((state & BlockBits::IN_BUSY) ||
+                      (state & BlockBits::OUT_BUSY));
   }
 
   /// Sets a GPIO which is linked to a loconet magnetartikel (both for input
@@ -162,7 +161,8 @@ class ErbertBlockUi : public Executable {
   }
 
   /// Sets a GPIO which is linked to a loconet magnetartikel for output, which
-  /// blocks the Erlaubnistaster. True means it is blocked.
+  /// blocks the Erlaubnistaster. True (normally closed/green) means it is
+  /// blocked. Has to be inverted for Erbert.
   uint16_t set_erlaubnis_blocked_magnetart(gpio_pin_t pin, bool inverted) {
     erlaubnis_blocked_.setup(pin, inverted, GPIO_OUTPUT);
     return 1u << 2;
