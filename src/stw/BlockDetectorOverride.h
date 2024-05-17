@@ -78,6 +78,10 @@ class BlockDetectorOverride : public Gpio {
     // Does nothing.
   }
 
+  void set_input(gpio_pin_t pin) const override {
+    // Does nothing.
+  }
+  
  private:
   GpioAccessor real_detector_;
   GpioAccessor btn_detector_;
