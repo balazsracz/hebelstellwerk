@@ -47,15 +47,12 @@ class ErbertBlockUi : public Executable {
     Executor::instance()->add(this);
   }
 
-  void begin() override {}
+  void begin() override {
+    tm_.start_drifting(16);
+  }
 
   void loop() override {
-    auto m = Executor::instance()->millis();
-    if (m != last_millis_) {
-      last_millis_ = m;
-    } else {
-      return;
-    }
+    if (!tm_.check()) return;
 
     // Updates output fields.
     auto state = block_->get_status();
@@ -194,16 +191,18 @@ class ErbertBlockUi : public Executable {
 
   /// Input: RbT. True when pressed.
   uint16_t set_rbt(gpio_pin_t pin, bool inverted) {
-    route_in_rbt_.setup(pin, inverted, GPIO_INPUT);
+    rbt_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 7;
   }
 
   /// Input: BlGT. True when pressed.
   uint16_t set_blgt(gpio_pin_t pin, bool inverted) {
-    route_in_blgt_.setup(pin, inverted, GPIO_INPUT);
+    blgt_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 8;
   }
   
+  /// These bits should be set after all the setup is done.
+  static constexpr uint16_t EXPECTED_SETUP = (1u << 9) - 1;
   
   
  private:
@@ -255,6 +254,10 @@ class ErbertBlockUi : public Executable {
   /// Input GPIO that is true when the user is pressing BlGT.
   DelayedGpioAccessor blgt_;
   
+  /// Block accecssor interface.
+  I2CBlockInterface* block_;
+  /// Helper for timed operations.
+  Timer tm_;
   
   /// True if the last set "erlaubnis out" on loconet was true.  
   bool shadow_erlaubnis_ : 1;
