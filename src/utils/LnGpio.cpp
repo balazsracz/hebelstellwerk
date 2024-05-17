@@ -63,6 +63,35 @@ void LnGpio::loop() {
   
   if (ln_packet) {
     ln_->processSwitchSensorMessage(ln_packet);
+    if (ln_type == LNGPIO_NONE && ln_type_b == LNGPIO_NONE) {
+      // checks for direct button message
+      //  [E5 0F 05 08 00 1F 41 68 03 6B 00 01 00 7F 38] 
+      if (ln_packet->data[0] == 0xE5 &&
+          ln_packet->data[1] == 0x0F &&
+          ln_packet->data[2] == 0x05 &&
+          ln_packet->data[3] == 0x08 &&
+          ln_packet->data[4] == 0x00 &&
+          ln_packet->data[5] == 0x1F) {
+        uint8_t pxct = ln_packet->data[6];
+        for (unsigned i = 0; i < 7; ++i) {
+          if (pxct & (1u<<i)) {
+            ln_packet->data[7+i] |= 0x80;
+          }
+        }
+        uint16_t p = (ln_packet->data[8] << 8) | ln_packet->data[7];
+        uint16_t q = (ln_packet->data[10] << 8) | ln_packet->data[9];
+        uint16_t r = (ln_packet->data[12] << 8) | ln_packet->data[11];
+        LOG(INFO, "LN ub  cls %04x data %d %04x", p, q, r);
+        if (p == 0x3E8) {
+          ln_address = q;
+          uint16_t btn = r;
+          ln_type = LNGPIO_UB_BUTTON_1;
+          ln_value = btn & 1;
+          ln_type_b = LNGPIO_UB_BUTTON_2;
+          ln_value = btn & 2;
+        }
+      }
+    }
   }
 
   if (ln_type == LNGPIO_NONE && ln_type_b == LNGPIO_NONE && !any_dirty_) {

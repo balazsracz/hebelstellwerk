@@ -53,6 +53,10 @@ enum LnGpioType : uint8_t {
   /// Sends on/off messages for Switch GREEN button (closed).
   LNGPIO_SWITCH_GREEN,
   LNGPIO_SENSOR,
+  /// Raw button from an uhlenbrock stellwerk. Address = XXXXN, where XXXX is
+  /// the module address.
+  LNGPIO_UB_BUTTON_1,
+  LNGPIO_UB_BUTTON_2,
 };
 
 struct LnGpioDefn {
