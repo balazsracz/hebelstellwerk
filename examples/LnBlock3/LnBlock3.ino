@@ -184,9 +184,10 @@ const LnGpioDefn ln_defs[] = {
     // A is module 301, art ns. 3204
     // Erlaubnis 700. thrown is OUT
     // 710 = Erlaubnisabgabesperre (CV38)
-    {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_MAG
-    {LNGPIO_SENSOR, 902},      // LN_A_VORGEBLOCKT_SEN
-    {LNGPIO_SWITCH, 903},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    // CV22 = CV24 = 57. Busy (rotausleuchtung).
+    {LNGPIO_SWITCH, 700},      // LN_A_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 57},      // LN_A_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SWITCH, 801},      // LN_A_RT_IN_MAG route in magnetartikel
     {LNGPIO_SWITCH, 802},      // LN_A_RT_IN_MAG2 route in magnetartikel
     {LNGPIO_SWITCH, 803},      // LN_A_RT_OUT_MAG route in magnetartikel
@@ -199,9 +200,10 @@ const LnGpioDefn ln_defs[] = {
     // CV88 (richtung 1) = 502
     // CV89 (richtung 2) = 503
     // Sperre (cv38) = 730
+    // CV22 = CV24 = 55. Busy (rotausleuchtung).
     {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG
-    {LNGPIO_SENSOR, 908},      // LN_B_VORGEBLOCKT_SEN
-    {LNGPIO_SWITCH, 909},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SENSOR, 55},      // LN_B_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 730},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SWITCH, 805},      // LN_B_RT_IN_MAG route in magnetartikel
     {LNGPIO_SWITCH, 806},      // LN_B_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 910},      // LN_B_RT_OUT_BLOCKED_SEN
@@ -214,9 +216,10 @@ const LnGpioDefn ln_defs[] = {
     // cv89 (richtung 2) = 513
     // cv10 = 603 (eagt 603 gn)
     // cv38 = 720
+    // CV22 = CV24 = 54. Busy (rotausleuchtung).
     {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG
-    {LNGPIO_SENSOR, 913},      // LN_C_VORGEBLOCKT_SEN
-    {LNGPIO_SWITCH, 914},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SENSOR, 54},      // LN_C_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 720},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SWITCH, 807},      // LN_C_RT_IN_MAG route in magnetartikel
     {LNGPIO_SWITCH, 808},      // LN_C_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 915},      // LN_C_RT_OUT_BLOCKED_SEN
