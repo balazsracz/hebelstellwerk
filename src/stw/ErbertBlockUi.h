@@ -145,6 +145,9 @@ class ErbertBlockUi : public Executable {
     return 1u << 0;
   }
 
+  /// Output (only) GPIO that will be set to true when the block is busy
+  /// (vorgeblockt). This is linked to a Sensor message in LocoNet that will
+  /// turn the lines red there.
   uint16_t set_block_busy_sensor(gpio_pin_t pin, bool inverted) {
     block_busy_.setup(pin, inverted, GPIO_OUTPUT);
     return 1u << 1;
@@ -157,21 +160,29 @@ class ErbertBlockUi : public Executable {
     return 1u << 2;
   }
 
+  /// Input GPIO that is true when there is an incoming route set through this
+  /// block.
   uint16_t set_route_in_gpio(gpio_pin_t pin, bool inverted) {
     block_route_in_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 3;
   }
 
+  /// Input GPIO that is true when there is an incoming route set through this
+  /// block (alternate).
   uint16_t set_route_in_gpio2(gpio_pin_t pin, bool inverted) {
     block_route_in2_.setup(pin, inverted, GPIO_INPUT);
     return 0;
   }
 
+  /// Input GPIO that is true when there is an outgoing route set through this
+  /// block.
   uint16_t set_route_out_gpio(gpio_pin_t pin, bool inverted) {
     block_route_out_.setup(pin, inverted, GPIO_INPUT);
     return 1u << 4;
   }
 
+  /// Input GPIO that is true when there is an outgoing route set through this
+  /// block (alternate).
   uint16_t set_route_out_gpio2(gpio_pin_t pin, bool inverted) {
     block_route_out2_.setup(pin, inverted, GPIO_INPUT);
     return 0;
