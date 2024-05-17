@@ -33,22 +33,25 @@
  * @date 28 April 2024
  */
 
-#include <Arduino.h>
-#include <LocoNet.h>
-#include <Hebelstellwerk.h>
+#define USE_LNGPIO
 
+#include <Arduino.h>
+#include <Hebelstellwerk.h>
+#include <LocoNet.h>
+
+#include "stw/DirectBlock.h"
+#include "stw/ErbertBlockUi.h"
+#include "stw/SimpleBlockUi.h"
 #include "utils/AnalogDemux.h"
 #include "utils/ArduinoArmPixel.h"
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
 #include "utils/PixelGpio.h"
-#include "stw/SimpleBlockUi.h"
-#include "stw/DirectBlock.h"
+#include "utils/LnGpio.h"
 
 #ifndef ARDUINO
 #error baaa
 #endif
-
 
 enum GpioPin : gpio_pin_t {
   ONBOARD_LED = 13,
@@ -77,13 +80,17 @@ enum GpioPin : gpio_pin_t {
   PX_B_ENDFELD,
 
   LN_GPIO_START = 140,
-  LN_TURNOUT_SENSOR = LN_GPIO_START,
-  LN_SW_TEST,
-  LN_SW_RED,
-  LN_SW_GREEN,
-  LN_A_DIRECTION,
-  LN_B_DIRECTION,
-  LN_C_DIRECTION,
+  LN_A_ERLAUBNIS_MAG = LN_GPIO_START,
+  LN_A_VORGEBLOCKT_SEN,
+  LN_A_ERLAUBNIS_BLOCK_MAG,
+  LN_A_RT_IN_MAG,
+  LN_A_RT_OUT_MAG,
+  LN_DETECTOR_SEN,
+  LN_A_RT_OUT_BLOCKED_SEN,
+  LN_A_RBT_HMAG,
+  LN_BLGT_HMAG,
+
+  LN_GPIO_END,
 };
 
 #define LED_TO_USE 13
@@ -99,32 +106,36 @@ HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 HardwareSerial BlockBSerial(PD2 /*rx*/, PC12 /*tx*/);
 HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
 
-//HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
+// HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
 
-
+// This is the built-in stirp
 SpiPixelStrip strip(9, PA7, PB4, PB3);
-//SpiPixelStrip strip(9, PB5, PB4, PB3);
+// This is the strip on the external SPI line
+// SpiPixelStrip strip(9, PB5, PB4, PB3);
 
 const uint32_t kOutputParams[] = {
-  0, Pixel::RED, Pixel::WHITE, //
-  1, Pixel::RED, Pixel::WHITE, //
-  2, Pixel::RED, Pixel::WHITE, //
-  3, Pixel::RED, Pixel::WHITE, //
-  4, Pixel::RED, Pixel::WHITE, //
-  5, Pixel::RED, Pixel::WHITE, //
-  6, Pixel::RED, Pixel::WHITE, //
-  7, Pixel::RED, Pixel::WHITE, //
-  8, Pixel::RED, Pixel::WHITE, //
+    0, Pixel::RED, Pixel::WHITE,  //
+    1, Pixel::RED, Pixel::WHITE,  //
+    2, Pixel::RED, Pixel::WHITE,  //
+    3, Pixel::RED, Pixel::WHITE,  //
+    4, Pixel::RED, Pixel::WHITE,  //
+    5, Pixel::RED, Pixel::WHITE,  //
+    6, Pixel::RED, Pixel::WHITE,  //
+    7, Pixel::RED, Pixel::WHITE,  //
+    8, Pixel::RED, Pixel::WHITE,  //
 };
 
 PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
 DirectBlock block_a{"A", &BlockASerial, PC11, PC1};
 SimpleBlockUi a_ui{&block_a};
+ErbertBlockUi a_eui{&block_a};
 DirectBlock block_b{"B", &BlockBSerial, PD2, PA1};
 SimpleBlockUi b_ui{&block_b};
+ErbertBlockUi b_eui{&block_b};
 DirectBlock block_c{"C", &BlockCSerial, PB11, PA15};
 SimpleBlockUi c_ui{&block_c};
+ErbertBlockUi c_eui{&block_c};
 
 const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
                           a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, false) |
@@ -148,17 +159,38 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
 const LnGpioDefn ln_defs[] = {
-  {LNGPIO_SENSOR, 55},
-  {LNGPIO_SWITCH, 13},
-  {LNGPIO_SWITCH_RED, 13},
-  {LNGPIO_SWITCH_GREEN, 13},
+    {LNGPIO_SWITCH, 901},      // LN_A_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 902},      // LN_A_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 903},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SWITCH, 801},      // LN_A_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SWITCH, 802},      // LN_A_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 1},        // LN_DETECTOR_SEN
+    {LNGPIO_SENSOR, 904},      // LN_A_RT_OUT_BLOCKED_SEN
+    {LNGPIO_SWITCH_RED, 905},  // LN_A_RBT_HMAG,
+    {LNGPIO_SWITCH_RED, 906},  // LN_BLGT_HMAG,
+
+    //    {LNGPIO_SENSOR, 55},      {LNGPIO_SWITCH, 13},
+    //{LNGPIO_SWITCH_RED, 13},  {LNGPIO_SWITCH_GREEN, 13},
 };
+
+static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
+              "Loconet GPIO misaligned");
 
 LnGpio ln_gpio{LN_GPIO_START, &LocoNet, ln_defs, ARRAYSIZE(ln_defs)};
 
+const uint16_t a_eui_rdy =
+    a_eui.set_erlaubnis_magnetart(LN_A_ERLAUBNIS_MAG, false) |
+    a_eui.set_block_busy_sensor(LN_A_VORGEBLOCKT_SEN, false) |
+    a_eui.set_erlaubnis_blocked_magnetart(
+        LN_A_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
+                                           // but receiver needs RED to block.
+    a_eui.set_route_in_gpio(LN_A_RT_IN_MAG, false) |
+    a_eui.set_route_out_gpio(LN_A_RT_OUT_MAG, false) |
+    a_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    a_eui.set_route_out_blocked(LN_A_RT_OUT_BLOCKED_SEN, false) |
+    a_eui.set_rbt(LN_A_RBT_HMAG, false) | a_eui.set_blgt(LN_BLGT_HMAG, false);
 
-//Blinker blinkerln{LN_GPIO_START, 2000};
-
+// Blinker blinkerln{LN_GPIO_START, 2000};
 
 /// Arduino setup routine.
 void setup() {
@@ -167,24 +199,22 @@ void setup() {
 
   pinMode(PC2, INPUT_PULLUP);
   pinMode(PA9, INPUT_PULLUP);
-  //digitalWrite(PA9, HIGH);
+  // digitalWrite(PA9, HIGH);
   pinMode(PC5, OUTPUT);
   digitalWrite(PC5, LOW);
-  
-  
+
   Serial.begin(115200);
   // delay(100);
   Serial.println("Hello, world");
 
   LocoNet.init(PC5);
-  
+
   Executor::instance()->begin();
   strip.set_brightness(0x20);
 
   ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
   ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
   ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
-
 }
 
 #include <vector>
@@ -217,7 +247,7 @@ class BlockDebug : public Executable {
     if (!digitalRead(USER_BTN) && tmAb_.check()) {
       tmAb_.start_oneshot(2000);
       LOG(INFO, "Sensor message");
-      uint8_t abgabe[] = {0xB2,0x39,0x46,0x32};
+      uint8_t abgabe[] = {0xB2, 0x39, 0x46, 0x32};
       s_->write(abgabe, sizeof(abgabe));
     }
   }
@@ -227,7 +257,7 @@ class BlockDebug : public Executable {
   Timer tmAb_;
   HardwareSerial* s_;
   std::vector<uint8_t> packet_;
-};// ln_debug(&LnSerial);
+};  // ln_debug(&LnSerial);
 
 class Analog : public Executable {
  public:
@@ -245,8 +275,7 @@ class Analog : public Executable {
 
  private:
   Timer tm_;
-};// reporter2;
-
+};  // reporter2;
 
 class Copier : public Executable {
  public:
@@ -262,18 +291,17 @@ class Copier : public Executable {
     auto* d = GpioRegistry::instance()->get(120);
     auto* l = GpioRegistry::instance()->get(LN_GPIO_START);
     for (unsigned i = 0; i < 9; i++) {
-      //d->write(120 + i, s->read(110 + i));
+      // d->write(120 + i, s->read(110 + i));
     }
-    l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
-    //l->write(LN_SW_TEST, s->read(110 + 1));
-    //d->write(120 + 0, l->read(LN_SW_RED));
-    //d->write(120 + 1, l->read(LN_SW_GREEN));
+    //l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
+    // l->write(LN_SW_TEST, s->read(110 + 1));
+    // d->write(120 + 0, l->read(LN_SW_RED));
+    // d->write(120 + 1, l->read(LN_SW_GREEN));
   }
 
  private:
   Timer tm_;
 } copier;
-
 
 /// Arduino loop routine.
 void loop() {
