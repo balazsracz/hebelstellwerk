@@ -104,12 +104,6 @@ class ErbertBlockUi : public Executable {
         seen_route_out_ = true;
       }
     }
-    if (!shadow_erlaubnis_ && !seen_route_in_) {
-      if (block_route_in_.read() ||
-          (block_route_in2_.has() && block_route_in2_.read())) {
-        seen_route_in_ = true;
-      }
-    }
     if (!(state & BlockBits::OUT_BUSY) && seen_route_out_ && detector_.read()) {
       block_->vorblocken();
       seen_route_out_ = false;
@@ -131,10 +125,24 @@ class ErbertBlockUi : public Executable {
     }
 
     // ====== RÜCKBLOCKEN ======
+    if (!shadow_erlaubnis_ && !seen_route_in_) {
+      if (block_route_in_.read() ||
+          (block_route_in2_.has() && block_route_in2_.read())) {
+        LOG(INFO, "Ruckblocken: seen route in.");
+        seen_route_in_ = true;
+      }
+    }
     if (seen_route_in_ && detector_.read()) {
+      LOG(INFO, "Ruckblocken: seen train.");
       seen_train_ = true;
     }
+    if (seen_route_in_ && seen_train_) {
+      if (debug_tm_.check()) {
+        LOG(INFO, "ruckblocken: rbt %d blgt %d", rbt_.read(), blgt_.read());
+      }
+    }
     if ((state & BlockBits::IN_BUSY) && seen_route_in_ && seen_train_ && rbt_.read() && blgt_.read()) {
+      LOG(INFO, "Ruckblocken.");
       block_->ruckblocken();
       seen_route_in_ = false;
       seen_train_ = false;
@@ -278,6 +286,7 @@ class ErbertBlockUi : public Executable {
   I2CBlockInterface* block_;
   /// Helper for timed operations.
   Timer tm_;
+  Timer debug_tm_{Timer::Drifting{1000}};
   
   /// True if the last set "erlaubnis out" on loconet was true.  
   bool shadow_erlaubnis_ : 1;
