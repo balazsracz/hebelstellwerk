@@ -58,7 +58,7 @@ void LnGpio::loop() {
   if (clear_tm_.check()) {
     for (unsigned i = 0; i < count_; ++i) {
       auto* p = defs_ + i;
-      if (ln_type == LNGPIO_SWITCH_GREEN || ln_type == LNGPIO_SWITCH_RED) {
+      if (p->type == LNGPIO_SWITCH_GREEN || p->type == LNGPIO_SWITCH_RED) {
         auto pos = get_pos(i);
         set_bit(pos.first, pos.second, true);
       }
@@ -99,7 +99,7 @@ void LnGpio::loop() {
           ln_type = LNGPIO_UB_BUTTON_1;
           ln_value = btn & 1;
           ln_type_b = LNGPIO_UB_BUTTON_2;
-          ln_value = btn & 2;
+          ln_value_b = btn & 2;
         }
       }
     }
@@ -115,13 +115,20 @@ void LnGpio::loop() {
       auto pos = get_pos(i);
       set_bit(pos.first, pos.second, ln_value);
       set_bit(pos.first, pos.second << 1, false);
+      if (ln_type == LNGPIO_UB_BUTTON_1) {
+        LOG(INFO, "UB button %d value %d", ln_address, ln_value);
+      }
       continue;
     }
     if (ln_type_b == p->type && ln_address == p->address) {
+      LOG(INFO, "Switch side id %d, type %d address %d", i, ln_type_b, ln_address); 
       auto pos = get_pos(i);
       set_bit(pos.first, pos.second, ln_value_b);
       set_bit(pos.first, pos.second << 1, false);
-      clear_tm_.start_oneshot(200);
+      if (ln_type_b == LNGPIO_SWITCH_RED ||
+          ln_type_b == LNGPIO_SWITCH_GREEN) {
+        clear_tm_.start_oneshot(2000);
+      }
       continue;
     }
     auto pos = get_pos(i);
@@ -172,7 +179,7 @@ void notifySensor( uint16_t Address, uint8_t State ) {
 // This call-back function is called from LocoNet.processSwitchSensorMessage
 // for all Switch Request messages
 void notifySwitchRequest( uint16_t Address, uint8_t Output, uint8_t Direction ) {
-  LOG(INFO, "LN Switch Req %d - %s - %s", Address, Direction ? "Closed" : "Thrown", Output ? "On" : "Off");
+  LOG(INFO, "LN Switch Req %d - %s - %s", Address, Direction ? "Closed/Grn" : "Thrown/Red", Output ? "On" : "Off");
   ln_address = Address;
   if (Output) {
     ln_type = LNGPIO_SWITCH;
