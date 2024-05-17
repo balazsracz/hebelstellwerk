@@ -41,6 +41,7 @@
 #include "utils/Gpio.h"
 #include "utils/Executor.h"
 #include "utils/Logging.h"
+#include "utils/Timer.h"
 
 enum LnGpioType : uint8_t {
   LNGPIO_NONE,
@@ -85,7 +86,7 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
 
   ~LnGpio() { delete[] state_; }
 
-  void begin() override {}
+  void begin() override {clear_tm_.start_oneshot(10);}
   void loop() override;
   
   void write(gpio_pin_t pin, bool value) const override {
@@ -159,6 +160,9 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
   /// first bit is the state. The second bit is 1 when we need to send out an
   /// update for this output.
   uint32_t* state_;
+
+  /// Timer used to clear event sensors.
+  Timer clear_tm_;
 };
 
 #endif  // _UTILS_LNGPIO_H_

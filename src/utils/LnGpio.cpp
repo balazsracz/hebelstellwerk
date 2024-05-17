@@ -54,6 +54,17 @@ static LnGpioType ln_type_b;
 static bool ln_value_b;
 
 void LnGpio::loop() {
+  // Performs clear
+  if (clear_tm_.check()) {
+    for (unsigned i = 0; i < count_; ++i) {
+      auto* p = defs_ + i;
+      if (ln_type == LNGPIO_SWITCH_GREEN || ln_type == LNGPIO_SWITCH_RED) {
+        auto pos = get_pos(i);
+        set_bit(pos.first, pos.second, true);
+      }
+    }
+  }
+
   // Check for any received LocoNet packets
   lnMsg *ln_packet;
   ln_packet = ln_->receive();
@@ -110,6 +121,7 @@ void LnGpio::loop() {
       auto pos = get_pos(i);
       set_bit(pos.first, pos.second, ln_value_b);
       set_bit(pos.first, pos.second << 1, false);
+      clear_tm_.start_oneshot(200);
       continue;
     }
     auto pos = get_pos(i);
