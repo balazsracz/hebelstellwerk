@@ -50,6 +50,7 @@
 #include "stw/I2CBlockImpl.h"
 #include "stw/FelderBlock.h"
 #include "stw/GlobalUnlocker.h"
+#include "stw/BlockDetectorOverride.h"
 
 GpioRegistry g_gpio_registry;
 PwmRegistry g_pwm_registry;
