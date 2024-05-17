@@ -148,13 +148,13 @@ PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
 DirectBlock block_a{"A", &BlockASerial, PC11, PC1};
 SimpleBlockUi a_ui{&block_a};
-ErbertBlockUi a_eui{&block_a};
+ErbertBlockUi a_eui{"A", &block_a};
 DirectBlock block_b{"B", &BlockBSerial, PD2, PA1};
 SimpleBlockUi b_ui{&block_b};
-ErbertBlockUi b_eui{&block_b};
+ErbertBlockUi b_eui{"B", &block_b};
 DirectBlock block_c{"C", &BlockCSerial, PB11, PA15};
 SimpleBlockUi c_ui{&block_c};
-ErbertBlockUi c_eui{&block_c};
+ErbertBlockUi c_eui{"C", &block_c};
 
 const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
                           a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, false) |
@@ -179,7 +179,7 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
 
 const LnGpioDefn ln_defs[] = {
     {LNGPIO_SENSOR, 1},        // LN_DETECTOR_SEN
-    {LNGPIO_SWITCH_RED, 906},  // LN_BLGT_HMAG,
+    {LNGPIO_SWITCH_GREEN, 604},  // LN_BLGT_HMAG,
 
     // A is module 301, art ns. 3204
     // Erlaubnis 700. thrown is OUT
@@ -188,12 +188,12 @@ const LnGpioDefn ln_defs[] = {
     {LNGPIO_SWITCH, 700},      // LN_A_ERLAUBNIS_MAG
     {LNGPIO_SENSOR, 57},      // LN_A_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
-    {LNGPIO_SWITCH, 801},      // LN_A_RT_IN_MAG route in magnetartikel
-    {LNGPIO_SWITCH, 802},      // LN_A_RT_IN_MAG2 route in magnetartikel
-    {LNGPIO_SWITCH, 803},      // LN_A_RT_OUT_MAG route in magnetartikel
-    {LNGPIO_SWITCH, 804},      // LN_A_RT_OUT_MAG2 route in magnetartikel
+    {LNGPIO_SENSOR, 1020},      // LN_A_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 1030},      // LN_A_RT_IN_MAG2 route in magnetartikel
+    {LNGPIO_SENSOR, 3010},      // LN_A_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 2010},      // LN_A_RT_OUT_MAG2 route in magnetartikel
     {LNGPIO_SENSOR, 904},      // LN_A_RT_OUT_BLOCKED_SEN
-    {LNGPIO_SWITCH_RED, 905},  // LN_A_RBT_HMAG,
+    {LNGPIO_UB_BUTTON_1, 402},  // LN_A_RBT_HMAG,
 
     // B is module 308, art nr. 3204
     // CV87 = 731
@@ -201,13 +201,16 @@ const LnGpioDefn ln_defs[] = {
     // CV89 (richtung 2) = 503
     // Sperre (cv38) = 730
     // CV22 = CV24 = 55. Busy (rotausleuchtung).
+    //
+    // SigB. Zieltaste 358 / 0
+    // Route B/in set: sen 2010 HIGH is set, LOW is clear.
     {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG
     {LNGPIO_SENSOR, 55},      // LN_B_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 730},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
-    {LNGPIO_SWITCH, 805},      // LN_B_RT_IN_MAG route in magnetartikel
-    {LNGPIO_SWITCH, 806},      // LN_B_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 2010},      // LN_B_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 1020},      // LN_B_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 910},      // LN_B_RT_OUT_BLOCKED_SEN
-    {LNGPIO_SWITCH_RED, 911},  // LN_B_RBT_HMAG,
+    {LNGPIO_UB_BUTTON_1, 407},  // LN_B_RBT_HMAG,
 
     // C is modul 208, art nr. 3204
     // Addresse 400's are free.
@@ -220,10 +223,10 @@ const LnGpioDefn ln_defs[] = {
     {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG
     {LNGPIO_SENSOR, 54},      // LN_C_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 720},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
-    {LNGPIO_SWITCH, 807},      // LN_C_RT_IN_MAG route in magnetartikel
-    {LNGPIO_SWITCH, 808},      // LN_C_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 3010},      // LN_C_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 1030},      // LN_C_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 915},      // LN_C_RT_OUT_BLOCKED_SEN
-    {LNGPIO_SWITCH_RED, 916},  // LN_C_RBT_HMAG,    
+    {LNGPIO_UB_BUTTON_1, 107},  // LN_C_RBT_HMAG,    
 };
 
 static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
@@ -244,7 +247,7 @@ const uint16_t a_eui_rdy =
     a_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
     a_eui.set_route_out_blocked(LN_A_RT_OUT_BLOCKED_SEN, false) |
     a_eui.set_rbt(LN_A_RBT_HMAG, false) |  //
-    a_eui.set_blgt(LN_BLGT_HMAG, false);
+    a_eui.set_blgt(LN_BLGT_HMAG, true);
 
 const uint16_t b_eui_rdy =
     b_eui.set_erlaubnis_magnetart(LN_B_ERLAUBNIS_MAG, true) |  //
@@ -257,7 +260,7 @@ const uint16_t b_eui_rdy =
     b_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
     b_eui.set_route_out_blocked(LN_B_RT_OUT_BLOCKED_SEN, false) |
     b_eui.set_rbt(LN_B_RBT_HMAG, false) |  //
-    b_eui.set_blgt(LN_BLGT_HMAG, false);
+    b_eui.set_blgt(LN_BLGT_HMAG, true);
 
 const uint16_t c_eui_rdy =
     c_eui.set_erlaubnis_magnetart(LN_C_ERLAUBNIS_MAG, true) |  //
@@ -270,7 +273,7 @@ const uint16_t c_eui_rdy =
     c_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
     c_eui.set_route_out_blocked(LN_C_RT_OUT_BLOCKED_SEN, false) |
     c_eui.set_rbt(LN_C_RBT_HMAG, false) |  //
-    c_eui.set_blgt(LN_BLGT_HMAG, false);
+    c_eui.set_blgt(LN_BLGT_HMAG, true);
 
 // Blinker blinkerln{LN_GPIO_START, 2000};
 
