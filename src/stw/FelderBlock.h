@@ -299,7 +299,7 @@ class FelderBlock : public Block {
     uint16_t status = iface_->get_status();
 
     // ==== Handle Störungsmelder ====
-    if (status & BlockBits::ERROR) {
+    if (status & BlockBits::ERROR || !status) {
         storungsmelder_.write(true);
     } else {
         storungsmelder_.write(false);
