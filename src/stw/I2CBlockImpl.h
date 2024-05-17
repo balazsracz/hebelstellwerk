@@ -50,7 +50,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   ///
   /// @param addr 7-bit address of the I2C block interface.
   /// @param theWire optional, I2C bus instance.
-  I2CBlock(uint8_t addr, TwoWire *theWire = &Wire) : dev_(addr, theWire) {
+  I2CBlock(uint8_t addr, TwoWire *theWire = &Wire) : dev_(addr, theWire), dirty_(false), last_error_(false), skip_missing_(0) {
     Executor::instance()->add(this);
   }
 
@@ -96,7 +96,14 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   void refresh() {
     uint16_t new_status = 0;
     if (!dev_.read((uint8_t *)&new_status, 2)) {
-      LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
+      if (!skip_missing_) {
+        LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
+        skip_missing_ = 20;
+      } else {
+        skip_missing_--;
+      }
+    } else {
+      skip_missing_ = 0;
     }
     if (new_status != last_status_) {
       LOG(LEVEL_INFO, "I2C Block %02x status %02x->%02x: %s", dev_.address(),
@@ -117,8 +124,10 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   /// Last read status word.
   uint16_t last_status_{0};
 
-  bool dirty_{false};
-  bool last_error_{false};
+  bool dirty_ : 1;
+  bool last_error_ : 1;
+  /// Counter how many missing errors we should skip displaying.
+  uint8_t skip_missing_ : 6;
 };
 
 #endif  // Arduino
