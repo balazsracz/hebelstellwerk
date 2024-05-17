@@ -46,8 +46,8 @@
 #include "utils/ArduinoArmPixel.h"
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
-#include "utils/PixelGpio.h"
 #include "utils/LnGpio.h"
+#include "utils/PixelGpio.h"
 
 #ifndef ARDUINO
 #error baaa
@@ -80,15 +80,34 @@ enum GpioPin : gpio_pin_t {
   PX_B_ENDFELD,
 
   LN_GPIO_START = 140,
-  LN_A_ERLAUBNIS_MAG = LN_GPIO_START,
+  LN_DETECTOR_SEN = LN_GPIO_START,
+  LN_BLGT_HMAG,
+  
+  LN_A_ERLAUBNIS_MAG,
   LN_A_VORGEBLOCKT_SEN,
   LN_A_ERLAUBNIS_BLOCK_MAG,
   LN_A_RT_IN_MAG,
+  LN_A_RT_IN_MAG2,
   LN_A_RT_OUT_MAG,
-  LN_DETECTOR_SEN,
+  LN_A_RT_OUT_MAG2,
   LN_A_RT_OUT_BLOCKED_SEN,
   LN_A_RBT_HMAG,
-  LN_BLGT_HMAG,
+
+  LN_B_ERLAUBNIS_MAG,
+  LN_B_VORGEBLOCKT_SEN,
+  LN_B_ERLAUBNIS_BLOCK_MAG,
+  LN_B_RT_IN_MAG,
+  LN_B_RT_OUT_MAG,
+  LN_B_RT_OUT_BLOCKED_SEN,
+  LN_B_RBT_HMAG,
+
+  LN_C_ERLAUBNIS_MAG,
+  LN_C_VORGEBLOCKT_SEN,
+  LN_C_ERLAUBNIS_BLOCK_MAG,
+  LN_C_RT_IN_MAG,
+  LN_C_RT_OUT_MAG,
+  LN_C_RT_OUT_BLOCKED_SEN,
+  LN_C_RBT_HMAG,
 
   LN_GPIO_END,
 };
@@ -159,18 +178,49 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
 const LnGpioDefn ln_defs[] = {
-    {LNGPIO_SWITCH, 901},      // LN_A_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 1},        // LN_DETECTOR_SEN
+    {LNGPIO_SWITCH_RED, 906},  // LN_BLGT_HMAG,
+
+    // A is module 301, art ns. 3204
+    // Erlaubnis 700. thrown is OUT
+    // 710 = Erlaubnisabgabesperre (CV38)
+    {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_MAG
     {LNGPIO_SENSOR, 902},      // LN_A_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 903},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SWITCH, 801},      // LN_A_RT_IN_MAG route in magnetartikel
-    {LNGPIO_SWITCH, 802},      // LN_A_RT_OUT_MAG route in magnetartikel
-    {LNGPIO_SENSOR, 1},        // LN_DETECTOR_SEN
+    {LNGPIO_SWITCH, 802},      // LN_A_RT_IN_MAG2 route in magnetartikel
+    {LNGPIO_SWITCH, 803},      // LN_A_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SWITCH, 804},      // LN_A_RT_OUT_MAG2 route in magnetartikel
     {LNGPIO_SENSOR, 904},      // LN_A_RT_OUT_BLOCKED_SEN
     {LNGPIO_SWITCH_RED, 905},  // LN_A_RBT_HMAG,
-    {LNGPIO_SWITCH_RED, 906},  // LN_BLGT_HMAG,
 
-    //    {LNGPIO_SENSOR, 55},      {LNGPIO_SWITCH, 13},
-    //{LNGPIO_SWITCH_RED, 13},  {LNGPIO_SWITCH_GREEN, 13},
+    // B is module 308, art nr. 3204
+    // CV87 = 731
+    // CV88 (richtung 1) = 502
+    // CV89 (richtung 2) = 503
+    // Sperre (cv38) = 730
+    {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 908},      // LN_B_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 909},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SWITCH, 805},      // LN_B_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SWITCH, 806},      // LN_B_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 910},      // LN_B_RT_OUT_BLOCKED_SEN
+    {LNGPIO_SWITCH_RED, 911},  // LN_B_RBT_HMAG,
+
+    // C is modul 208, art nr. 3204
+    // Addresse 400's are free.
+    // cv87 = 721
+    // cv88 (richtung 1) = 512
+    // cv89 (richtung 2) = 513
+    // cv10 = 603 (eagt 603 gn)
+    // cv38 = 720
+    {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 913},      // LN_C_VORGEBLOCKT_SEN
+    {LNGPIO_SWITCH, 914},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SWITCH, 807},      // LN_C_RT_IN_MAG route in magnetartikel
+    {LNGPIO_SWITCH, 808},      // LN_C_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 915},      // LN_C_RT_OUT_BLOCKED_SEN
+    {LNGPIO_SWITCH_RED, 916},  // LN_C_RBT_HMAG,    
 };
 
 static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
@@ -179,16 +229,45 @@ static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
 LnGpio ln_gpio{LN_GPIO_START, &LocoNet, ln_defs, ARRAYSIZE(ln_defs)};
 
 const uint16_t a_eui_rdy =
-    a_eui.set_erlaubnis_magnetart(LN_A_ERLAUBNIS_MAG, false) |
-    a_eui.set_block_busy_sensor(LN_A_VORGEBLOCKT_SEN, false) |
+    a_eui.set_erlaubnis_magnetart(LN_A_ERLAUBNIS_MAG, true) |  //
+    a_eui.set_block_busy_sensor(LN_A_VORGEBLOCKT_SEN, false) |  //
     a_eui.set_erlaubnis_blocked_magnetart(
         LN_A_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
                                            // but receiver needs RED to block.
     a_eui.set_route_in_gpio(LN_A_RT_IN_MAG, false) |
+    a_eui.set_route_in_gpio2(LN_A_RT_IN_MAG2, false) |
     a_eui.set_route_out_gpio(LN_A_RT_OUT_MAG, false) |
+    a_eui.set_route_out_gpio2(LN_A_RT_OUT_MAG2, false) |
     a_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
     a_eui.set_route_out_blocked(LN_A_RT_OUT_BLOCKED_SEN, false) |
-    a_eui.set_rbt(LN_A_RBT_HMAG, false) | a_eui.set_blgt(LN_BLGT_HMAG, false);
+    a_eui.set_rbt(LN_A_RBT_HMAG, false) |  //
+    a_eui.set_blgt(LN_BLGT_HMAG, false);
+
+const uint16_t b_eui_rdy =
+    b_eui.set_erlaubnis_magnetart(LN_B_ERLAUBNIS_MAG, true) |  //
+    b_eui.set_block_busy_sensor(LN_B_VORGEBLOCKT_SEN, false) |  //
+    b_eui.set_erlaubnis_blocked_magnetart(
+        LN_B_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
+                                           // but receiver needs RED to block.
+    b_eui.set_route_in_gpio(LN_B_RT_IN_MAG, false) |
+    b_eui.set_route_out_gpio(LN_B_RT_OUT_MAG, false) |
+    b_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    b_eui.set_route_out_blocked(LN_B_RT_OUT_BLOCKED_SEN, false) |
+    b_eui.set_rbt(LN_B_RBT_HMAG, false) |  //
+    b_eui.set_blgt(LN_BLGT_HMAG, false);
+
+const uint16_t c_eui_rdy =
+    c_eui.set_erlaubnis_magnetart(LN_C_ERLAUBNIS_MAG, true) |  //
+    c_eui.set_block_busy_sensor(LN_C_VORGEBLOCKT_SEN, false) |  //
+    c_eui.set_erlaubnis_blocked_magnetart(
+        LN_C_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
+                                           // but receiver needs RED to block.
+    c_eui.set_route_in_gpio(LN_C_RT_IN_MAG, false) |
+    c_eui.set_route_out_gpio(LN_C_RT_OUT_MAG, false) |
+    c_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    c_eui.set_route_out_blocked(LN_C_RT_OUT_BLOCKED_SEN, false) |
+    c_eui.set_rbt(LN_C_RBT_HMAG, false) |  //
+    c_eui.set_blgt(LN_BLGT_HMAG, false);
 
 // Blinker blinkerln{LN_GPIO_START, 2000};
 
@@ -215,6 +294,10 @@ void setup() {
   ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
   ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
   ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
+
+  ASSERT(a_eui_rdy == a_eui.EXPECTED_SETUP);
+  ASSERT(b_eui_rdy == a_eui.EXPECTED_SETUP);
+  ASSERT(c_eui_rdy == a_eui.EXPECTED_SETUP);
 }
 
 #include <vector>
@@ -293,10 +376,10 @@ class Copier : public Executable {
     for (unsigned i = 0; i < 9; i++) {
       // d->write(120 + i, s->read(110 + i));
     }
-    //l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
-    // l->write(LN_SW_TEST, s->read(110 + 1));
-    // d->write(120 + 0, l->read(LN_SW_RED));
-    // d->write(120 + 1, l->read(LN_SW_GREEN));
+    // l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
+    //  l->write(LN_SW_TEST, s->read(110 + 1));
+    //  d->write(120 + 0, l->read(LN_SW_RED));
+    //  d->write(120 + 1, l->read(LN_SW_GREEN));
   }
 
  private:
