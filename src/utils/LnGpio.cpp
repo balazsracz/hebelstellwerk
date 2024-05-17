@@ -102,7 +102,7 @@ bool LnGpio::send_ln_update(const LnGpioDefn* def, bool value) {
   LN_STATUS st = LN_UNKNOWN_ERROR;
   switch(def->type) {
     case LNGPIO_SWITCH:
-      st = ln_->requestSwitch(def->address, true /*output on*/, value /* true = thrown/red false = closed/green*/);
+      st = ln_->requestSwitch(def->address, false /*output off*/, value /* true = thrown/red false = closed/green*/);
       break;
     case LNGPIO_SENSOR:
       st = ln_->reportSensor(def->address, value);
