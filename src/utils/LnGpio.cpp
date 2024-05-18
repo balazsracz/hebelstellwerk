@@ -47,7 +47,7 @@ static uint16_t ln_address;
 /// Binary value of the incoming message.
 static bool ln_value;
 
-/// ALternate type of incoming message. Used for Swith RED and Switch GREEN
+/// Alternate type of incoming message. Used for Swith RED and Switch GREEN
 /// messages.
 static LnGpioType ln_type_b;
 /// Alternate value for incoming message.
