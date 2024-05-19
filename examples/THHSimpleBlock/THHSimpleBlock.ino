@@ -27,54 +27,100 @@
  *
  * \file BlockTest.ino
  *
- * Test for FREMO-Block Schnittstelle
+ * Simple Block operating UI for an Abzweig like Teichholzhagen.
  *
  * @author Balazs Racz
- * @date 28 April 2024
+ * @date 19 May 2024
  */
 
 #include <Arduino.h>
 #include <Hebelstellwerk.h>
 
-#include "utils/AnalogDemux.h"
-#include "utils/ArduinoArmPixel.h"
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
 #include "utils/PixelGpio.h"
 #include "stw/SimpleBlockUi.h"
+#include "stw/I2CBlockImpl.h"
 #include "stw/DirectBlock.h"
 
 #ifndef ARDUINO
 #error baaa
 #endif
 
-
 enum GpioPin : gpio_pin_t {
   ONBOARD_LED = 13,
   ONBOARD_BTN = USER_BTN,
 
-  ANALOG_BTN_START = 110,
-  BTN_C_VORBLOCK = ANALOG_BTN_START,
-  BTN_C_ABGABE,
-  BTN_C_RUCKBLOCK,
-  BTN_A_RUCKBLOCK,
-  BTN_A_ABGABE,
-  BTN_A_VORBLOCK,
-  BTN_B_VORBLOCK,
-  BTN_B_ABGABE,
-  BTN_B_RUCKBLOCK,
+  GPIO_EXT1_BTN_START = 130,
+
+  GPIO_EXT2_BTN_START = 150,
+
+  FLD1_START = GPIO_EXT1_BTN_START,
+  FLD1_BTN1 = FLD1_START,
+  FLD1_BTN2,
+  FLD1_BTN3,
+  FLD1_BTN4,
+  FLD1_BTN5,
+  FLD1_BTN6,
+
+  FLD1_LEDF1,
+  FLD1_LEDF2,
+  FLD1_LEDF3,
+  FLD1_KURBEL,
+
+  FLD1_SW3L,
+  FLD1_SW3H,
+  FLD1_SW2L,
+  FLD1_SW2H,
+  FLD1_SW1L,
+  FLD1_SW1H,
+  FLD1_END,
+
+  FLD2_START = GPIO_EXT2_BTN_START,
+  FLD2_BTN1 = FLD2_START,
+  FLD2_BTN2,
+  FLD2_BTN3,
+  FLD2_BTN4,
+  FLD2_BTN5,
+  FLD2_BTN6,
+
+  FLD2_LEDF1,
+  FLD2_LEDF2,
+  FLD2_LEDF3,
+  FLD2_KURBEL,
+
+  FLD2_SW3L,
+  FLD2_SW3H,
+  FLD2_SW2L,
+  FLD2_SW2H,
+  FLD2_SW1L,
+  FLD2_SW1H,
+  FLD2_END,
+  
+  BTN_A_RUCKBLOCK = FLD1_BTN4,
+  BTN_A_ABGABE = FLD1_BTN5,
+  BTN_A_VORBLOCK = FLD1_BTN6,
+  BTN_C_VORBLOCK = FLD2_BTN1,
+  BTN_C_ABGABE = FLD2_BTN2,
+  BTN_C_RUCKBLOCK = FLD2_BTN3,
+  BTN_B_VORBLOCK = FLD2_BTN4,
+  BTN_B_ABGABE = FLD2_BTN5,
+  BTN_B_RUCKBLOCK = FLD2_BTN6,
 
   PIXEL_START = 120,
-  PX_C_ANFANGSFELD = PIXEL_START,
-  PX_C_ERLAUBNISFELD,
-  PX_C_ENDFELD,
-  PX_A_ENDFELD,
+  PX_A_ENDFELD = PIXEL_START,
   PX_A_ERLAUBNISFELD,
   PX_A_ANFANGSFELD,
+  PX_C_ANFANGSFELD,
+  PX_C_ERLAUBNISFELD,
+  PX_C_ENDFELD,
   PX_B_ANFANGSFELD,
   PX_B_ERLAUBNISFELD,
   PX_B_ENDFELD,
 };
+
+static_assert(FLD1_END - FLD1_START == 16, "fld1 pinout wrong");
+static_assert(FLD2_END - FLD2_START == 16, "fld2 pinout wrong");
 
 #define LED_TO_USE 13
 
@@ -83,16 +129,24 @@ Blinker blinker2{LED_TO_USE, 750};
 GlobalState st;
 GlobalUnlocker unlocker{ONBOARD_BTN, true};
 
-static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
-AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
+//TwoWire nucleoWire(PB7,PB6);
+//TwoWire nucleoWire(D14,D15);
+TwoWire& nucleoWire = Wire;
+
+Gpio23017 ext_btn_left(GPIO_EXT1_BTN_START, 0x25, nucleoWire);
+Gpio23017 ext_btn_right(GPIO_EXT2_BTN_START, 0x27, nucleoWire);
+
+
+#if 0
 HardwareSerial BlockASerial(PC11 /*rx*/, PC10 /*tx*/);
 HardwareSerial BlockBSerial(PD2 /*rx*/, PC12 /*tx*/);
 HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
 
 HardwareSerial LnSerial(PA10 /*rx*/, PA9 /*tx*/);
+#endif
 
-
-SpiPixelStrip strip(9, PA7, PB4, PB3);
+/// External SPI port for pixel driving.
+SpiPixelStrip strip(9, PB5, PB4, PB3);
 
 const uint32_t kOutputParams[] = {
   0, Pixel::RED, Pixel::WHITE, //
@@ -108,11 +162,11 @@ const uint32_t kOutputParams[] = {
 
 PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
-DirectBlock block_a{"A", &BlockASerial, PC11, PC1};
+I2CBlock block_a{0x28, &nucleoWire}; /// @todo: check
 SimpleBlockUi a_ui{&block_a};
-DirectBlock block_b{"B", &BlockBSerial, PD2, PA1};
+I2CBlock block_b{0x29, &nucleoWire}; /// @todo: check
 SimpleBlockUi b_ui{&block_b};
-DirectBlock block_c{"C", &BlockCSerial, PB11, PA15};
+I2CBlock block_c{0x2B, &nucleoWire}; /// @todo: check
 SimpleBlockUi c_ui{&block_c};
 
 const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
@@ -135,22 +189,6 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
                           c_ui.set_anfangsfeld(PX_C_ANFANGSFELD, false) |
                           c_ui.set_endfeld(PX_C_ENDFELD, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
-
-/// Arduino setup routine.
-void setup() {
-  pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(USER_BTN, INPUT_PULLUP);
-
-  Serial.begin(115200);
-  // delay(100);
-  Serial.println("Hello, world");
-  Executor::instance()->begin();
-  strip.set_brightness(0x20);
-
-  ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
-  ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
-  ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
-}
 
 #include <vector>
 
@@ -192,7 +230,7 @@ class BlockDebug : public Executable {
   Timer tmAb_;
   HardwareSerial* s_;
   std::vector<uint8_t> packet_;
-} ln_debug(&LnSerial);
+};// ln_debug(&LnSerial);
 
 class Analog : public Executable {
  public:
@@ -235,8 +273,53 @@ class Copier : public Executable {
 };// copier;
 
 
+/// Arduino setup routine.
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+  pinMode(USER_BTN, INPUT_PULLUP);
+
+  Serial.begin(115200);
+  nucleoWire.setSDA(PB7);
+  nucleoWire.setSCL(PB6);
+  nucleoWire.begin();
+  // delay(100);
+  Serial.println("Hello, world");
+
+  ASSERT(a_ui_rdy == a_ui.EXPECTED_SETUP);
+  ASSERT(b_ui_rdy == b_ui.EXPECTED_SETUP);
+  ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
+}
+
+
+
 /// Arduino loop routine.
 void loop() {
+  static bool started = false;
+  static unsigned next = 50;
+  auto m = millis();
+  if (m < 3000) {
+    if (m > next) {
+      Serial.println(m);
+      next = m + 50;
+    }
+    return;
+  }
+  if (!started) {
+    started = true;
+    Serial.println("hello world");
+    // Scans all i2c devices
+    for (unsigned a = 0; a < 128; ++a) {
+      Adafruit_I2CDevice dev(a);//, &nucleoWire);
+      if (dev.begin(true)) {
+        LOG(LEVEL_INFO, "Found i2c %02x", a);
+      }
+      delay(10);
+    }
+
+    Executor::instance()->begin();
+    strip.set_brightness(0x18);
+  }
+  
   // Calls the executor to do loop for all registered objects.
   ex.loop();
 }

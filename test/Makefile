@@ -92,6 +92,9 @@ build-lnex:
 build-lnblk:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod $(APP_PATH)/examples/LnBlock3
 
+build-thh:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod $(APP_PATH)/examples/THHSimpleBlock
+
 
 tests: run-tests build-examples
 
