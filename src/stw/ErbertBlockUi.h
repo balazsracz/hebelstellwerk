@@ -97,6 +97,10 @@ class ErbertBlockUi : public Executable {
       }
       return;
     }
+    if (erlaubnis_out_sen_.read() != shadow_erlaubnis_) {
+      // Update sensor.
+      erlaubnis_out_sen_.write(shadow_erlaubnis_);
+    }
 
     // ====== VORBLOCKEN ======
     if (shadow_erlaubnis_ && !seen_route_out_) {
@@ -161,6 +165,14 @@ class ErbertBlockUi : public Executable {
     return 1u << 0;
   }
 
+  /// Secondary IO for Erlaubnis. This should be set to a Sensor. We will write
+  /// this with the Erlaubnis value that is correct, after the
+  /// Magnetartikel. True if we do have the erlaubnis. Will be write only.
+  uint16_t set_erlaubnis_sen(gpio_pin_t pin, bool inverted) {
+    erlaubnis_out_sen_.setup(pin, inverted, GPIO_OUTPUT);
+    return 1u << 9;
+  }
+  
   /// Output (only) GPIO that will be set to true when the block is busy
   /// (vorgeblockt). This is linked to a Sensor message in LocoNet that will
   /// turn the lines red there.
@@ -230,7 +242,7 @@ class ErbertBlockUi : public Executable {
   }
   
   /// These bits should be set after all the setup is done.
-  static constexpr uint16_t EXPECTED_SETUP = (1u << 9) - 1;
+  static constexpr uint16_t EXPECTED_SETUP = (1u << 10) - 1;
   
   
  private:
@@ -246,6 +258,11 @@ class ErbertBlockUi : public Executable {
   /// written.
   DelayedGpioAccessor erlaubnis_out_;
 
+  /// Secondary IO for Erlaubnis. This should be set to a Sensor. We will write
+  /// this with the Erlaubnis value that is correct, after the
+  /// Magnetartikel. True if we do have the erlaubnis. Will be write only.
+  DelayedGpioAccessor erlaubnis_out_sen_;
+  
   /// Output, will be set to true to block the Erlaubnis button when we don't
   /// have the Erlaubnis. This prevents unilaterally taking the Erlaubnis from
   /// the remote station.
