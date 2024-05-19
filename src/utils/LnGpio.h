@@ -54,6 +54,16 @@ enum LnGpioType : uint8_t {
   /// Sends on/off messages for Switch GREEN button (closed).
   LNGPIO_SWITCH_GREEN,
   LNGPIO_SENSOR,
+
+  /// This event is set to high when a sensor low message comes. Setting it to
+  /// low does nothing on the bus. Setting it to high sends the given message
+  /// to the bus.
+  LNGPIO_SENSOR_LOW_EVENT,
+  /// This event is set to high when a sensor high message comes. Setting it to
+  /// low does nothing on the bus. Setting it to high sends the given message
+  /// to the bus.
+  LNGPIO_SENSOR_HIGH_EVENT,
+
   /// Raw button from an uhlenbrock stellwerk. Address = XXXXN, where XXXX is
   /// the module address.
   LNGPIO_UB_BUTTON_1,

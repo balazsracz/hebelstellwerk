@@ -155,6 +155,14 @@ bool LnGpio::send_ln_update(const LnGpioDefn* def, bool value) {
     case LNGPIO_SENSOR:
       st = ln_->reportSensor(def->address, value);
       break;
+    case LNGPIO_SENSOR_LOW_EVENT:
+      // Sends only on TRUE state.
+      if (value) st = ln_->reportSensor(def->address, false);
+      break;
+    case LNGPIO_SENSOR_HIGH_EVENT:
+      // Sends only on TRUE state.
+      if (value) st = ln_->reportSensor(def->address, false);
+      break;
     default:
       // ignore
       return true;
@@ -174,6 +182,13 @@ void notifySensor( uint16_t Address, uint8_t State ) {
   ln_type = LNGPIO_SENSOR;
   ln_address = Address;
   ln_value = State != 0;
+  if (ln_value) {
+    ln_type_b = LNGPIO_SENSOR_HIGH_EVENT;
+    ln_value_b = true;
+  } else {
+    ln_type_b = LNGPIO_SENSOR_LOW_EVENT;
+    ln_value_b = true;
+  }
 }
 
 // This call-back function is called from LocoNet.processSwitchSensorMessage
