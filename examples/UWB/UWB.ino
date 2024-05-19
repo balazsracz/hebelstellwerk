@@ -420,13 +420,17 @@ class Report : public Executable {
     // ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(),
     // ext_detector.ok());
     LOG(LEVEL_INFO,
-        "hebel %04x fstr %04x taster %04x det %04x blkab %d %02x %s blkcd %d "
+        "hebel %04x fstr %04x taster %04x det %04x wire %d blkab %d %02x %s blkcd %d "
         "%02x %s",
         ext_hebel_sig_w.input_states(), ext_hebel_fstr.input_states(),
         ext_hebel_taster.input_states(), ext_detector.input_states(),
+        Wire.getBusStatus(),
         blk_ab.state(), i2c_ab.get_status(),
         block_to_string(i2c_ab.get_status()).c_str(), blk_cd.state(),
         i2c_cd.get_status(), block_to_string(i2c_cd.get_status()).c_str());
+
+    Wire.end();
+    Wire.begin();
   }
 
  private:
