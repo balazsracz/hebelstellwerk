@@ -45,6 +45,7 @@
 
 #include "utils/Executor.h"
 #include "utils/Macros.h"
+#include "utils/Pixel.h"
 
 class SpiPixelStrip : public Pixel, public Executable {
  public:
