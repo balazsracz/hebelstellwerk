@@ -57,6 +57,8 @@ enum GpioPin : gpio_pin_t {
   ONBOARD_LED = 13,
   ONBOARD_BTN = USER_BTN,
 
+  BLOCK_DETECTOR = 100,
+  
   ANALOG_BTN_START = 110,
   BTN_C_VORBLOCK = ANALOG_BTN_START,
   BTN_C_ABGABE,
@@ -84,6 +86,7 @@ enum GpioPin : gpio_pin_t {
   LN_BLGT_HMAG,
   
   LN_A_ERLAUBNIS_MAG,
+  LN_A_ERLAUBNIS_SEN,
   LN_A_VORGEBLOCKT_SEN,
   LN_A_ERLAUBNIS_BLOCK_MAG,
   LN_A_RT_IN_MAG,
@@ -94,6 +97,7 @@ enum GpioPin : gpio_pin_t {
   LN_A_RBT_HMAG,
 
   LN_B_ERLAUBNIS_MAG,
+  LN_B_ERLAUBNIS_SEN,
   LN_B_VORGEBLOCKT_SEN,
   LN_B_ERLAUBNIS_BLOCK_MAG,
   LN_B_RT_IN_MAG,
@@ -102,6 +106,7 @@ enum GpioPin : gpio_pin_t {
   LN_B_RBT_HMAG,
 
   LN_C_ERLAUBNIS_MAG,
+  LN_C_ERLAUBNIS_SEN,
   LN_C_VORGEBLOCKT_SEN,
   LN_C_ERLAUBNIS_BLOCK_MAG,
   LN_C_RT_IN_MAG,
@@ -109,8 +114,15 @@ enum GpioPin : gpio_pin_t {
   LN_C_RT_OUT_BLOCKED_SEN,
   LN_C_RBT_HMAG,
 
+  LN_SEN_1020_LOW,
+  LN_SEN_1030_LOW,
+  LN_SEN_2010_LOW,
+  LN_SEN_3010_LOW,
+  
   LN_GPIO_END,
 };
+
+#include "stw/EisenbachBelegtmelder.h"
 
 #define LED_TO_USE 13
 
@@ -186,6 +198,7 @@ const LnGpioDefn ln_defs[] = {
     // 710 = Erlaubnisabgabesperre (CV38)
     // CV22 = CV24 = 57. Busy (rotausleuchtung).
     {LNGPIO_SWITCH, 700},      // LN_A_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 52},      // LN_A_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 57},      // LN_A_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SENSOR, 1020},      // LN_A_RT_IN_MAG route in magnetartikel
@@ -205,6 +218,7 @@ const LnGpioDefn ln_defs[] = {
     // SigB. Zieltaste 358 / 0
     // Route B/in set: sen 2010 HIGH is set, LOW is clear.
     {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 50},      // LN_B_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 55},      // LN_B_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 730},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SENSOR, 2010},      // LN_B_RT_IN_MAG route in magnetartikel
@@ -221,21 +235,29 @@ const LnGpioDefn ln_defs[] = {
     // cv38 = 720
     // CV22 = CV24 = 54. Busy (rotausleuchtung).
     {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG
+    {LNGPIO_SENSOR, 51},      // LN_C_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 54},      // LN_C_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 720},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SENSOR, 3010},      // LN_C_RT_IN_MAG route in magnetartikel
     {LNGPIO_SENSOR, 1030},      // LN_C_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 915},      // LN_C_RT_OUT_BLOCKED_SEN
-    {LNGPIO_UB_BUTTON_1, 107},  // LN_C_RBT_HMAG,    
+    {LNGPIO_UB_BUTTON_1, 107},  // LN_C_RBT_HMAG,
+
+    {LNGPIO_SENSOR_LOW_EVENT, 1020},
+    {LNGPIO_SENSOR_LOW_EVENT, 1030},
+    {LNGPIO_SENSOR_LOW_EVENT, 2010},
+    {LNGPIO_SENSOR_LOW_EVENT, 3010},
 };
 
 static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
               "Loconet GPIO misaligned");
 
 LnGpio ln_gpio{LN_GPIO_START, &LocoNet, ln_defs, ARRAYSIZE(ln_defs)};
+EisenbachBelegtmelder block_det{BLOCK_DETECTOR};
 
 const uint16_t a_eui_rdy =
     a_eui.set_erlaubnis_magnetart(LN_A_ERLAUBNIS_MAG, true) |  //
+    a_eui.set_erlaubnis_sen(LN_A_ERLAUBNIS_SEN, true) |  //
     a_eui.set_block_busy_sensor(LN_A_VORGEBLOCKT_SEN, false) |  //
     a_eui.set_erlaubnis_blocked_magnetart(
         LN_A_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
@@ -244,33 +266,35 @@ const uint16_t a_eui_rdy =
     a_eui.set_route_in_gpio2(LN_A_RT_IN_MAG2, false) |
     a_eui.set_route_out_gpio(LN_A_RT_OUT_MAG, false) |
     a_eui.set_route_out_gpio2(LN_A_RT_OUT_MAG2, false) |
-    a_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    a_eui.set_detector_gpio(BLOCK_DETECTOR, false) |
     a_eui.set_route_out_blocked(LN_A_RT_OUT_BLOCKED_SEN, false) |
     a_eui.set_rbt(LN_A_RBT_HMAG, false) |  //
     a_eui.set_blgt(LN_BLGT_HMAG, true);
 
 const uint16_t b_eui_rdy =
     b_eui.set_erlaubnis_magnetart(LN_B_ERLAUBNIS_MAG, true) |  //
+    b_eui.set_erlaubnis_sen(LN_B_ERLAUBNIS_SEN, true) |  //
     b_eui.set_block_busy_sensor(LN_B_VORGEBLOCKT_SEN, false) |  //
     b_eui.set_erlaubnis_blocked_magnetart(
         LN_B_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
                                            // but receiver needs RED to block.
     b_eui.set_route_in_gpio(LN_B_RT_IN_MAG, false) |
     b_eui.set_route_out_gpio(LN_B_RT_OUT_MAG, false) |
-    b_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    b_eui.set_detector_gpio(BLOCK_DETECTOR, false) |
     b_eui.set_route_out_blocked(LN_B_RT_OUT_BLOCKED_SEN, false) |
     b_eui.set_rbt(LN_B_RBT_HMAG, false) |  //
     b_eui.set_blgt(LN_BLGT_HMAG, true);
 
 const uint16_t c_eui_rdy =
     c_eui.set_erlaubnis_magnetart(LN_C_ERLAUBNIS_MAG, true) |  //
+    c_eui.set_erlaubnis_sen(LN_C_ERLAUBNIS_SEN, true) |  //
     c_eui.set_block_busy_sensor(LN_C_VORGEBLOCKT_SEN, false) |  //
     c_eui.set_erlaubnis_blocked_magnetart(
         LN_C_ERLAUBNIS_BLOCK_MAG, true) |  // inverted, because blocked is true
                                            // but receiver needs RED to block.
     c_eui.set_route_in_gpio(LN_C_RT_IN_MAG, false) |
     c_eui.set_route_out_gpio(LN_C_RT_OUT_MAG, false) |
-    c_eui.set_detector_gpio(LN_DETECTOR_SEN, false) |
+    c_eui.set_detector_gpio(BLOCK_DETECTOR, false) |
     c_eui.set_route_out_blocked(LN_C_RT_OUT_BLOCKED_SEN, false) |
     c_eui.set_rbt(LN_C_RBT_HMAG, false) |  //
     c_eui.set_blgt(LN_BLGT_HMAG, true);
