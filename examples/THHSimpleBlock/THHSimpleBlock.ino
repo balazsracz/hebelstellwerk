@@ -164,28 +164,28 @@ PixelGpio px_gpio{&strip, 120, 9, kOutputParams};
 
 I2CBlock block_a{0x28, &nucleoWire}; /// @todo: check
 SimpleBlockUi a_ui{&block_a};
-I2CBlock block_b{0x29, &nucleoWire}; /// @todo: check
+I2CBlock block_b{0x2B, &nucleoWire}; /// @todo: check
 SimpleBlockUi b_ui{&block_b};
-I2CBlock block_c{0x2B, &nucleoWire}; /// @todo: check
+I2CBlock block_c{0x29, &nucleoWire}; /// @todo: check
 SimpleBlockUi c_ui{&block_c};
 
-const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, false) |
-                          a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, false) |
-                          a_ui.set_abgabe_taste(BTN_A_ABGABE, false) |
+const uint16_t a_ui_rdy = a_ui.set_vorblock_taste(BTN_A_VORBLOCK, true) |
+                          a_ui.set_ruckblock_taste(BTN_A_RUCKBLOCK, true) |
+                          a_ui.set_abgabe_taste(BTN_A_ABGABE, true) |
                           a_ui.set_anfangsfeld(PX_A_ANFANGSFELD, false) |
                           a_ui.set_endfeld(PX_A_ENDFELD, false) |
                           a_ui.set_erlaubnisfeld(PX_A_ERLAUBNISFELD, false);
 
-const uint16_t b_ui_rdy = b_ui.set_vorblock_taste(BTN_B_VORBLOCK, false) |
-                          b_ui.set_ruckblock_taste(BTN_B_RUCKBLOCK, false) |
-                          b_ui.set_abgabe_taste(BTN_B_ABGABE, false) |
+const uint16_t b_ui_rdy = b_ui.set_vorblock_taste(BTN_B_VORBLOCK, true) |
+                          b_ui.set_ruckblock_taste(BTN_B_RUCKBLOCK, true) |
+                          b_ui.set_abgabe_taste(BTN_B_ABGABE, true) |
                           b_ui.set_anfangsfeld(PX_B_ANFANGSFELD, false) |
                           b_ui.set_endfeld(PX_B_ENDFELD, false) |
                           b_ui.set_erlaubnisfeld(PX_B_ERLAUBNISFELD, false);
 
-const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
-                          c_ui.set_ruckblock_taste(BTN_C_RUCKBLOCK, false) |
-                          c_ui.set_abgabe_taste(BTN_C_ABGABE, false) |
+const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, true) |
+                          c_ui.set_ruckblock_taste(BTN_C_RUCKBLOCK, true) |
+                          c_ui.set_abgabe_taste(BTN_C_ABGABE, true) |
                           c_ui.set_anfangsfeld(PX_C_ANFANGSFELD, false) |
                           c_ui.set_endfeld(PX_C_ENDFELD, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
@@ -251,6 +251,53 @@ class Analog : public Executable {
 };// reporter2;
 
 
+class Report3 : public Executable {
+ public:
+  Report3() {
+    Executor::instance()->add(this);
+    tm_.start_periodic(1000);
+  }
+
+  void begin() override {}
+  void loop() override {
+    if (!tm_.check()) return;
+#if 0    
+    ++i;
+    if (entsp_a.read() && entsp_b.read() && (i & 1)) {
+      GlobalState::instance()->is_unlocked_ ^= 1;
+      LOG(LEVEL_INFO, "Global unlock %s",
+          GlobalState::instance()->is_unlocked_ ? "true" : "false");
+    }
+#endif
+    // Serial.print("Hello ");
+    // Serial.println(i);
+    // LOG(LEVEL_INFO, "hello2 1ok %d 2ok %d 3ok %d 4ok %d",
+    // ext_hebel_sig_w.ok(), ext_hebel_fstr.ok(), ext_hebel_taster.ok(),
+    // ext_detector.ok());
+    LOG(LEVEL_INFO,
+        "extl %04x extr %04x taster %04x det %04x wire %d blka %d %02x %s blkb %d %02x %s blkc %d %02x %s",
+        ext_btn_left.input_states(), ext_btn_right.input_states(),
+        ext_btn_left.input_states(), ext_btn_right.input_states(),
+        0,
+        0, block_a.get_status(),
+        block_to_string(block_a.get_status()).c_str(),
+        0, block_b.get_status(),
+        block_to_string(block_b.get_status()).c_str(),
+        0, block_c.get_status(),
+        block_to_string(block_c.get_status()).c_str());
+
+    Wire.end();
+    Wire.begin();
+  }
+
+ private:
+  //GpioAccessor entsp_a{GPIO_BTN_ANFANG_C, true, GPIO_INPUT};
+  //GpioAccessor entsp_b{GPIO_BTN_ENDFELD_D, true, GPIO_INPUT};
+  Timer tm_;
+  int i = 0;
+} reporter3;
+
+
 class Copier : public Executable {
  public:
   Copier() {
@@ -271,6 +318,8 @@ class Copier : public Executable {
  private:
   Timer tm_;
 };// copier;
+
+
 
 
 /// Arduino setup routine.
