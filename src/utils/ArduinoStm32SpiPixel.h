@@ -59,8 +59,14 @@ class SpiPixelStrip : public Pixel, public Executable {
 
   ~SpiPixelStrip() { delete[] data_; }
 
+#if defined(STM32F0xx)
+  static constexpr uint32_t SPI_FREQ = 48000000 / 16;
+#elif defined(STM32F3xx)
   static constexpr uint32_t SPI_FREQ = 72000000 / 32;
-
+#else
+  #error set the SPI clock frequency needed
+#endif  
+  
   static constexpr auto MODE = SPI_MODE1;
 
   void begin() override {
