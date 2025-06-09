@@ -45,11 +45,11 @@ extern const char* volatile g_death_file;
 extern volatile int g_death_lineno;
 
 #define DIE(x)                                           \
+  g_death_file = __FILE__;                               \
+  g_death_lineno = __LINE__;                             \
   if (Serial) {                                          \
     Serial.printf("%s:%d: %s\n", __FILE__, __LINE__, x); \
   }                                                      \
-  g_death_file = __FILE__;                               \
-  g_death_lineno = __LINE__;                             \
   do {                                                   \
     pinMode(LED_BUILTIN, OUTPUT);                        \
     while (1) {                                          \
