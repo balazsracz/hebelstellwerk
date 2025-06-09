@@ -46,7 +46,7 @@
 /// NUM_IN is the number of input bytes, NUM_OUT is the number of output
 /// bytes. Each byte is 8 gpio numbers. The first NUM_OUT * 8 numbers will be
 /// the outputs, the next NUM_IN * 8 numbers will be the inputs.
-template<int NUM_IN, int NUM_OUT>
+template<int NUM_OUT, int NUM_IN>
 class GpioSpi : public Gpio, public Executable {
  public:
   static constexpr uint16_t NUM_PINS = NUM_IN * 8 + NUM_OUT * 8;

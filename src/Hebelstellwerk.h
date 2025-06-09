@@ -61,6 +61,9 @@ BlockRegistry g_block_registry;
 
 Executor ex;
 
+const char* volatile g_death_file;
+volatile int g_death_lineno;
+
 #ifdef ARDUINO
 #include "utils/ArduinoGpio.h"
 #include "utils/Pwm9685.h"

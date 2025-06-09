@@ -41,19 +41,24 @@
 
 #if defined(ARDUINO) && defined(LED_BUILTIN)
 
-#define DIE(x)                                         \
-  if (Serial) {                                        \
-    Serial.println(x);                                 \
-  }                                                    \
-  do {                                                 \
-    pinMode(LED_BUILTIN, OUTPUT);                      \
-    while (1) {                                        \
-      volatile int xx = 0;                             \
-      digitalWrite(LED_BUILTIN, HIGH);                 \
-      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
-      digitalWrite(LED_BUILTIN, LOW);                  \
-      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
-    }                                                  \
+extern const char* volatile g_death_file;
+extern volatile int g_death_lineno;
+
+#define DIE(x)                                           \
+  if (Serial) {                                          \
+    Serial.printf("%s:%d: %s\n", __FILE__, __LINE__, x); \
+  }                                                      \
+  g_death_file = __FILE__;                               \
+  g_death_lineno = __LINE__;                             \
+  do {                                                   \
+    pinMode(LED_BUILTIN, OUTPUT);                        \
+    while (1) {                                          \
+      volatile int xx = 0;                               \
+      digitalWrite(LED_BUILTIN, HIGH);                   \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx;   \
+      digitalWrite(LED_BUILTIN, LOW);                    \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx;   \
+    }                                                    \
   } while (0)
 
 #define ASSERT(x)                \
