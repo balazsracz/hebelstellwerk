@@ -14,6 +14,7 @@
 #include "utils/ArduinoStm32SpiPixel.h"
 #include "utils/Blinker.h"
 #include "utils/PixelGpio.h"
+#include "utils/GpioDebug.h"
 
 
 #ifndef ARDUINO
@@ -73,28 +74,68 @@ enum GpioPin : gpio_pin_t {
   INT_PORTA1,
   INT_PORTA0,
 
+
+  HBL_F1A = INT_PORTA0,
+  HBL_F1B = INT_PORTA1,
+  HBL_F2A = INT_PORTA2,
+  HBL_F2B = INT_PORTA3,
+  HBL_F3A = INT_PORTA4,
+  HBL_F3B = INT_PORTA5,
+  HBL_F4A = INT_PORTA6,
+  HBL_F4B = INT_PORTA7,
+  HBL_F5A = INT_PORTB0,
+  HBL_F5B = INT_PORTB1,
+  HBL_F6A = INT_PORTB2,
+  HBL_F6B = INT_PORTB3,
+
   EXT_SPI = 300,
 
-  EXT_2 = EXT_SPI + 8,
-  EXT_OUT0 = EXT_2,
-  EXT_OUT1,
-  EXT_OUT2,
-  EXT_OUT3,
-  EXT_OUT4,
-  EXT_OUT5,
-  EXT_OUT6,
-  EXT_OUT7,
+  BRD_BLOCK_OUT = EXT_SPI + 0,
+  TEMP0 = BRD_BLOCK_OUT - 1,
+  LED_ENDF_ROT,
+  LED_ENDF_WEISS,
+  LED_ERLAUB_ROT,
+  LED_ERLAUB_WEISS,
+  LED_ANF_ROT,
+  LED_ANF_WEISS,
+  LED_FESTLEGE_ROT,
+  LED_FESTLEGE_WEISS,
 
-  EXT_IN = EXT_2 + 8,
-  EXT_IN0 = EXT_IN,
-  EXT_IN1,
-  EXT_IN2,
-  EXT_IN3,
-  EXT_IN4,
-  EXT_IN5,
-  EXT_IN6,
-  EXT_IN7,
 
+  EXT_SPI_IN = EXT_SPI + 8,
+
+  BRD_BLOCK_IN = EXT_SPI_IN + 0,
+  TEMP1 = BRD_BLOCK_IN - 1,
+  KURBEL_RAW,
+  BLOCK_IN1,
+  BLOCK_IN2,
+  BLOCK_IN3,
+  BTN_ENDF,
+  BTN_ERLAUB,
+  BTN_ANF,
+  BTN_FESTLEGE,
+
+  BRD_HEBEL_IN_LINKS = BRD_BLOCK_IN + 8,
+  TEMP2 = BRD_HEBEL_IN_LINKS - 1,
+  HBL_W8,
+  HBL_W9,
+  HBL_W10_11,
+  BTN_BELEG,
+  HBL_SIGA,
+  HBL_SIGB,
+  SW_MODEA,
+  SW_MODEB,
+
+  BRD_HEBEL_IN_RECHTS = BRD_HEBEL_IN_LINKS + 8,
+  TEMP3 = BRD_HEBEL_IN_RECHTS - 1,
+  HBL_W1,
+  HBL_W2a,
+  HBL_W2b,
+  HBL_W3,
+  HBL_W4,
+  HBL_W5_6,
+  HBL_W7a,
+  HBL_W7b,
 };
 
 GlobalState st;
@@ -124,8 +165,8 @@ const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
                           c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
 
-static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 1;
-static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 2;
+static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 3;
+static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 1;
 GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{EXT_SPI, EXT_LAT, g_ext_spi};
 
 static constexpr unsigned NUM_INT_INPUT_REGISTERS = 2;
@@ -135,8 +176,21 @@ GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{INT_SPI, I
 
 Timer g_tmm;
 
-GpioAccessor g_extout0(EXT_OUT0, false, GPIO_OUTPUT);
-GpioAccessor g_extin0(INT_PORTA0, false, GPIO_INPUT);
+std::initializer_list<GpioDebugInstance> g_gpios{
+  {BTN_ANF, "Anfangsfeld knopf"},
+  {BTN_ENDF, "Endfeld knopf"},
+  {BTN_ERLAUB, "Erlaubnis knopf"},
+  {BTN_FESTLEGE, "Festlege knopf"},
+  {KURBEL_RAW, "Kurbel"},
+  {HBL_F1A, "Fahrstrasse 1a"},
+  {HBL_F1B, "Fahrstrasse 1b"},
+  {HBL_W1, "Weiche 1"},
+  {HBL_W8, "Weiche 8"},
+};
+
+
+GpioDebug g_gpio_printer_{g_gpios};
+
 
 
 void setup() {
@@ -170,9 +224,8 @@ void loop() {
   // Calls the executor to do loop for all registered objects.
   ex.loop();
   if (g_tmm.check()) {
-    Serial.printf("Input: %02x | %02x %02x %d\n", g_ext_gpio.get_input_byte(0), 
-      g_int_gpio.get_input_byte(0), g_int_gpio.get_input_byte(1), 
-      g_extin0.read());
+    Serial.printf("Input: %02x | %02x %02x\n", g_ext_gpio.get_input_byte(0), 
+      g_int_gpio.get_input_byte(0), g_int_gpio.get_input_byte(1)
+      );
   }
-  g_extout0.write(digitalRead(USER_BTN));
 }
