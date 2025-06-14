@@ -1,6 +1,6 @@
 /// Uses a Nucleo 303 with the OpenLCB IO Board extension to drive external SPI connected GPIOs.
 /// The ionboard PORTA, PORTB is driven using SPI2, and external shift registers are driven
-/// using SPI3. 
+/// using SPI3.
 
 #include <Arduino.h>
 #include <Hebelstellwerk.h>
@@ -15,10 +15,16 @@
 
 int EXT_LAT = PC11;
 
-SPIClass g_ext_spi{PB5_ALT1, PB4_ALT1, PB3_ALT1};
+#if defined(STM32F0xx)
+SPIClass g_ext_spi{ PB5, PB4, PB3 };
+#elif defined(STM32F3xx)
+SPIClass g_ext_spi{ PB5_ALT1, PB4_ALT1, PB3_ALT1 };
+#else
+#error set the SPI pins
+#endif
 
 
-SPIClass g_int_spi{/*mosi*/ PB15, /*miso*/ PB14, /*sck*/ PB13};
+SPIClass g_int_spi{ /*mosi*/ PB15, /*miso*/ PB14, /*sck*/ PB13 };
 
 int INT_LAT = PA6;
 
@@ -50,8 +56,8 @@ enum GpioPin : gpio_pin_t {
 
   EXT_SPI = 100,
 
-  EXT_2 = EXT_SPI + 8,
-  EXT_OUT0 = EXT_2,
+  EXT_1 = EXT_SPI + 0,
+  EXT_OUT0 = EXT_1,
   EXT_OUT1,
   EXT_OUT2,
   EXT_OUT3,
@@ -59,6 +65,16 @@ enum GpioPin : gpio_pin_t {
   EXT_OUT5,
   EXT_OUT6,
   EXT_OUT7,
+
+  EXT_2 = EXT_1 + 8,
+  EXT_OUT8 = EXT_2,
+  EXT_OUT9,
+  EXT_OUT10,
+  EXT_OUT11,
+  EXT_OUT12,
+  EXT_OUT13,
+  EXT_OUT14,
+  EXT_OUT15,
 
   EXT_IN = EXT_2 + 8,
   EXT_IN0 = EXT_IN,
@@ -72,16 +88,17 @@ enum GpioPin : gpio_pin_t {
 
 };
 
-static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 1;
+static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 2;
 static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 2;
-GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{EXT_SPI, EXT_LAT, g_ext_spi};
+GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{ EXT_SPI, EXT_LAT, g_ext_spi };
 
 static constexpr unsigned NUM_INT_INPUT_REGISTERS = 2;
 static constexpr unsigned NUM_INT_OUTPUT_REGISTERS = 1;
-GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{INT_SPI, INT_LAT, g_int_spi};
+GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{ INT_SPI, INT_LAT, g_int_spi };
 
 
 Timer g_tmm;
+Timer g_blinker;
 
 GpioAccessor g_extout0(EXT_OUT0, false, GPIO_OUTPUT);
 GpioAccessor g_extin0(INT_PORTA0, false, GPIO_INPUT);
@@ -99,15 +116,23 @@ void setup() {
   Executor::instance()->begin();
 
   g_tmm.start_periodic(500);
+  g_blinker.start_periodic(1000);
 }
 
 void loop() {
   // Calls the executor to do loop for all registered objects.
   ex.loop();
   if (g_tmm.check()) {
-    Serial.printf("Input: %02x | %02x %02x %d\n", g_ext_gpio.get_input_byte(0), 
-      g_int_gpio.get_input_byte(0), g_int_gpio.get_input_byte(1), 
-      g_extin0.read());
+    Serial.printf("Input: %02x %02x | %02x %02x %d\n", g_ext_gpio.get_input_byte(0), g_ext_gpio.get_input_byte(1),
+                  g_int_gpio.get_input_byte(0), g_int_gpio.get_input_byte(1),
+                  g_extin0.read());
   }
   g_extout0.write(digitalRead(USER_BTN));
+  if (g_blinker.check()) {
+    static bool value = 0;
+    value ^= 1;
+    for (gpio_pin_t pin = EXT_OUT0; pin < EXT_OUT15; ++pin) {
+      g_ext_gpio.write(pin, value ^ (pin & 1));
+    }
+  }
 }
