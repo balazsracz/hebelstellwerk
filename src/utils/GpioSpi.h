@@ -128,6 +128,10 @@ class GpioSpi : public Gpio, public Executable {
     auto p = pin - start_pin_;
     unsigned idx = p / 8;
     unsigned mask = get_mask(p);
+    if (idx < NUM_OUT) {
+      // Reading back the written value.
+      return (output_bytes_[idx] & mask);
+    }
     ASSERT(idx >= NUM_OUT);
     idx -= NUM_OUT;
     ASSERT(idx < NUM_IN);
