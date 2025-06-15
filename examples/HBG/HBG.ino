@@ -15,6 +15,7 @@
 #include "utils/Blinker.h"
 #include "utils/PixelGpio.h"
 #include "utils/GpioDebug.h"
+#include "utils/GpioCopier.h"
 
 
 #ifndef ARDUINO
@@ -121,10 +122,10 @@ enum GpioPin : gpio_pin_t {
   HBL_W9,
   HBL_W10_11,
   BTN_BELEG,
+  SW_MODEUP,
+  SW_MODEDN,
   HBL_SIGA,
   HBL_SIGB,
-  SW_MODEA,
-  SW_MODEB,
 
   BRD_HEBEL_IN_RECHTS = BRD_HEBEL_IN_LINKS + 8,
   TEMP3 = BRD_HEBEL_IN_RECHTS - 1,
@@ -174,22 +175,57 @@ static constexpr unsigned NUM_INT_OUTPUT_REGISTERS = 1;
 GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{INT_SPI, INT_LAT, g_int_spi};
 
 
-Timer g_tmm;
-
 std::initializer_list<GpioDebugInstance> g_gpios{
-  {BTN_ANF, "Anfangsfeld knopf"},
-  {BTN_ENDF, "Endfeld knopf"},
-  {BTN_ERLAUB, "Erlaubnis knopf"},
-  {BTN_FESTLEGE, "Festlege knopf"},
-  {KURBEL_RAW, "Kurbel"},
-  {HBL_F1A, "Fahrstrasse 1a"},
-  {HBL_F1B, "Fahrstrasse 1b"},
-  {HBL_W1, "Weiche 1"},
-  {HBL_W8, "Weiche 8"},
+  {SW_MODEUP, "Special mode Up", true},
+  {SW_MODEDN, "Special mode Down", true},
+  {BTN_BELEG, "Belegtmelder Hilfstaste", true},
+  {BTN_ANF, "Anfangsfeld taste", true},
+  {BTN_ENDF, "Endfeld taste", true},
+  {BTN_ERLAUB, "Erlaubnis taste", true},
+  {BTN_FESTLEGE, "Festlege taste", true},
+  {KURBEL_RAW, "Kurbel", true},
+  {HBL_F1A, "Fahrstrasse 1a", true},
+  {HBL_F1B, "Fahrstrasse 1b", true},
+  {HBL_F2A, "Fahrstrasse 2a", true},
+  {HBL_F2B, "Fahrstrasse 2b", true},
+  {HBL_F3A, "Fahrstrasse 3a", true},
+  {HBL_F3B, "Fahrstrasse 3b", true},
+  {HBL_F4A, "Fahrstrasse 4a", true},
+  {HBL_F4B, "Fahrstrasse 4b", true},
+  {HBL_F5A, "Fahrstrasse 5a", true},
+  {HBL_F5B, "Fahrstrasse 5b", true},
+  {HBL_F6A, "Fahrstrasse 6a", true},
+  {HBL_F6B, "Fahrstrasse 6b", true},
+  {HBL_W1, "Weiche 1", true},
+  {HBL_W2a, "Weiche 2a", true},
+  {HBL_W2b, "Weiche 2b", true},
+  {HBL_W3, "Weiche 3", true},
+  {HBL_W4, "Weiche 4", true},
+  {HBL_W5_6, "Weiche 5", true},
+  {HBL_W7a, "Weiche 7a", true},
+  {HBL_W7b, "Weiche 7b", true},
+  {HBL_W8, "Weiche 8", true},
+  {HBL_W9, "Weiche 9", true},
+  {HBL_W10_11, "Weiche 10/11", true},
+  {HBL_SIGA, "Signal A", true},
+  {HBL_SIGB, "Signal B", true},
 };
 
 
-GpioDebug g_gpio_printer_{g_gpios};
+GpioDebug g_gpio_printer{g_gpios};
+
+std::initializer_list<GpioCopyInstance> g_shadows{
+  {BTN_ANF, LED_ANF_ROT, true},
+  {BTN_ANF, LED_ANF_WEISS, false},
+  {BTN_ENDF, LED_ENDF_ROT, true},
+  {BTN_ENDF, LED_ENDF_WEISS, false},
+  {BTN_ERLAUB, LED_ERLAUB_ROT, true},
+  {BTN_ERLAUB, LED_ERLAUB_WEISS, false},
+  {BTN_FESTLEGE, LED_FESTLEGE_ROT, true},
+  {BTN_FESTLEGE, LED_FESTLEGE_WEISS, false},
+};
+
+GpioCopy g_gpio_shadow{g_shadows};
 
 
 
@@ -216,16 +252,9 @@ void setup() {
   strip.set_brightness(0x20);
 
   ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
-
-  g_tmm.start_periodic(500);
 }
 
 void loop() {
   // Calls the executor to do loop for all registered objects.
   ex.loop();
-  if (g_tmm.check()) {
-    Serial.printf("Input: %02x | %02x %02x\n", g_ext_gpio.get_input_byte(0), 
-      g_int_gpio.get_input_byte(0), g_int_gpio.get_input_byte(1)
-      );
-  }
 }
