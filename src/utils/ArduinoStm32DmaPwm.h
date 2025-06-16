@@ -35,29 +35,25 @@
 #ifndef _UTILS_ARDUINOSTM32DMAPWM_H_
 #define _UTILS_ARDUINOSTM32DMAPWM_H_
 
-#include "stm32yyxx_ll_spi.h"
-
 #ifndef ARDUINO
 #error "Won't work"
 #endif
 
-#include "utils/Executor.h"
-#include "utils/Macros.h"
+#include "utils/Pwm.h"
+
+class DmaPwmImpl;
 
 class DmaPwm {
  public:
-  DmaPwm(pwm_pin_t pin_start, std::initializer_list<> pins) {
+  DmaPwm(pwm_pin_t pwm_pin_start, std::initializer_list<int> pins) {
     create_impl(pin_start, pins);
   }
 
  private:
   // We use the pImpl pattern to hide the details and dependencies on low level
   // DMA and Timer drivers.
-  class DmaPwmImpl;
   DmaPwmImpl* impl_;
-  void create_impl(pwm_pin_t pin_start, std::initializer_list<> pins);
+  void create_impl(pwm_pin_t pin_start, std::initializer_list<int> pins);
 };
-
-
 
 #endif // _UTILS_ARDUINOSTM32DMAPWM_H_
