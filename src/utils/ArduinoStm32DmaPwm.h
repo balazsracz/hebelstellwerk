@@ -39,6 +39,8 @@
 #error "Won't work"
 #endif
 
+#include <Arduino.h>
+
 #include "utils/Pwm.h"
 
 class DmaPwmImpl;
@@ -46,7 +48,7 @@ class DmaPwmImpl;
 class DmaPwm {
  public:
   DmaPwm(pwm_pin_t pwm_pin_start, std::initializer_list<int> pins) {
-    create_impl(pin_start, pins);
+    create_impl(pwm_pin_start, pins);
   }
 
  private:
