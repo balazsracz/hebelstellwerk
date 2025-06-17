@@ -133,7 +133,9 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
     if (next_active_pin_ < pins_.size()) {
       if (!pulse_in_progress_) {
         // start pulse for next pin.
-        start_timer(next_active_pin_);
+        if (!start_timer(next_active_pin_)) {
+          ++next_active_pin_;
+        }
       }
     } else if (tm_.check()) {
       // Start new iteration.
@@ -144,7 +146,10 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
  private:
   /// Starts the DMA based output for a given pin.
   /// @param index 0 to pins_.size() - 1.
-  void start_timer(unsigned index) {
+  bool start_timer(unsigned index) {
+    if (!pins_[index].count_high_) {
+      return false;
+    }
     auto& pn = pins_[index].pin_name_;
     GPIO_TypeDef* port = get_GPIO_Port(STM_PORT(pn));
     uint32_t target_address = (uint32_t) &port->BSRR;
@@ -161,6 +166,8 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
     __HAL_TIM_ENABLE(&timer_handle_);
     // Triggering an update will perform one DMA right now and 
     HAL_TIM_GenerateEvent(&timer_handle_, TIM_EVENTSOURCE_UPDATE);
+
+    return true;
   }
 
   /// Stops the DMA and resets the timer.
