@@ -10,6 +10,7 @@
 #include "utils/ArduinoStm32DmaPwm.h"
 #include "utils/ServoGpio.h"
 
+#include "utils/CommandHandler.h"
 
 
 
@@ -33,6 +34,8 @@ enum GpioPin : gpio_pin_t {
   SERVO4,
 };
 
+Blinker blinker{ONBOARD_LED};
+
 enum PwmPin : pwm_pin_t {
   PWM_DMA = 200,
   PWM_SERVO1 = PWM_DMA,
@@ -54,7 +57,22 @@ std::initializer_list<GpioCopyInstance> g_shadows{
   {ONBOARD_BTN, SERVO1, true},
 };
 
+#if 1
 GpioCopy g_gpio_shadow{g_shadows};
+#endif
+
+
+void CommandHandler::set_servo(int servo_num, int degrees) {
+  if (servo_num < 1 || servo_num > ARRAYSIZE(servos)) {
+    Serial.println(F("Error: Invalid servo number"));
+    return;
+  }
+  if (degrees < -90 || degrees > 270) {
+    Serial.println(F("Error: Invalid servo degree"));
+    return;
+  }
+  servos[servo_num - 1].set_manual_degree(degrees);
+}
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);

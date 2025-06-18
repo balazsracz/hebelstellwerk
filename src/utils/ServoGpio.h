@@ -99,10 +99,20 @@ class ServoGpio : public Gpio, public Servo, private Executable {
     command_deg(deg_off_);
     steady_state_ = true;
     output_off_ = false;
+    disengaged_ = false;
     target_time_millis_ = Executor::instance()->millis() + SERVO_TURNOFF_MSEC;
   }
 
+  /// Overrides the output state to a specific number of degrees. Disengages
+  /// the servo from being controlled from now on.
+  void set_manual_degree(int deg) {
+    disengaged_ = true;
+    target_deg_ = deg;
+    command_deg(target_deg_);
+  }
+  
   void loop() override {
+    if (disengaged_) return;
     if (steady_state_) {
       if (output_off_) {
         // nothing to do
@@ -240,6 +250,9 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   mutable bool steady_state_ : 1;
   /// 1 if we have turned off the output.
   mutable bool output_off_ : 1;
+  /// 1 if this servo gpio was disengaged due to manual override from the
+  /// cmdline.
+  mutable bool disengage_ : 1;
 
   /// Degree that we commanded last time.
   mutable int16_t commanded_deg_;
