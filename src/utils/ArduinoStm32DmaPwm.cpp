@@ -44,11 +44,32 @@
 
 #include "stm32yyxx_hal_conf.h"
 
-#define DMA_INSTANCE               DMA1_Channel1
+#if defined(STM32F3xx)
+#define DMA_INSTANCE               DMA1_Channel2
 
-DMA_HandleTypeDef     g_dma_handle = {0};
+static void dmamux_setup() {
+  __HAL_RCC_DMA1_CLK_ENABLE();
+}
+
+#elif defined(STM32F0xx)
+
+#define DMA_INSTANCE               DMA1_Channel2
+
+static void dmamux_setup() {
+  __HAL_RCC_DMA1_CLK_ENABLE();
+}
+
+#else
+#error define DMAMUX setup for this chip
+#endif
+
 
 #define TIMER_INSTANCE               TIM2
+
+
+HardwareTimer g_htim{TIMER_INSTANCE};
+
+DMA_HandleTypeDef     g_dma_handle = {0};
 
 
 class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
@@ -86,11 +107,19 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
     // 20 msec.
     tm_.start_drifting(20);
 
+    dmamux_setup();
+    
+    {
+      uint32_t index = get_timer_index(TIMER_INSTANCE);      
+      timerObj_t* arduino_obj = HardwareTimer_Handle[index];
+      timer_handle_ = &arduino_obj->handle;
+    }
+
     // Sets up pin names and initializes outputs.
     for (auto& p : pins_) {
+      pinMode(p.arduino_pin_, OUTPUT);
       p.pin_name_ = digitalPinToPinName(p.arduino_pin_);
       digitalWriteFast(p.pin_name_, LOW);
-      pinMode(p.arduino_pin_, OUTPUT);
     }
     
     // Sets up HAL DMA configuration.
@@ -110,16 +139,16 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
     ASSERT(ret == HAL_OK);
 
     // Sets up HAL Timer configuration.
-    timer_handle_.Instance = TIMER_INSTANCE;
+    timer_handle_->Instance = TIMER_INSTANCE;
     // Prescaler for 1000 timer ticks per millisecond.
-    timer_handle_.Init.Prescaler = F_CPU / 1000000;
-    timer_handle_.Init.CounterMode = TIM_COUNTERMODE_DOWN;
-    timer_handle_.Init.Period = 1000; // 1 msec, will set later.
-    timer_handle_.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1; 
-    timer_handle_.Init.RepetitionCounter = 0;
-    timer_handle_.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+    timer_handle_->Init.Prescaler = F_CPU / 1000000;
+    timer_handle_->Init.CounterMode = TIM_COUNTERMODE_DOWN;
+    timer_handle_->Init.Period = 1000; // 1 msec, will set later.
+    timer_handle_->Init.ClockDivision = TIM_CLOCKDIVISION_DIV1; 
+    timer_handle_->Init.RepetitionCounter = 0;
+    timer_handle_->Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
-    ret = HAL_TIM_Base_Init(&timer_handle_);
+    ret = HAL_TIM_Base_Init(timer_handle_);
     ASSERT(ret == HAL_OK);
   }
 
@@ -160,20 +189,20 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
         HAL_DMA_Start(&g_dma_handle, (uint32_t)dma_buffer_, target_address, 2);
     ASSERT(HAL_OK == ret);
     // Sets up timer.
-    __HAL_TIM_SET_COUNTER(&timer_handle_, 1000);
-    __HAL_TIM_SET_AUTORELOAD(&timer_handle_, pins_[index].count_high_);
-    __HAL_TIM_ENABLE_DMA(&timer_handle_, TIM_DMA_UPDATE);    
-    __HAL_TIM_ENABLE(&timer_handle_);
+    __HAL_TIM_SET_COUNTER(timer_handle_, 1000);
+    __HAL_TIM_SET_AUTORELOAD(timer_handle_, pins_[index].count_high_);
+    __HAL_TIM_ENABLE_DMA(timer_handle_, TIM_DMA_UPDATE);    
+    __HAL_TIM_ENABLE(timer_handle_);
     // Triggering an update will perform one DMA right now and 
-    HAL_TIM_GenerateEvent(&timer_handle_, TIM_EVENTSOURCE_UPDATE);
+    HAL_TIM_GenerateEvent(timer_handle_, TIM_EVENTSOURCE_UPDATE);
 
     return true;
   }
 
   /// Stops the DMA and resets the timer.
   void stop_timer() {
-    __HAL_TIM_DISABLE_DMA(&timer_handle_, TIM_DMA_UPDATE);
-    __HAL_TIM_DISABLE(&timer_handle_);
+    __HAL_TIM_DISABLE_DMA(timer_handle_, TIM_DMA_UPDATE);
+    __HAL_TIM_DISABLE(timer_handle_);
     // Calls the HAL to ensure that the state management is correct.
     auto ret = HAL_DMA_PollForTransfer(&g_dma_handle, HAL_DMA_FULL_TRANSFER, 0);
     ASSERT(ret == HAL_OK);
@@ -181,7 +210,7 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
   }
 
   struct PinInfo {
-    PinInfo(int ardino_pin) {}
+    PinInfo(int arduino_pin) : arduino_pin_(arduino_pin) {}
     
     int arduino_pin_;
     PinName pin_name_;
@@ -203,7 +232,7 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
   uint32_t dma_buffer_[2];
 
   // HAL configuration and state
-  TIM_HandleTypeDef timer_handle_{0};
+  TIM_HandleTypeDef* timer_handle_ = nullptr;
 };  // class DmaPwmImpl
 
 void DmaPwm::create_impl(pwm_pin_t pin_start, std::initializer_list<int> pins) {
