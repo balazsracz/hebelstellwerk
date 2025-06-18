@@ -252,7 +252,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   mutable bool output_off_ : 1;
   /// 1 if this servo gpio was disengaged due to manual override from the
   /// cmdline.
-  mutable bool disengage_ : 1;
+  mutable bool disengaged_ : 1;
 
   /// Degree that we commanded last time.
   mutable int16_t commanded_deg_;
