@@ -16,6 +16,9 @@
 #include "utils/PixelGpio.h"
 #include "utils/GpioDebug.h"
 #include "utils/GpioCopier.h"
+#include "utils/ArduinoStm32DmaPwm.h"
+#include "utils/Pwm.h"
+#include "utils/CommandHandler.h"
 
 
 #ifndef ARDUINO
@@ -55,6 +58,34 @@ enum GpioPin : gpio_pin_t {
   PX_C_ERLAUBNISFELD,
   PX_C_ENDFELD,
 
+  SRV_START = 150 - 1,
+  SRV_LOCK_F1a,
+  SRV_LOCK_F1b,
+  SRV_LOCK_F2a,
+  SRV_LOCK_F2b,
+  SRV_LOCK_F3a,
+  SRV_LOCK_F3b,
+  SRV_LOCK_F4a,
+  SRV_LOCK_F4b,
+  SRV_LOCK_F5a,
+  SRV_LOCK_F5b,
+  SRV_LOCK_F6a,
+  SRV_LOCK_F6b,
+
+  SRV_LOCK_W1,
+  SRV_LOCK_W2a, 
+  SRV_LOCK_W2b,
+  SRV_LOCK_W3,
+  SRV_LOCK_W4,
+  SRV_LOCK_W5_6,
+  SRV_LOCK_W7a,
+  SRV_LOCK_W7b,
+  SRV_LOCK_W8,
+  SRV_LOCK_W9,
+  SRV_LOCK_W10_11,
+  SRV_LOCK_SIGA,
+  SRV_LOCK_SIGB,
+  
   INT_SPI = 250,
   INT_OUT_DUMMY = INT_SPI,
   INT_PORTB7 = INT_OUT_DUMMY + 8,
@@ -76,18 +107,18 @@ enum GpioPin : gpio_pin_t {
   INT_PORTA0,
 
 
-  HBL_F1A = INT_PORTA0,
-  HBL_F1B = INT_PORTA1,
-  HBL_F2A = INT_PORTA2,
-  HBL_F2B = INT_PORTA3,
-  HBL_F3A = INT_PORTA4,
-  HBL_F3B = INT_PORTA5,
-  HBL_F4A = INT_PORTA6,
-  HBL_F4B = INT_PORTA7,
-  HBL_F5A = INT_PORTB0,
-  HBL_F5B = INT_PORTB1,
-  HBL_F6A = INT_PORTB2,
-  HBL_F6B = INT_PORTB3,
+  HBL_F1a = INT_PORTA0,
+  HBL_F1b = INT_PORTA1,
+  HBL_F2a = INT_PORTA2,
+  HBL_F2b = INT_PORTA3,
+  HBL_F3a = INT_PORTA4,
+  HBL_F3b = INT_PORTA5,
+  HBL_F4a = INT_PORTA6,
+  HBL_F4b = INT_PORTA7,
+  HBL_F5a = INT_PORTB0,
+  HBL_F5b = INT_PORTB1,
+  HBL_F6a = INT_PORTB2,
+  HBL_F6b = INT_PORTB3,
 
   EXT_SPI = 300,
 
@@ -139,6 +170,99 @@ enum GpioPin : gpio_pin_t {
   HBL_W7b,
 };
 
+enum PwmPin : pwm_pin_t {
+  PWM_DMA = 100,
+
+  PWM_LOCK_F1a = PWM_DMA,
+  PWM_LOCK_F1b,
+  PWM_LOCK_F2a,
+  PWM_LOCK_F2b,
+  PWM_LOCK_F3a,
+  PWM_LOCK_F3b,
+  PWM_LOCK_F4a,
+  PWM_LOCK_F4b,
+  PWM_LOCK_F5a,
+  PWM_LOCK_F5b,
+  PWM_LOCK_F6a,
+  PWM_LOCK_F6b,
+
+  PWM_LOCK_W1,
+  PWM_LOCK_W2a, 
+  PWM_LOCK_W2b,
+  PWM_LOCK_W3,
+  PWM_LOCK_W4,
+  PWM_LOCK_W5_6,
+  PWM_LOCK_W7a,
+  PWM_LOCK_W7b,
+  PWM_LOCK_W8,
+  PWM_LOCK_W9,
+  PWM_LOCK_W10_11,
+  PWM_LOCK_SIGA,
+  PWM_LOCK_SIGB,
+};
+
+DmaPwm g_pwm(PWM_DMA, {PC8, PC9, PC6,  PC5,  PA12, PA11, PB12, PC7,  PB2,
+                       PA8, PB1, PB15, PC10, PC12, PD2,  PC14, PC15, PA0,
+                       PA1, PF1, PC0,  PC3,  PC1,  PC2,  PA4});
+
+// was: PC9, PC8, PC6, PA12, PA11, PB12, PC7, PB2, PA8, PB1, PB15, PC2, PC5,
+// PC10, PC12, PD2, PC14, PC15, PA0, PA1, PF1, PA4, PC1, PC3, PC0
+
+/// Milliseconds how long it should take to transition a servo from on to off.
+static constexpr unsigned XN_TIME = 500;
+
+ServoGpio servos[25] = {
+    {SRV_LOCK_F1a, PWM_LOCK_F1a, 30, 90, XN_TIME},
+    {SRV_LOCK_F1b, PWM_LOCK_F1b, 160, 100, XN_TIME},
+    {SRV_LOCK_F2a, PWM_LOCK_F2a, 10, 70, XN_TIME},
+    {SRV_LOCK_F2b, PWM_LOCK_F2b, 155, 90, XN_TIME},
+    {SRV_LOCK_F3a, PWM_LOCK_F3a, 30, 90, XN_TIME},
+    {SRV_LOCK_F3b, PWM_LOCK_F3b, 140, 80, XN_TIME},
+    {SRV_LOCK_F4a, PWM_LOCK_F4a, -50, 10, XN_TIME},
+    {SRV_LOCK_F4b, PWM_LOCK_F4b, 215, 155, XN_TIME},
+    {SRV_LOCK_F5a, PWM_LOCK_F5a, 0, 80, XN_TIME},
+    {SRV_LOCK_F5b, PWM_LOCK_F5b, 160, 80, XN_TIME},
+    {SRV_LOCK_F6a, PWM_LOCK_F6a, 30, 110, XN_TIME},
+    {SRV_LOCK_F6b, PWM_LOCK_F6b, 150, 90, XN_TIME},
+
+    {SRV_LOCK_W1, PWM_LOCK_W1, 45, 100, XN_TIME},
+    {SRV_LOCK_W2a, PWM_LOCK_W2a, 30, 85, XN_TIME},
+    {SRV_LOCK_W2b, PWM_LOCK_W2b, 40, 90, XN_TIME},
+    {SRV_LOCK_W3, PWM_LOCK_W3, 50, 100, XN_TIME},  // 4
+    {SRV_LOCK_W4, PWM_LOCK_W4, 35, 95, XN_TIME},   // 5
+    {SRV_LOCK_W5_6, PWM_LOCK_W5_6, 25, 85, XN_TIME},
+    {SRV_LOCK_W7a, PWM_LOCK_W7a, 45, 95, XN_TIME},
+    {SRV_LOCK_W7b, PWM_LOCK_W7b, 55, 110, XN_TIME}, //8
+    {SRV_LOCK_W8, PWM_LOCK_W8, 60, 110, XN_TIME},  //9
+    {SRV_LOCK_W9, PWM_LOCK_W9, 60, 115, XN_TIME},
+    {SRV_LOCK_W10_11, PWM_LOCK_W10_11, 60, 115, XN_TIME},
+    {SRV_LOCK_SIGA, PWM_LOCK_SIGA, 65, 115, XN_TIME}, // 12
+    {SRV_LOCK_SIGB, PWM_LOCK_SIGB, 60, 110, XN_TIME}, // 13
+};
+
+void CommandHandler::set_servo(int servo_num, int degrees) {
+  if (servo_num < 1 || servo_num > ARRAYSIZE(servos)) {
+    Serial.println(F("Error: Invalid servo number"));
+    return;
+  }
+  if (degrees < -90 || degrees > 270) {
+    Serial.println(F("Error: Invalid servo degree"));
+    return;
+  }
+  servos[servo_num - 1].set_manual_degree(degrees);
+}
+
+void CommandHandler::set_gpio(int gpio_num, bool is_on) {
+  const Gpio* gpio = GpioRegistry::instance()->get_or_null(gpio_num);
+  if (!gpio) {
+    Serial.println(F("Error: Gpio number not registered"));
+    return;
+  }
+  gpio->write(gpio_num, is_on);
+}
+
+CommandHandler cli;
+
 GlobalState st;
 GlobalUnlocker unlocker{ONBOARD_BTN, true};
 
@@ -184,18 +308,18 @@ std::initializer_list<GpioDebugInstance> g_gpios{
   {BTN_ERLAUB, "Erlaubnis taste", true},
   {BTN_FESTLEGE, "Festlege taste", true},
   {KURBEL_RAW, "Kurbel", true},
-  {HBL_F1A, "Fahrstrasse 1a", true},
-  {HBL_F1B, "Fahrstrasse 1b", true},
-  {HBL_F2A, "Fahrstrasse 2a", true},
-  {HBL_F2B, "Fahrstrasse 2b", true},
-  {HBL_F3A, "Fahrstrasse 3a", true},
-  {HBL_F3B, "Fahrstrasse 3b", true},
-  {HBL_F4A, "Fahrstrasse 4a", true},
-  {HBL_F4B, "Fahrstrasse 4b", true},
-  {HBL_F5A, "Fahrstrasse 5a", true},
-  {HBL_F5B, "Fahrstrasse 5b", true},
-  {HBL_F6A, "Fahrstrasse 6a", true},
-  {HBL_F6B, "Fahrstrasse 6b", true},
+  {HBL_F1a, "Fahrstrasse 1a", true},
+  {HBL_F1b, "Fahrstrasse 1b", true},
+  {HBL_F2a, "Fahrstrasse 2a", true},
+  {HBL_F2b, "Fahrstrasse 2b", true},
+  {HBL_F3a, "Fahrstrasse 3a", true},
+  {HBL_F3b, "Fahrstrasse 3b", true},
+  {HBL_F4a, "Fahrstrasse 4a", true},
+  {HBL_F4b, "Fahrstrasse 4b", true},
+  {HBL_F5a, "Fahrstrasse 5a", true},
+  {HBL_F5b, "Fahrstrasse 5b", true},
+  {HBL_F6a, "Fahrstrasse 6a", true},
+  {HBL_F6b, "Fahrstrasse 6b", true},
   {HBL_W1, "Weiche 1", true},
   {HBL_W2a, "Weiche 2a", true},
   {HBL_W2b, "Weiche 2b", true},
@@ -227,22 +351,13 @@ std::initializer_list<GpioCopyInstance> g_shadows{
 
 GpioCopy g_gpio_shadow{g_shadows};
 
-
-
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(USER_BTN, INPUT_PULLUP);
   g_ext_spi.begin();
   g_int_spi.begin();
-  pinMode(PB15, OUTPUT);
 
-  //@todo check these
-  pinMode(PC2, INPUT_PULLUP);
-  pinMode(PA9, INPUT_PULLUP);
-  // digitalWrite(PA9, HIGH);
-  pinMode(PC5, OUTPUT);
-  digitalWrite(PC5, LOW);
-  // end todo
+  pinMode(PA9, INPUT_PULLUP); // LN-TX
 
   Serial.begin(115200);
   // delay(100);
@@ -252,6 +367,13 @@ void setup() {
   strip.set_brightness(0x20);
 
   ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
+
+  // SPI1 MOSI that is unused and we ahve a servo on that pin.
+  pinMode(PB15, OUTPUT);
+  digitalWrite(PB15, LOW);
+  // Idk
+  pinMode(PC5, OUTPUT);
+  digitalWrite(PC5, LOW);
 }
 
 void loop() {
