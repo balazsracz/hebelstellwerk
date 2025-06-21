@@ -108,6 +108,37 @@ class CommandHandler : public Executable {
 
       // Call the function to handle the command.
       set_servo(servo_num, degrees);
+    } else if (command.startsWith(F("gpio"))) {
+      // Find the space after "gpio".
+      int first_space = command.indexOf(' ');
+      if (first_space == -1) {
+        print_error(F("Malformed gpio command: Missing parameters."));
+        return;
+      }
+
+      // Find the space between the two numbers.
+      int second_space = command.indexOf(' ', first_space + 1);
+      if (second_space == -1) {
+        print_error(F("Malformed gpio command: Missing second parameter."));
+        return;
+      }
+
+      // Extract substrings for the two parameters.
+      String num_str = command.substring(first_space + 1, second_space);
+      String on_str = command.substring(second_space + 1);
+
+      // Convert substrings to integer values.
+      int gpio_num = num_str.toInt();
+      bool is_on = on_str.toInt();
+
+      // Print a confirmation message to the Serial monitor.
+      Serial.print(F("CMD: Set gpio #"));
+      Serial.print(gpio_num);
+      Serial.print(F(" to "));
+      Serial.print(is_on ? F("on"): F("off"));
+
+      // Call the function to handle the command.
+      set_gpio(gpio_num, is_on);
     } else {
       // Handle any command that is not recognized.
       Serial.print(F("Unknown command: "));
@@ -133,6 +164,16 @@ class CommandHandler : public Executable {
    * @param degrees The integer for the servo's target angle (-90 to 270).
    */
   static void set_servo(int servo_num, int degrees);
+
+  /**
+   * @brief The target function for the "gpio" command. The user has to
+   * implement this in the main .ino sketch.
+   *
+   * @param gpio_num The integer identifier for the gpio.
+   * @param is_on True for setting the gpio on, false for off
+   */
+  static void set_gpio(int gpio_num, bool is_on);
+
 };
 
 #endif  // _UTILS_COMMAND_HANDLER_H
