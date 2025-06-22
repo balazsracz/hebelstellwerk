@@ -353,6 +353,11 @@ std::initializer_list<GpioCopyInstance> g_shadows{
   {LED_FESTLEGE_WEISS, LED_FESTLEGE_ROT, true},
   // Servos für Fahrstrassenhebel sind gleich.
   {SRV_LOCK_F1a, SRV_LOCK_F1b, false},
+  {SRV_LOCK_F2a, SRV_LOCK_F2b, false},
+  {SRV_LOCK_F3a, SRV_LOCK_F3b, false},
+  {SRV_LOCK_F4a, SRV_LOCK_F4b, false},
+  {SRV_LOCK_F5a, SRV_LOCK_F5b, false},
+  {SRV_LOCK_F6a, SRV_LOCK_F6b, false},
 };
 
 GpioCopy g_gpio_shadow{g_shadows};
@@ -394,6 +399,16 @@ Signalhebel SB{SIGNAL_B_AUS, HP1, HBL_SIGB, false, SRV_LOCK_SIGB, false};
 
 Fahrstrassenhebel Rab1{a1,      b1,   HBL_F1a,      true,
                        HBL_F1b, true, SRV_LOCK_F1a, false};
+Fahrstrassenhebel Rab2{a2,      b2,   HBL_F2a,      true,
+                       HBL_F2b, true, SRV_LOCK_F2a, false};
+Fahrstrassenhebel Rab3{a3,      b3,   HBL_F3a,      true,
+                       HBL_F3b, true, SRV_LOCK_F3a, false};
+Fahrstrassenhebel Rab4{a4,      b4,   HBL_F4a,      true,
+                       HBL_F4b, true, SRV_LOCK_F4a, false};
+Fahrstrassenhebel Rab5{a5,      b5,   HBL_F5a,      true,
+                       HBL_F5b, true, SRV_LOCK_F5a, false};
+Fahrstrassenhebel Rab6{a6,      b6,   HBL_F6a,      true,
+                       HBL_F6b, true, SRV_LOCK_F6a, false};
 
 #if 1
 
@@ -424,6 +439,51 @@ Verschlusstabelle vtbl({
     Fstr(b1),
     WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
     WeicheMinus(W4), WeichePlus(W5_6), WeichePlus(W7b),
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+
+    Fstr(a2),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeicheMinus(W3),
+    WeichePlus(W4), WeichePlus(W5_6), WeichePlus(W7b),
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b2),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeicheMinus(W3),
+    WeichePlus(W4), WeichePlus(W5_6), WeichePlus(W7b),
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+
+    Fstr(a3),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeichePlus(W4), WeichePlus(W7b),
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b3),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeichePlus(W4), WeichePlus(W7b),
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+
+    Fstr(a4),
+    WeicheMinus(W1), WeichePlus(W2b), WeichePlus(W7a), WeicheMinus(W7b),
+    WeichePlus(W8), WeichePlus(W9), 
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b4),
+    WeicheMinus(W1), WeichePlus(W2b), WeichePlus(W7a), WeicheMinus(W7b),
+    WeichePlus(W8), WeichePlus(W9), 
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+
+    Fstr(a5),
+    WeicheMinus(W1), WeichePlus(W2b), WeicheMinus(W7a), WeicheMinus(W7b),
+    WeicheMinus(W8), WeichePlus(W9), WeichePlus(W10_11),
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b5),
+    WeicheMinus(W1), WeichePlus(W2b), WeicheMinus(W7a), WeicheMinus(W7b),
+    WeicheMinus(W8), WeichePlus(W9), WeichePlus(W10_11),
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+    
+    Fstr(a6),
+    WeicheMinus(W1), WeichePlus(W2b), WeicheMinus(W7a), WeicheMinus(W7b),
+    WeichePlus(W8), WeicheMinus(W9), WeichePlus(W10_11),
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b6),
+    WeicheMinus(W1), WeichePlus(W2b), WeicheMinus(W7a), WeicheMinus(W7b),
+    WeichePlus(W8), WeicheMinus(W9), WeichePlus(W10_11),
     Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
   });
 
