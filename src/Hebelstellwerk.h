@@ -64,6 +64,10 @@ Executor ex;
 const char* volatile g_death_file;
 volatile int g_death_lineno;
 
+using Signalhebel = SignalLever;
+using Fahrstrassenhebel = RouteLever;
+using Weichenhebel = TurnoutLever;
+
 #ifdef ARDUINO
 #include "utils/ArduinoGpio.h"
 #include "utils/Pwm9685.h"
