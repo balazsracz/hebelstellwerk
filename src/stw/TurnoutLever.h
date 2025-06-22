@@ -59,6 +59,16 @@ class TurnoutRegistry
 
 class TurnoutLever : private Executable {
  public:
+  /// Constructor
+  ///
+  /// @param turnout identifier of the turnout that this level controls.
+  /// @param lever_input GPIO for the level input. True when the level is in +,
+  /// False when the lever is in -.
+  /// @param lever_invert true if the GPIO for the lever should be inverted.
+  /// @param lock_output GPIO (output) for locking the lever. Will be set to
+  /// True to lock the lever, False to unlock it.
+  /// @param lock_invert true if the gpio output for the lock should be
+  /// inverted.
   TurnoutLever(TurnoutId turnout, gpio_pin_t lever_input, bool lever_invert,
                gpio_pin_t lock_output, bool lock_invert)
       : id_(turnout),
