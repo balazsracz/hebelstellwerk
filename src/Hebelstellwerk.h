@@ -67,6 +67,7 @@ volatile int g_death_lineno;
 using Signalhebel = SignalLever;
 using Fahrstrassenhebel = RouteLever;
 using Weichenhebel = TurnoutLever;
+using Verschlusstabelle = LockTable;
 
 #ifdef ARDUINO
 #include "utils/ArduinoGpio.h"

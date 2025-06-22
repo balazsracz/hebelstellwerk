@@ -88,6 +88,11 @@ static constexpr LockTableEntry Route(RouteId id) {
   return lock_table_helper(ROUTE_ROW, id);
 }
 
+/// Alias for Route
+static constexpr LockTableEntry Fstr(RouteId id) {
+  return Route(id);
+}
+
 /// Declares that a turnout has to be in the + state in order to allow the
 /// current route. It will be locked there when the route is locked.
 static constexpr LockTableEntry TurnoutPlus(TurnoutId id) {
@@ -136,6 +141,12 @@ static constexpr LockTableEntry BlockOut(BlockId id) {
   return lock_table_helper(BLOCK_OUT, id);
 }
 
+/// Alias for BlockOut
+static constexpr LockTableEntry BlockAusfahrt(BlockId id) {
+  return BlockOut(id);
+}
+
+
 /// Declares that the current route uses the particular block in the inbounds
 /// direction. This is a not dependency; the block may have an arbitrary
 /// state. The detector circuit of this block will be used to determine when
@@ -143,6 +154,12 @@ static constexpr LockTableEntry BlockOut(BlockId id) {
 static constexpr LockTableEntry BlockIn(BlockId id) {
   return lock_table_helper(BLOCK_IN, id);
 }
+
+/// Alias for BlockIn
+static constexpr LockTableEntry BlockEinfahrt(BlockId id) {
+  return BlockIn(id);
+}
+
 
 /// Declares that the given route must NOT be set in order to set the current
 /// route. This is purely a dependency. THIS SETTING IS NOT SYMMETRIC. If two
@@ -171,9 +188,9 @@ class LockTable : public Singleton<LockTable> {
  public:
   LockTable(std::initializer_list<LockTableEntry> entries) : ar_(entries) {}
 
-  const LockTableEntry* begin() { return ar_.begin(); }
+  const LockTableEntry* begin() { return &*ar_.begin(); }
 
-  const LockTableEntry* end() { return ar_.end(); }
+  const LockTableEntry* end() { return &*ar_.end(); }
 
   /// Data structure representing a row in the lock table.
   struct Row {
@@ -243,9 +260,7 @@ class LockTable : public Singleton<LockTable> {
   }
   
  private:
-  std::initializer_list<LockTableEntry> ar_;
+  const std::vector<LockTableEntry> ar_;
 };
-
-using Verschlusstabelle = LockTable;
 
 #endif  // _STW_LOCKTABLE_H_
