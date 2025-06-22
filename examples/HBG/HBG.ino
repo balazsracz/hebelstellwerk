@@ -41,6 +41,12 @@ enum GpioPin : gpio_pin_t {
   ONBOARD_BTN = USER_BTN,
 
   BLOCK_DETECTOR = 100,
+  BLOCK_DETECTOR_HW,
+  DUMMY,
+
+  LED_HALTSTELLMELDER = DUMMY,
+  LED_STRECKENTASTENSPERRE = DUMMY,
+  LED_STOERUNGSMELDER = DUMMY,
   
   ANALOG_BTN_START = 110,
   BTN_C_VORBLOCK = ANALOG_BTN_START,
@@ -141,7 +147,7 @@ enum GpioPin : gpio_pin_t {
   KURBEL_RAW,
   BLOCK_IN1,
   BLOCK_IN2,
-  BLOCK_IN3,
+  BTN_FHT, // not really here
   BTN_ENDF,
   BTN_ERLAUB,
   BTN_ANF,
@@ -208,6 +214,9 @@ DmaPwm g_pwm(PWM_DMA, {PC8, PC9, PC6,  PC5,  PA12, PA11, PB12, PC7,  PB2,
 // was: PC9, PC8, PC6, PA12, PA11, PB12, PC7, PB2, PA8, PB1, PB15, PC2, PC5,
 // PC10, PC12, PD2, PC14, PC15, PA0, PA1, PF1, PA4, PC1, PC3, PC0
 
+DummyGpio gpio_detector(BLOCK_DETECTOR_HW);
+DummyGpio gpio_dummy(DUMMY);
+
 /// Milliseconds how long it should take to transition a servo from on to off.
 static constexpr unsigned XN_TIME = 500;
 
@@ -261,16 +270,6 @@ void CommandHandler::set_gpio(int gpio_num, bool is_on) {
   gpio->write(gpio_num, is_on);
 }
 
-CommandHandler cli;
-
-GlobalState st;
-GlobalUnlocker unlocker{ONBOARD_BTN, true};
-
-static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
-AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
-
-HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
-
 SpiPixelStrip strip(6, PA7, PB4, PB3);
 const uint32_t kOutputParams[] = {
     0, Pixel::RED, Pixel::WHITE,  //
@@ -280,16 +279,6 @@ const uint32_t kOutputParams[] = {
 
 PixelGpio px_gpio{&strip, 120, 6, kOutputParams};
 
-DirectBlock block_c{"C", &BlockCSerial, PB11, PA15};
-SimpleBlockUi c_ui{&block_c};
-const uint16_t c_ui_rdy = c_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
-                          c_ui.set_ruckblock_taste(BTN_C_RUCKBLOCK, false) |
-                          c_ui.set_abgabe_taste(BTN_C_ABGABE, false) |
-                          c_ui.set_anfangsfeld(PX_C_ANFANGSFELD, false) |
-                          c_ui.set_endfeld(PX_C_ENDFELD, false) |
-                          c_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
-
-
 static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 3;
 static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 1;
 GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{EXT_SPI, EXT_LAT, g_ext_spi};
@@ -297,6 +286,25 @@ GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{EXT_SPI, E
 static constexpr unsigned NUM_INT_INPUT_REGISTERS = 2;
 static constexpr unsigned NUM_INT_OUTPUT_REGISTERS = 1;
 GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{INT_SPI, INT_LAT, g_int_spi};
+
+CommandHandler cli;
+
+GlobalState st;
+GlobalUnlocker unlocker{SW_MODEDN, true};
+
+static const int16_t kCenters[] = {913, 786, 683, 559, 461, 346, 254, 171, 93};
+AnalogDemux gpio_an{110, PB0, kCenters, sizeof(kCenters) / sizeof(kCenters[0])};
+
+HardwareSerial BlockCSerial(PB11 /*rx*/, PB10 /*tx*/);
+
+DirectBlock block{"C", &BlockCSerial, PB11, PA15};
+SimpleBlockUi block_ui{&block};
+const uint16_t ui_rdy = block_ui.set_vorblock_taste(BTN_C_VORBLOCK, false) |
+                        block_ui.set_ruckblock_taste(BTN_C_RUCKBLOCK, false) |
+                        block_ui.set_abgabe_taste(BTN_C_ABGABE, false) |
+                        block_ui.set_anfangsfeld(PX_C_ANFANGSFELD, false) |
+                        block_ui.set_endfeld(PX_C_ENDFELD, false) |
+                        block_ui.set_erlaubnisfeld(PX_C_ERLAUBNISFELD, false);
 
 
 std::initializer_list<GpioDebugInstance> g_gpios{
@@ -339,17 +347,70 @@ std::initializer_list<GpioDebugInstance> g_gpios{
 GpioDebug g_gpio_printer{g_gpios};
 
 std::initializer_list<GpioCopyInstance> g_shadows{
-  {BTN_ANF, LED_ANF_ROT, true},
-  {BTN_ANF, LED_ANF_WEISS, false},
-  {BTN_ENDF, LED_ENDF_ROT, true},
-  {BTN_ENDF, LED_ENDF_WEISS, false},
-  {BTN_ERLAUB, LED_ERLAUB_ROT, true},
-  {BTN_ERLAUB, LED_ERLAUB_WEISS, false},
-  {BTN_FESTLEGE, LED_FESTLEGE_ROT, true},
-  {BTN_FESTLEGE, LED_FESTLEGE_WEISS, false},
+  {LED_ANF_WEISS, LED_ANF_ROT, true},
+  {LED_ENDF_WEISS, LED_ENDF_ROT, true},
+  {LED_ERLAUB_WEISS, LED_ERLAUB_ROT, true},
+  {LED_FESTLEGE_WEISS, LED_FESTLEGE_ROT, true},
+  // Servos für Fahrstrassenhebel sind gleich.
+  {SRV_LOCK_F1a, SRV_LOCK_F1b, false},
 };
 
 GpioCopy g_gpio_shadow{g_shadows};
+
+// The Hilfsbelegungstaste is active low. The real hardware is marked as active
+// high, because dummygpio reports low by default.
+// The output is active high (true means occupied).
+BlockDetectorOverride gpio_det_ab(BLOCK_DETECTOR, BTN_BELEG, true,
+                                  BLOCK_DETECTOR_HW, false);
+
+
+// ==================== logical devices ================
+
+enum SignalId : uint8_t { SIGNAL_A_EIN, SIGNAL_B_AUS };
+
+enum TurnoutId : uint8_t { W1, W2a, W2b, W3, W4, W5_6, W7a, W7b, //
+  W8, WS9, W10_11 };
+
+enum RouteId : uint8_t { a1, b1, a2, b2, a3, b3, a4, b4, a5, b5, a6, b6 };
+
+enum BlockId : uint8_t {
+  BLOCK_AB,
+};
+
+Weichenhebel TW1{W1, HBL_W1, true, SRV_LOCK_W1, false};
+
+Signalhebel SA{SIGNAL_A_EIN, HP2, HBL_SIGA, false, SRV_LOCK_SIGA, false};
+Signalhebel SB{SIGNAL_B_AUS, HP1, HBL_SIGB, false, SRV_LOCK_SIGB, false};
+
+Fahrstrassenhebel Rab1{a1,      b1,   HBL_F1a,      true,
+                       HBL_F1b, true, SRV_LOCK_F1a, false};
+
+#if 1
+
+FelderBlock blk_ab(&block, BLOCK_AB, BLOCK_DETECTOR, false, BTN_FESTLEGE, true,
+                   LED_FESTLEGE_WEISS, true, BTN_FHT, true);
+
+const auto abrdy = blk_ab.set_vorblock_taste(BTN_ANF, true) |
+                   blk_ab.set_ruckblock_taste(BTN_ENDF, true) |
+                   blk_ab.set_abgabe_taste(BTN_ERLAUB, true) |
+                   blk_ab.set_kurbel(KURBEL_RAW, true) |
+                   blk_ab.set_anfangsfeld(LED_ANF_WEISS, true) |
+                   blk_ab.set_endfeld(LED_ENDF_WEISS, true) |
+                   blk_ab.set_erlaubnisfeld(LED_ERLAUB_WEISS, true) |
+                   /// @todo figure out these GPIO assignments
+                   blk_ab.set_signalhaltmelder(LED_HALTSTELLMELDER, false) |
+                   blk_ab.set_storungsmelder(LED_STOERUNGSMELDER, false) |
+                   blk_ab.set_streckentastensperre(LED_STRECKENTASTENSPERRE, false);
+
+#endif
+
+// ================= Verschlusstabelle ======================
+
+Verschlusstabelle vtbl({
+    Fstr(a1), WeichePlus(W1), Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b1), WeichePlus(W1), Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+  });
+
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -361,12 +422,13 @@ void setup() {
 
   Serial.begin(115200);
   // delay(100);
-  Serial.println("Hello, world");
+  Serial.println("\n\n=================\nHello, world");
   Executor::instance()->begin();
 
   strip.set_brightness(0x20);
 
-  ASSERT(c_ui_rdy == c_ui.EXPECTED_SETUP);
+  ASSERT(ui_rdy == block_ui.EXPECTED_SETUP);
+  blk_ab.check_setup(abrdy);
 
   // SPI1 MOSI that is unused and we ahve a servo on that pin.
   pinMode(PB15, OUTPUT);
