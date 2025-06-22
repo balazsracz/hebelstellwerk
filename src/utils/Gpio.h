@@ -82,10 +82,12 @@ class DummyGpio : public Gpio {
     GpioRegistry::instance()->register_obj(this, num);
   }
   
-  void write(gpio_pin_t pin, bool value) const override {}
-  bool read(gpio_pin_t pin) const override { return false; }
+  void write(gpio_pin_t pin, bool value) const override { value_ = value; }
+  bool read(gpio_pin_t pin) const override { return value_; }
   void set_output(gpio_pin_t pin) const override {}
   void set_input(gpio_pin_t pin) const override {}
+
+  mutable bool value_{false};
 };
 
 enum GpioDirection { GPIO_INPUT, GPIO_OUTPUT };
