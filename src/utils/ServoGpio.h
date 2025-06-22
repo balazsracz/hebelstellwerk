@@ -107,12 +107,14 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   /// the servo from being controlled from now on.
   void set_manual_degree(int deg) {
     disengaged_ = true;
+    steady_state_ = true;
+    output_off_ = false;
     target_deg_ = deg;
     command_deg(target_deg_);
+    target_time_millis_ = Executor::instance()->millis() + SERVO_TURNOFF_MSEC;
   }
   
   void loop() override {
-    if (disengaged_) return;
     if (steady_state_) {
       if (output_off_) {
         // nothing to do
@@ -126,6 +128,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
         return;
       }
     }
+    if (disengaged_) return;
     auto millis = Executor::instance()->millis();
     if (millis >= target_time_millis_) {
       // We reached an end point.
@@ -149,8 +152,8 @@ class ServoGpio : public Gpio, public Servo, private Executable {
     // Still in the middle of the travel
     if (tm_.check()) {
       // Update servo position.
-      fprintf(stderr, "int(%u/%u, %u/%u, %u)\n", source_time_millis_,
-              source_deg_, target_time_millis_, target_deg_, millis);
+      //fprintf(stderr, "int(%u/%u, %u/%u, %u)\n", source_time_millis_,
+      //        source_deg_, target_time_millis_, target_deg_, millis);
       auto deg = interpolate(source_time_millis_, source_deg_,
                              target_time_millis_, target_deg_, millis);
       command_deg(deg);
@@ -197,9 +200,10 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   }
 
   void write(gpio_pin_t pin, bool value) const override {
-    if (value == last_state_) {
+    if (value == last_state_ && !disengaged_) {
       return;
     }
+    disengaged_ = false;
     last_state_ = value;
     steady_state_ = false;
     pending_overrotate_ = true;
@@ -217,7 +221,7 @@ class ServoGpio : public Gpio, public Servo, private Executable {
   bool read(gpio_pin_t pin) const override { return last_state_; }
 
  private:
-  static constexpr uint32_t SERVO_UPDATE_MSEC = 50;
+  static constexpr uint32_t SERVO_UPDATE_MSEC = 5;
   /// After this many msec in steady state we turn off the PWM output.
   static constexpr uint32_t SERVO_TURNOFF_MSEC = 1000;
 
