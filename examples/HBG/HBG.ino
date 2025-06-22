@@ -369,7 +369,7 @@ BlockDetectorOverride gpio_det_ab(BLOCK_DETECTOR, BTN_BELEG, true,
 enum SignalId : uint8_t { SIGNAL_A_EIN, SIGNAL_B_AUS };
 
 enum TurnoutId : uint8_t { W1, W2a, W2b, W3, W4, W5_6, W7a, W7b, //
-  W8, WS9, W10_11 };
+  W8, W9, W10_11 };
 
 enum RouteId : uint8_t { a1, b1, a2, b2, a3, b3, a4, b4, a5, b5, a6, b6 };
 
@@ -378,6 +378,16 @@ enum BlockId : uint8_t {
 };
 
 Weichenhebel TW1{W1, HBL_W1, true, SRV_LOCK_W1, false};
+Weichenhebel TW2a{W2a, HBL_W2a, true, SRV_LOCK_W2a, false};
+Weichenhebel TW2b{W2b, HBL_W2b, true, SRV_LOCK_W2b, false};
+Weichenhebel TW3{W3, HBL_W3, true, SRV_LOCK_W3, false};
+Weichenhebel TW4{W4, HBL_W4, true, SRV_LOCK_W4, false};
+Weichenhebel TW5_6{W5_6, HBL_W5_6, true, SRV_LOCK_W5_6, false};
+Weichenhebel TW7a{W7a, HBL_W7a, true, SRV_LOCK_W7a, false};
+Weichenhebel TW7b{W7b, HBL_W7b, true, SRV_LOCK_W7b, false};
+Weichenhebel TW8{W8, HBL_W8, true, SRV_LOCK_W8, false};
+Weichenhebel TW9{W9, HBL_W9, true, SRV_LOCK_W9, false};
+Weichenhebel TW10_11{W10_11, HBL_W10_11, true, SRV_LOCK_W10_11, false};
 
 Signalhebel SA{SIGNAL_A_EIN, HP2, HBL_SIGA, false, SRV_LOCK_SIGA, false};
 Signalhebel SB{SIGNAL_B_AUS, HP1, HBL_SIGB, false, SRV_LOCK_SIGB, false};
@@ -407,8 +417,14 @@ const auto abrdy = blk_ab.set_vorblock_taste(BTN_ANF, true) |
 // ================= Verschlusstabelle ======================
 
 Verschlusstabelle vtbl({
-    Fstr(a1), WeichePlus(W1), Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
-    Fstr(b1), WeichePlus(W1), Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
+    Fstr(a1),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeicheMinus(W4), WeichePlus(W5_6), WeichePlus(W7b),
+    Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
+    Fstr(b1),
+    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeicheMinus(W4), WeichePlus(W5_6), WeichePlus(W7b),
+    Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
   });
 
 
