@@ -38,6 +38,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <utility>
+#include <vector>
 
 #include "stw/Types.h"
 #include "utils/Singleton.h"

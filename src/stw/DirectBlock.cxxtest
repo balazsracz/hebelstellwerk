@@ -16,6 +16,16 @@ class HardwareSerial {
   }
 };
 
+
+void pinMode(int pin, int mode) {}
+
+static constexpr int INPUT_PULLUP = 0x55;
+static constexpr bool LOW = false;
+static constexpr bool HIGH = true;
+
+bool digitalRead(int pin) { return LOW; }
+
+
 #include "stw/DirectBlock.h"
 #include "stw/SimpleBlockUi.h"
 

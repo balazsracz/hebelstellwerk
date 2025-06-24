@@ -124,11 +124,11 @@ TEST_F(ServoGpioTest, regular_move) {
   ex_.loop();
   ex_.loop();
 
-  ex_.advance(49);
+  ex_.advance(4);
   ex_.loop();
   ex_.loop();
 
-  ex_.advance(1);
+  ex_.advance(46);
   EXPECT_CALL(pwm_a_, write(1, 1250 + (1750 - 1250) * 5 / 5));
   ex_.loop();
   ex_.loop();

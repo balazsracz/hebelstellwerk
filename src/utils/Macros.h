@@ -44,21 +44,27 @@
 extern const char* volatile g_death_file;
 extern volatile int g_death_lineno;
 
-#define DIE(x)                                           \
-  g_death_file = __FILE__;                               \
-  g_death_lineno = __LINE__;                             \
-  if (Serial) {                                          \
-    Serial.printf("%s:%d: %s\n", __FILE__, __LINE__, x); \
-  }                                                      \
-  do {                                                   \
-    pinMode(LED_BUILTIN, OUTPUT);                        \
-    while (1) {                                          \
-      volatile int xx = 0;                               \
-      digitalWrite(LED_BUILTIN, HIGH);                   \
-      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx;   \
-      digitalWrite(LED_BUILTIN, LOW);                    \
-      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx;   \
-    }                                                    \
+//     Serial.printf("%s:%d: %s\n", __FILE__, __LINE__, x);
+
+#define DIE(x)                                         \
+  g_death_file = __FILE__;                             \
+  g_death_lineno = __LINE__;                           \
+  if (Serial) {                                        \
+    Serial.print(__FILE__);                            \
+    Serial.print(":");                                 \
+    Serial.print(__LINE__);                            \
+    Serial.print(": ");                                \
+    Serial.println(x);                                 \
+  }                                                    \
+  do {                                                 \
+    pinMode(LED_BUILTIN, OUTPUT);                      \
+    while (1) {                                        \
+      volatile int xx = 0;                             \
+      digitalWrite(LED_BUILTIN, HIGH);                 \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
+      digitalWrite(LED_BUILTIN, LOW);                  \
+      for (unsigned j = 0; j < F_CPU / 100; ++j) ++xx; \
+    }                                                  \
   } while (0)
 
 #define ASSERT(x)                \

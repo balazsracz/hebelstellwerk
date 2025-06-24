@@ -32,6 +32,8 @@
  * @date 12 Jun 2025
  */
 
+#ifdef ARDUINO_ARCH_STM32
+
 #include "utils/ArduinoStm32DmaPwm.h"
 
 #include <Arduino.h>
@@ -238,3 +240,5 @@ class DmaPwmImpl : public Executable, public Pwm, public Singleton<DmaPwmImpl> {
 void DmaPwm::create_impl(pwm_pin_t pin_start, std::initializer_list<int> pins) {
   impl_ = new DmaPwmImpl(pin_start, pins);
 }
+
+#endif // ARDUINO_ARCH_STM32

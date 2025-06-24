@@ -38,6 +38,7 @@
 #include "stw/I2CBlock.h"
 #include "utils/Executor.h"
 #include "utils/Logging.h"
+#include "utils/Timer.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>

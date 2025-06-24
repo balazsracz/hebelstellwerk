@@ -19,7 +19,7 @@
     "version": "1.0.0",
     "license": "BSD-2-Clause",
     "frameworks": "arduino",
-    "platforms": "avr,stm32,espressif32,esp32,sam,samd",
+    "platforms": "avr,stm32,espressif32,esp32,sam,samd,renesas_uno",
     "build": {
         "srcFilter" : [
             "-<.git/>",
