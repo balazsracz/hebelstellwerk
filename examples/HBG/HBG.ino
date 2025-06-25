@@ -451,11 +451,11 @@ Verschlusstabelle vtbl({
     Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
 
     Fstr(a3),
-    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeichePlus(W1), WeichePlus(W2a), WeicheMinus(W2b), WeichePlus(W3),
     WeichePlus(W4), WeichePlus(W7b),
     Hp2(SIGNAL_A_EIN), BlockEinfahrt(BLOCK_AB),
     Fstr(b3),
-    WeichePlus(W1), WeicheMinus(W2a), WeicheMinus(W2b), WeichePlus(W3),
+    WeichePlus(W1), WeichePlus(W2a), WeicheMinus(W2b), WeichePlus(W3),
     WeichePlus(W4), WeichePlus(W7b),
     Hp1(SIGNAL_B_AUS), BlockAusfahrt(BLOCK_AB),
 
