@@ -93,4 +93,16 @@ extern volatile int g_death_lineno;
 
 #endif  // NDEBUG is not defined, use assert
 
+/// Adds a constructor to the current class that proxies every argument to the
+/// base constructor.
+///
+/// @param CURRENT_CLASS the name of the current class
+/// @param BASE_CLASS the name of the immediate base class
+#define INHERIT_CONSTRUCTOR(CURRENT_CLASS, BASE_CLASS)                         \
+    template <typename... Args>                                                \
+    explicit CURRENT_CLASS(Args... args)                                       \
+        : BASE_CLASS(args...)                                                  \
+    {                                                                          \
+    }
+
 #endif  // _STW_MACROS_H_

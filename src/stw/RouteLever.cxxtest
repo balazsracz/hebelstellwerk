@@ -121,10 +121,10 @@ class UWB {
   RouteLever Rab3{a3, b3, IN_a3, false, IN_b3, false, LOCK_a3b3, false};
   RouteLever Rcd3{c3, d3, IN_c3, false, IN_d3, false, LOCK_c3d3, false};
   RouteLever Rcd1{c1, d1, IN_c1, false, IN_d1, false, LOCK_c1d1, false};
-  Block BlkAB{BLOCK_AB,      AB_DETECTOR, false,  AB_LOCK_BTN, false,
-              AB_LOCK_FIELD, false,       AB_FHT, false};
-  Block BlkCD{BLOCK_CD,      CD_DETECTOR, false,  CD_LOCK_BTN, false,
-              CD_LOCK_FIELD, false,       CD_FHT, false};
+  FakeBlock BlkAB{BLOCK_AB,      AB_DETECTOR, false,  AB_LOCK_BTN, false,
+                  AB_LOCK_FIELD, false,       AB_FHT, false};
+  FakeBlock BlkCD{BLOCK_CD,      CD_DETECTOR, false,  CD_LOCK_BTN, false,
+                  CD_LOCK_FIELD, false,       CD_FHT, false};
 };
 
 class UWBTest : public TestBase, public UWB {
@@ -462,4 +462,88 @@ TEST_F(UWBTest, full_cycle_route_out) {
   EXPECT_FALSE(gpios_.read(LOCK_c1d1));
 
   EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
+}
+
+/// Moves a Fstr lever to outgoing when the block is not free.
+TEST_F(UWBTest, block_out_not_free) {
+  start();
+  wait();
+  BlkAB.set_allow_outgoing_train(false);
+  BlkCD.set_allow_outgoing_train(false);
+  wait();
+
+  // Fstr levers for track 3 are locked.
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(LOCK_c3d3));
+  // Fstr levers for track 1 are unlocked.
+  EXPECT_FALSE(gpios_.read(LOCK_a1b1));
+  EXPECT_FALSE(gpios_.read(LOCK_c1d1));
+
+  // Flip W9 and W1b to minus
+  gpios_.write(IN_W9, true);
+  gpios_.write(IN_W1b, true);
+  wait();
+
+  // Fstr a3b3 and c3d3 is unlocked
+  EXPECT_FALSE(gpios_.read(LOCK_c3d3));
+  EXPECT_FALSE(gpios_.read(LOCK_a3b3));
+  // everything else is locked
+  EXPECT_TRUE(gpios_.read(LOCK_a1b1));
+  EXPECT_TRUE(gpios_.read(LOCK_c1d1));
+
+  // Sets the outgoing Fstr lever
+  gpios_.write(IN_b3, true);
+  wait();
+
+  // Some turnouts got locked.
+  EXPECT_TRUE(gpios_.read(LOCK_W1a));
+  EXPECT_TRUE(gpios_.read(LOCK_W1b));
+  EXPECT_FALSE(gpios_.read(LOCK_W2));
+  EXPECT_FALSE(gpios_.read(LOCK_W7));
+  EXPECT_FALSE(gpios_.read(LOCK_W9));
+  EXPECT_FALSE(gpios_.read(LOCK_W10));
+
+  // Not the Fstr lever though.
+  EXPECT_FALSE(gpios_.read(LOCK_a3b3));
+  
+  // Presses the Festlege button
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+
+  // Didn't work
+  EXPECT_FALSE(gpios_.read(LOCK_a3b3));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
+
+  gpios_.write(AB_LOCK_BTN, false);
+  wait();
+
+  // Rückblock erhalten
+  BlkAB.set_allow_outgoing_train(true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_a3b3));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
+
+  // Presses the Festlege button again
+  gpios_.write(AB_LOCK_BTN, true);
+  wait();
+
+  // Did work this time
+  EXPECT_TRUE(gpios_.read(LOCK_a3b3));
+  EXPECT_TRUE(gpios_.read(AB_LOCK_FIELD));
+  EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
+
+  gpios_.write(AB_LOCK_BTN, false);
+  wait();
+
+  // Hilfsauflöse
+  gpios_.write(AB_FHT, true);
+  wait();
+
+  EXPECT_FALSE(gpios_.read(LOCK_a3b3));
+  EXPECT_FALSE(gpios_.read(AB_LOCK_FIELD));
+  EXPECT_FALSE(gpios_.read(LOCK_B_HP2));
+  wait(); // need 1 sec for the signal lever to lock
+  EXPECT_TRUE(gpios_.read(LOCK_B_HP2));
 }

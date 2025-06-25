@@ -132,14 +132,14 @@ class RouteLever : private Executable {
   }
 
  private:
-  /// Verifies that the preconditions for setting a route are fulfilled. Goes
-  /// through the lock table, and checks for Turnouts that they are in the
-  /// right direction, Aux that they are set. Ignores signals (nothing to
-  /// check) and block as well (because the direction of the block is not
-  /// given).
+  /// Verifies that the preconditions for setting a route lever are
+  /// fulfilled. Goes through the lock table, and checks for Turnouts that they
+  /// are in the right direction, Aux that they are set. Ignores signals
+  /// (nothing to check) and block as well (because the direction of the block
+  /// is not given).
   /// @param row row_up_ or row_dn_.
-  /// @return true if the preconditions are okay for setting this route.
-  static bool check_preconditions(const LockTable::Row& row) {
+  /// @return true if the preconditions are okay for setting this route lever.
+  static bool check_route_lever_preconditions(const LockTable::Row& row) {
     for (const LockTableEntry& e : row) {
       switch (e.type_) {
         case TURNOUT_PLUS: {
@@ -165,6 +165,8 @@ class RouteLever : private Executable {
           /// @todo implement
           break;
         case BLOCK_OUT:
+          /// Block is not part of the route lever preconditions.
+          break;
           if (!check_block(BlockRegistry::instance()->get((BlockId)e.arg_),
                            true)) {
             return false;
@@ -202,6 +204,29 @@ class RouteLever : private Executable {
     return true;
   }
 
+  /// Verifies that the preconditions for locking a route are fulfilled. This
+  /// basically means the block state and the wiederholsperre.
+  /// @param row row_up_ or row_dn_.
+  /// @return true if the preconditions are okay for locking this route.
+  static bool check_route_lock_preconditions(const LockTable::Row& row) {
+    if (!check_route_lever_preconditions(row)) {
+      return false;
+    }
+    for (const LockTableEntry& e : row) {
+      switch (e.type_) {
+        case BLOCK_OUT:
+          if (!check_block(BlockRegistry::instance()->get((BlockId)e.arg_),
+                           true)) {
+            return false;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    return true;
+  }
+  
   /// Locks the preconditions of a route. This means that Turnout and Aux
   /// objects mentioned on the lock table row will get locked.
   static void lock_route_preconditions(const LockTable::Row& row) {
@@ -361,7 +386,7 @@ class RouteLever : private Executable {
                               !signal_lever->is_proceed();
       switch (state_) {
         case State::NEUTRAL_LOCKED: {
-          if (check_preconditions(row_)) {
+          if (check_route_lever_preconditions(row_)) {
             error_unexpected_set_ = false;
             state_ = State::NEUTRAL;
             LOG(LEVEL_INFO, "Fstr %d unlocked", id_);
@@ -382,7 +407,7 @@ class RouteLever : private Executable {
             LOG(LEVEL_INFO, "Fstr %d lever set", id_);
             state_ = State::SET;
             lock_route_preconditions(row_);
-          } else if (!check_preconditions(row_)) {
+          } else if (!check_route_lever_preconditions(row_)) {
             state_ = State::NEUTRAL_LOCKED;
             LOG(LEVEL_INFO, "Fstr %d locked", id_);
           }
@@ -394,7 +419,7 @@ class RouteLever : private Executable {
             state_ = State::NEUTRAL;
             unlock_route_preconditions(row_);
           } else if (block_ && block_->route_lock_button().read() &&
-                     check_block(block_, block_out_)) {
+                     check_route_lock_preconditions(row_)) {
             state_ = State::SET_LOCKED;
             LOG(LEVEL_INFO, "Fstr %d locking route", id_);
             block_->notify_route_locked(id_, block_out_);

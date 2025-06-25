@@ -145,4 +145,17 @@ class Block : public Executable {
 
 };  // class Block
 
+/// Fake block implementation for testing.
+class FakeBlock : public Block {
+ public:
+  INHERIT_CONSTRUCTOR(FakeBlock, Block);
+
+  bool allow_outgoing_train() override { return allow_out_; }
+
+  void set_allow_outgoing_train(bool value) { allow_out_ = value; }
+
+ private:
+  bool allow_out_ = true;
+};
+
 #endif  // _STW_BLOCK_H_

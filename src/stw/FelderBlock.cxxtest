@@ -426,10 +426,10 @@ TEST_F(FelderBlockTest, outgoing_disallow_without_block) {
   EXPECT_WHITE(AN_ANFANGSFELD);
 
   EXPECT_TRUE(gpios_.read(LOCK_N_HP2));
-  EXPECT_TRUE(gpios_.read(LOCK_a1n1));
+  EXPECT_FALSE(gpios_.read(LOCK_a1n1));
 
-  // Route lever is locked because outbounds are blocked by the block, and
-  // inbounds by W1. We fix W1 state.
+  // Route lever is not locked because outbound setting is mechanically
+  // possible. Inbound is still blocked by W1. We fix W1 state.
   gpios_.write(IN_W1, true);
   wait();
 
@@ -445,7 +445,7 @@ TEST_F(FelderBlockTest, outgoing_disallow_without_block) {
   EXPECT_RED(AN_LOCK_FIELD);
   gpios_.write(AN_LOCK_BTN, true);
   wait();
-  // Failed to lock in the route.
+  // Failed to lock in the route because the block is not correct.
   EXPECT_RED(AN_LOCK_FIELD);
   gpios_.write(AN_LOCK_BTN, false);
   EXPECT_FALSE(gpios_.read(LOCK_a1n1));
