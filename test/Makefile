@@ -72,7 +72,7 @@ clean veryclean: clean-gtest
 
 run-tests: $(TESTOUTPUTS) $(TESTMD5)
 
-build-examples: build-blink build-gpioinfra build-uwb
+build-examples: build-blink build-gpioinfra build-uwb build-hbg
 
 build-blink:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b arduino:renesas_uno:minima $(APP_PATH)/examples/Blink
@@ -94,6 +94,9 @@ build-lnblk:
 
 build-thh:
 	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod $(APP_PATH)/examples/THHSimpleBlock
+
+build-hbg:
+	$(ARDUINOCLIPATH)/arduino-cli compile -b STMicroelectronics.old:stm32:Nucleo_64:pnum=NUCLEO_F303RE,dbg=enable_sym,upload_method=swdMethod $(APP_PATH)/examples/HBG
 
 
 tests: run-tests build-examples
