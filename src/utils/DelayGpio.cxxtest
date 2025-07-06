@@ -1,0 +1,81 @@
+#include "utils/DelayGpio.h"
+
+#include "test_main.h"
+
+
+class DelayGpioTest : public TestBase {
+protected:
+  DelayGpioTest() {
+    ex_.begin();
+  }
+
+  void wait(unsigned msec = 500) {
+    for (unsigned i = 0; i < msec; ++i) {
+      ex_.advance(1);
+      ex_.loop();
+    }
+  }
+
+  static constexpr unsigned READ_PIN = 101;
+
+  GpioRegistry reg_;
+  DummyGpio src_{READ_PIN};
+};
+
+
+TEST_F(DelayGpioTest, registered) {
+  DelayGpio gpio{113, READ_PIN, false, 450};
+  EXPECT_EQ(&gpio, GpioRegistry::instance()->get_or_null(113));
+}
+
+TEST_F(DelayGpioTest, read_default_toggle_back) {
+  DelayGpio gpio{113, READ_PIN, false, 450};
+  GpioAccessor acc{113, false, GPIO_INPUT};
+
+  EXPECT_FALSE(acc.read());
+  wait();
+  EXPECT_FALSE(acc.read());
+
+  src_.write(READ_PIN, true);
+  wait(10);
+  //EXPECT_FALSE(acc.read());
+  
+  wait(1000);
+  EXPECT_TRUE(acc.read());
+  // Below threshold immediately resets to zero.
+  src_.write(READ_PIN, false);
+  wait(50);
+  EXPECT_FALSE(acc.read());
+
+  // Now check that a short wait does not trigger up.
+  src_.write(READ_PIN, true);
+  wait(400);
+  LOG(LEVEL_INFO, "tricky here");
+  EXPECT_FALSE(acc.read());
+  wait(50);
+  EXPECT_TRUE(acc.read());
+  wait(500);
+  EXPECT_TRUE(acc.read());
+
+  // Back again
+  src_.write(READ_PIN, false);
+  wait(50);
+  EXPECT_FALSE(acc.read());
+  
+}
+
+
+TEST_F(DelayGpioTest, many_toggle) {
+  DelayGpio gpio{113, READ_PIN, false, 450};
+  GpioAccessor acc{113, false, GPIO_INPUT};
+
+  for(int cnt = 0; cnt < 100; ++cnt) {
+    src_.write(READ_PIN, false);
+    wait();
+    EXPECT_FALSE(acc.read());
+    src_.write(READ_PIN, true);
+    wait();
+    EXPECT_TRUE(acc.read());
+  }
+  
+}
