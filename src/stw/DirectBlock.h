@@ -55,6 +55,7 @@ class DirectBlock : public I2CBlockInterface, private Executable {
         pending_abgabe_(false),
         pending_esc_(false),
         packet_overflow_(false),
+        seen_peer_(false),
         arduino_rx_pin_(ard_pin),
         arduino_det_pin_(ard_rev_pin) {
     Executor::instance()->add(this);
@@ -75,6 +76,9 @@ class DirectBlock : public I2CBlockInterface, private Executable {
       pending_ruckblocken_ = 1;
     }
     status_ = status;
+    if (!seen_peer_) {
+      set_bit(BlockBits::ERROR);
+    }
   }
 
   uint16_t get_status() override { return status_; }
@@ -105,6 +109,7 @@ class DirectBlock : public I2CBlockInterface, private Executable {
         digitalRead(arduino_det_pin_) == LOW) {
       error_tm_.start_oneshot(100);
       clear_bit(BlockBits::ERROR);
+      seen_peer_ = true;
     } else if (error_tm_.check()) {
       set_bit(BlockBits::ERROR);
       LOG(INFO, "Block %s CABLE ERROR", name_);
@@ -271,6 +276,8 @@ class DirectBlock : public I2CBlockInterface, private Executable {
   bool pending_esc_ : 1;
   /// True if the SLIP decoder packet has overflowed.
   bool packet_overflow_ : 1;
+  /// True if we've seen the opposite end of the cable, ever.
+  bool seen_peer_ : 1;
   /// Buffer for incoming SLIP packet.
   uint8_t incoming_packet_[32];
   /// Number of bytes filled in in incoming_packet_.

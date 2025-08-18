@@ -324,7 +324,14 @@ class FelderBlock : public Block {
       bool has_in = status & BlockBits::HANDOFF;
       bool has_start = status & BlockBits::STARTUP;
       bool has_err = status & BlockBits::ERROR;
-      if (has_out && has_in) {
+      if (has_err) {
+        // We have an error, maybe the block line is not connected.
+        if (status & BlockBits::NEWINPUT) {
+          iface_->clear_incoming_notify();
+        }
+        startup_err_ = true;
+        // We don't leave the startup state. This will show three red fields.
+      } else if (has_out && has_in) {
         // Confusing.
         LOG(LEVEL_ERROR,
             "ERR Block %d startup: both out and in is set in status (%02x), "
@@ -341,13 +348,6 @@ class FelderBlock : public Block {
             status & BlockBits::IN_BUSY ? State::IN_OCC : State::IN_FREE;
         LOG(LEVEL_INFO, "Block %d: start with block state IN (%02x) - %d", id_,
             status, (int)state_);
-      } else if (has_err) {
-        // We have an error, maybe the block line is not connected.
-        if (status & BlockBits::NEWINPUT) {
-          iface_->clear_incoming_notify();
-        }
-        startup_err_ = true;
-        // We don't leave the startup state. This will show three red fields.
       } else if (has_start) {
         // The block doesn't know the state and we don't know it either. This
         // is a cold start. We set up the state for outgoing track free. In
