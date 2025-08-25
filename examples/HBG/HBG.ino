@@ -41,7 +41,7 @@ enum GpioPin : gpio_pin_t {
   ONBOARD_BTN = USER_BTN,
 
   BLOCK_DETECTOR = 100,
-  BLOCK_DETECTOR_HW,
+  //BLOCK_DETECTOR_HW,
   DUMMY,
 
   LED_HALTSTELLMELDER = DUMMY,
@@ -125,6 +125,7 @@ enum GpioPin : gpio_pin_t {
   HBL_F5b = INT_PORTB1,
   HBL_F6a = INT_PORTB2,
   HBL_F6b = INT_PORTB3,
+  BLOCK_DETECTOR_HW = INT_PORTB4,
 
   EXT_SPI = 300,
 
@@ -214,7 +215,6 @@ DmaPwm g_pwm(PWM_DMA, {PC8, PC9, PC6,  PC5,  PA12, PA11, PB12, PC7,  PB2,
 // was: PC9, PC8, PC6, PA12, PA11, PB12, PC7, PB2, PA8, PB1, PB15, PC2, PC5,
 // PC10, PC12, PD2, PC14, PC15, PA0, PA1, PF1, PA4, PC1, PC3, PC0
 
-DummyGpio gpio_detector(BLOCK_DETECTOR_HW);
 DummyGpio gpio_dummy(DUMMY);
 
 /// Milliseconds how long it should take to transition a servo from on to off.
@@ -362,11 +362,10 @@ std::initializer_list<GpioCopyInstance> g_shadows{
 
 GpioCopy g_gpio_shadow{g_shadows};
 
-// The Hilfsbelegungstaste is active low. The real hardware is marked as active
-// high, because dummygpio reports low by default.
+// The Hilfsbelegungstaste is active low. The real hardware is also active low.
 // The output is active high (true means occupied).
 BlockDetectorOverride gpio_det_ab(BLOCK_DETECTOR, BTN_BELEG, true,
-                                  BLOCK_DETECTOR_HW, false);
+                                  BLOCK_DETECTOR_HW, true);
 
 
 // ==================== logical devices ================
