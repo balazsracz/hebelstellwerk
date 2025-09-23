@@ -38,7 +38,7 @@ TEST_F(DelayGpioTest, read_default_toggle_back) {
 
   src_.write(READ_PIN, true);
   wait(10);
-  //EXPECT_FALSE(acc.read());
+  EXPECT_FALSE(acc.read());
   
   wait(1000);
   EXPECT_TRUE(acc.read());
