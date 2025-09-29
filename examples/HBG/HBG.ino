@@ -44,9 +44,11 @@ enum GpioPin : gpio_pin_t {
   //BLOCK_DETECTOR_HW,
   DUMMY,
 
-  LED_HALTSTELLMELDER = DUMMY,
-  LED_STRECKENTASTENSPERRE = DUMMY,
   LED_STOERUNGSMELDER = DUMMY,
+
+  SND_START = 105,
+  SND_1 = SND_START,
+  SND_5,
   
   ANALOG_BTN_START = 110,
   BTN_C_VORBLOCK = ANALOG_BTN_START,
@@ -140,21 +142,33 @@ enum GpioPin : gpio_pin_t {
   LED_FESTLEGE_ROT,
   LED_FESTLEGE_WEISS,
 
+  BRD_BLOCK_BACK_OUT = BRD_BLOCK_OUT + 8,
+  TEMP5 = BRD_BLOCK_BACK_OUT - 1,
+  LED_STRECKENTASTENSPERRE,
+  LED_HALTSTELLMELDER,
+  SND_1_HW,
+  SND_5_HW,
+  
 
-  EXT_SPI_IN = EXT_SPI + 8,
+  EXT_SPI_IN = EXT_SPI + 16,
 
   BRD_BLOCK_IN = EXT_SPI_IN + 0,
   TEMP1 = BRD_BLOCK_IN - 1,
   KURBEL_RAW,
   BLOCK_IN1,
   BLOCK_IN2,
-  BTN_FHT, // not really here
+  BTN_NC1,
   BTN_ENDF,
   BTN_ERLAUB,
   BTN_ANF,
   BTN_FESTLEGE,
 
-  BRD_HEBEL_IN_LINKS = BRD_BLOCK_IN + 8,
+  BRD_BLOCK_BACK_IN = BRD_BLOCK_IN + 8,
+  TEMP4 = BRD_BLOCK_BACK_IN - 1,
+  BTN_FHT,
+  
+  
+  BRD_HEBEL_IN_LINKS = BRD_BLOCK_BACK_IN + 8,
   TEMP2 = BRD_HEBEL_IN_LINKS - 1,
   HBL_W2b,
   HBL_W2a,
@@ -279,8 +293,8 @@ const uint32_t kOutputParams[] = {
 
 PixelGpio px_gpio{&strip, 120, 6, kOutputParams};
 
-static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 3;
-static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 1;
+static constexpr unsigned NUM_EXT_INPUT_REGISTERS = 4;
+static constexpr unsigned NUM_EXT_OUTPUT_REGISTERS = 2;
 GpioSpi<NUM_EXT_OUTPUT_REGISTERS, NUM_EXT_INPUT_REGISTERS> g_ext_gpio{EXT_SPI, EXT_LAT, g_ext_spi};
 
 static constexpr unsigned NUM_INT_INPUT_REGISTERS = 2;
@@ -421,9 +435,8 @@ const auto abrdy = blk_ab.set_vorblock_taste(BTN_ANF, true) |
                    blk_ab.set_anfangsfeld(LED_ANF_WEISS, true) |
                    blk_ab.set_endfeld(LED_ENDF_WEISS, true) |
                    blk_ab.set_erlaubnisfeld(LED_ERLAUB_WEISS, true) |
-                   /// @todo figure out these GPIO assignments
                    blk_ab.set_signalhaltmelder(LED_HALTSTELLMELDER, false) |
-                   blk_ab.set_storungsmelder(LED_STOERUNGSMELDER, false) |
+                   blk_ab.set_storungsmelder(LED_STOERUNGSMELDER, false) | // does not exist
                    blk_ab.set_streckentastensperre(LED_STRECKENTASTENSPERRE, false);
 
 #endif
@@ -487,6 +500,46 @@ Verschlusstabelle vtbl({
   });
 
 
+
+class SndGpio : public Gpio, private Executable {
+ public:
+  SndGpio(gpio_pin_t gpio_pin, gpio_pin_t hw)
+      : gpio_pin_(gpio_pin)
+      , hw_pin_(hw, true, GPIO_OUTPUT)
+  {
+    GpioRegistry::instance()->register_obj(this, gpio_pin);
+    Executor::instance()->add(this);
+  }
+
+  void write(gpio_pin_t pin, bool value) const override {
+    if (!value) return;
+    hw_pin_.write(true);
+    tm_.start_oneshot(100);
+  }
+
+  bool read(gpio_pin_t pin) const override {
+    return false;
+  }
+  
+  void begin() override {
+    hw_pin_.write(false);
+  }
+
+  void loop() override {
+    if (tm_.check()) {
+      hw_pin_.write(false);
+    }
+  }
+  
+ private:
+  gpio_pin_t gpio_pin_;
+  GpioAccessor hw_pin_;
+  mutable Timer tm_;
+};
+
+SndGpio snd1(SND_1, SND_1_HW);
+SndGpio snd2(SND_5, SND_5_HW);
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(USER_BTN, INPUT_PULLUP);
@@ -511,6 +564,10 @@ void setup() {
   // Idk
   pinMode(PC5, OUTPUT);
   digitalWrite(PC5, LOW);
+
+  block.set_sound(DirectBlock::SND_RUCKBLOCKEN_IN, SND_5)
+      .set_sound(DirectBlock::SND_ERLAUBNIS_ABGABE_IN, SND_1)
+      .set_sound(DirectBlock::SND_VORBLOCKEN_IN, SND_1);
 }
 
 void loop() {
