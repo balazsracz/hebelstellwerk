@@ -135,7 +135,7 @@ class CommandHandler : public Executable {
       Serial.print(F("CMD: Set gpio #"));
       Serial.print(gpio_num);
       Serial.print(F(" to "));
-      Serial.print(is_on ? F("on"): F("off"));
+      Serial.println(is_on ? F("on"): F("off"));
 
       // Call the function to handle the command.
       set_gpio(gpio_num, is_on);
