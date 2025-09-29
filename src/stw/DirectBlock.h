@@ -39,6 +39,7 @@
 #include "utils/Executor.h"
 #include "utils/Logging.h"
 #include "utils/Timer.h"
+#include "utils/Gpio.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -62,6 +63,23 @@ class DirectBlock : public I2CBlockInterface, private Executable {
     clear_packet();
   }
 
+  enum SoundType {
+    SND_VORBLOCKEN_OUT,
+    SND_VORBLOCKEN_IN,
+    SND_RUCKBLOCKEN_OUT,
+    SND_RUCKBLOCKEN_IN,
+    SND_ERLAUBNIS_ABGABE_OUT,
+    SND_ERLAUBNIS_ABGABE_IN,
+    SND_MAX
+  };
+
+  DirectBlock& set_sound(SoundType snd, gpio_pin_t gpio) {
+    if ((int)snd < (int)SND_MAX) {
+      sounds_[snd] = gpio;
+    }
+    return (*this);
+  }
+  
   void set_status(uint16_t status) override {
     if ((status & BlockBits::HANDOFF) && !(status_ & BlockBits::HANDOFF)) {
       pending_abgabe_ = 1;
@@ -85,16 +103,19 @@ class DirectBlock : public I2CBlockInterface, private Executable {
 
   void ruckblocken() override {
     pending_ruckblocken_ = 1;
+    play_sound(SND_RUCKBLOCKEN_OUT);
     I2CBlockInterface::ruckblocken();
   }
 
   void vorblocken() override {
     pending_vorblocken_ = 1;
+    play_sound(SND_VORBLOCKEN_OUT);
     I2CBlockInterface::vorblocken();
   }
 
   void abgabe() override {
     pending_abgabe_ = 1;
+    play_sound(SND_ERLAUBNIS_ABGABE_OUT);
     I2CBlockInterface::abgabe();
   }
 
@@ -200,14 +221,17 @@ class DirectBlock : public I2CBlockInterface, private Executable {
       switch (incoming_packet_[0]) {
         case kCmdAbgabe: {
           status_ = RECV_ABGABE_STATUS;
+          play_sound(SND_ERLAUBNIS_ABGABE_IN);
           break;
         }
         case kCmdVorblock: {
           status_ = RECV_VORBLOCK_STATUS;
+          play_sound(SND_VORBLOCKEN_IN);
           break;
         }
         case kCmdRuckblock: {
           status_ = RECV_RUCKBLOCK_STATUS;
+          play_sound(SND_RUCKBLOCKEN_IN);
           break;
         }
         default:
@@ -227,6 +251,12 @@ class DirectBlock : public I2CBlockInterface, private Executable {
 
   void clear_bit(BlockBits bit) { status_ &= ~uint16_t(bit); }
 
+  void play_sound(SoundType snd) {
+    auto g = sounds_[snd];
+    if (!g) return;
+    GpioRegistry::instance()->get(g)->write(g, true);
+  }
+  
   static constexpr uint8_t kEnd = 0300;    /* indicates end of packet */
   static constexpr uint8_t kEsc = 0333;    /* indicates byte stuffing */
   static constexpr uint8_t kEscEnd = 0334; /* ESC ESC_END means END data byte */
@@ -288,6 +318,8 @@ class DirectBlock : public I2CBlockInterface, private Executable {
   /// GPIO pin that will be checked for block cable detection. This will be
   /// used with digitalRead(). This pin is the reverse of the block RX.
   int16_t arduino_det_pin_;
+  /// Stores the sound gpio numbers.
+  gpio_pin_t sounds_[SND_MAX] = {0};
 };  // class directblock
 
 #endif  // _STW_DIRECTBLOCK_H_
