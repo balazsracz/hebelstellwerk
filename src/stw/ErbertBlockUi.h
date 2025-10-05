@@ -87,7 +87,8 @@ class ErbertBlockUi : public Executable {
       return;
     }
     // Checks if the UI reversed the handoff when it should not have.
-    if ((state & BlockBits::HANDOFF) && erlaubnis_out_.read()) {
+    if ((state & BlockBits::HANDOFF) && erlaubnis_out_.read() &&
+        !(state & BlockBits::ERROR)) {
       if (need_force_erlaubnis_) {
         set_erlaubnis_out_ui(false);
       } else {
@@ -96,7 +97,7 @@ class ErbertBlockUi : public Executable {
         tm_.start_oneshot(300);
       }
       return;
-    }
+      }
     if (erlaubnis_out_sen_.read() != shadow_erlaubnis_) {
       // Update sensor.
       erlaubnis_out_sen_.write(shadow_erlaubnis_);
@@ -153,8 +154,13 @@ class ErbertBlockUi : public Executable {
       seen_train_ = false;
     }
 
-    block_busy_.write((state & BlockBits::IN_BUSY) ||
-                      (state & BlockBits::OUT_BUSY));
+    block_busy_.write(
+        (!(state & BlockBits::ERROR)) &&
+        ((state & BlockBits::IN_BUSY) || (state & BlockBits::OUT_BUSY)));
+
+    erlaubnis_blocked_.write(
+        (!(state & BlockBits::ERROR)) &&
+        !shadow_erlaubnis_);
   }
 
   /// Sets a GPIO which is linked to a loconet magnetartikel (both for input
@@ -249,7 +255,6 @@ class ErbertBlockUi : public Executable {
   void set_erlaubnis_out_ui(bool has_out) {
     shadow_erlaubnis_ = has_out;
     erlaubnis_out_.write(has_out);
-    erlaubnis_blocked_.write(!has_out);
     need_force_erlaubnis_ = false;
   }
 
