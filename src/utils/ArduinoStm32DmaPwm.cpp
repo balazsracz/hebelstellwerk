@@ -32,7 +32,7 @@
  * @date 12 Jun 2025
  */
 
-#ifdef ARDUINO_ARCH_STM32
+#if defined(ARDUINO_ARCH_STM32) && !defined(HAL_TIM_MODULE_ONLY)
 
 #include "utils/ArduinoStm32DmaPwm.h"
 
