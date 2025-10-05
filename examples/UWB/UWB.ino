@@ -107,6 +107,7 @@ enum GpioPin : gpio_pin_t {
   GPIO_CD_STRECKENTASTENSPERRE,
   GPIO_BTN_AB_FHT,
   GPIO_BTN_CD_FHT,
+  // Hier sind noch zwei Ausgänge frei
   GPIO_BTN_ENDFELD_D = GPIO_EXT_TASTER + 8,
   GPIO_BTN_ERLAUBNIS_C,
   GPIO_BTN_ANFANG_C,
