@@ -16,6 +16,7 @@
 #include "utils/PixelGpio.h"
 #include "utils/GpioDebug.h"
 #include "utils/GpioCopier.h"
+#include "utils/DelayGpio.h"
 #include "utils/ArduinoStm32DmaPwm.h"
 #include "utils/Pwm.h"
 #include "utils/CommandHandler.h"
@@ -49,6 +50,8 @@ enum GpioPin : gpio_pin_t {
   SND_START = 105,
   SND_1 = SND_START,
   SND_5,
+
+  KURBEL,
   
   ANALOG_BTN_START = 110,
   BTN_C_VORBLOCK = ANALOG_BTN_START,
@@ -301,6 +304,8 @@ static constexpr unsigned NUM_INT_INPUT_REGISTERS = 2;
 static constexpr unsigned NUM_INT_OUTPUT_REGISTERS = 1;
 GpioSpi<NUM_INT_OUTPUT_REGISTERS, NUM_INT_INPUT_REGISTERS> g_int_gpio{INT_SPI, INT_LAT, g_int_spi};
 
+DelayGpio kurbel(KURBEL, KURBEL_RAW, true, 1500);
+
 CommandHandler cli;
 
 GlobalState st;
@@ -431,7 +436,7 @@ FelderBlock blk_ab(&block, BLOCK_AB, BLOCK_DETECTOR, false, BTN_FESTLEGE, true,
 const auto abrdy = blk_ab.set_vorblock_taste(BTN_ANF, true) |
                    blk_ab.set_ruckblock_taste(BTN_ENDF, true) |
                    blk_ab.set_abgabe_taste(BTN_ERLAUB, true) |
-                   blk_ab.set_kurbel(KURBEL_RAW, true) |
+                   blk_ab.set_kurbel(KURBEL, false) |
                    blk_ab.set_anfangsfeld(LED_ANF_WEISS, true) |
                    blk_ab.set_endfeld(LED_ENDF_WEISS, true) |
                    blk_ab.set_erlaubnisfeld(LED_ERLAUB_WEISS, true) |
