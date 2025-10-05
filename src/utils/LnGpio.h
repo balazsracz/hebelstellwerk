@@ -109,6 +109,17 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
       any_dirty_ = true;
     }
   }
+
+  void force_write(gpio_pin_t pin, bool value) const {
+    uint16_t ofs = (pin - pin_);
+    auto pos = get_pos(ofs);
+    set_bit(pos.first, pos.second, value);
+    LOG(LEVEL_INFO, "Ln force write %d to %d", ofs, value);
+    // always: set dirty
+    set_bit(pos.first, pos.second << 1, true);
+    any_dirty_ = true;
+  }
+  
   bool read(gpio_pin_t pin) const override {
     uint16_t ofs = (pin - pin_);
     auto pos = get_pos(ofs);
