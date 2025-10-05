@@ -125,9 +125,9 @@ class LnGpio : public Gpio, public Executable, public Singleton<LnGpio> {
   void set_state(unsigned ofs, bool value) {}
 
   std::pair<uint32_t*, uint32_t> get_pos(unsigned ofs) const {
-    ofs <<= 1;
-    uint32_t* p = state_ + (ofs >> 4);
-    uint32_t bit = 1u << ((ofs & 15) << 1);
+    ofs *= 2; // always two bits per ofs, one value, one dirty
+    uint32_t* p = state_ + (ofs / 32);
+    uint32_t bit = 1u << (ofs & 31);
     return {p, bit};
   }
 
