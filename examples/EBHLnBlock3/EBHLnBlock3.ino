@@ -301,6 +301,155 @@ const uint16_t c_eui_rdy =
 
 // Blinker blinkerln{LN_GPIO_START, 2000};
 
+class EbhInit: public Executable {
+ public:
+  EbhInit() {
+    Executor::instance()->add(this);
+  }
+
+  void begin() override {
+    state_ = 0;
+    // 200 msec, 5 loconet pakete pro sekunde
+    tm_.start_drifting(200);
+  }
+
+  void loop() override {
+    if (!tm_.check()) return;
+    switch(state_) {
+      case 1:
+        // Rückmelden bei alle drei blocken
+        block_a.ruckblocken();
+        block_b.ruckblocken();
+        block_c.ruckblocken();
+        break;
+
+        // Auflösen alle vier Fahrstrassen
+      case 2:
+        LocoNet.reportSensor(1020, false);
+        break;
+      case 3:
+        LocoNet.reportSensor(1030, false);
+        break;
+      case 4:
+        LocoNet.reportSensor(3010, false);
+        break;
+      case 5:
+        LocoNet.reportSensor(2010, false);
+        break;
+
+        // Zurücknehmen Verriegelung von Erlaubnis
+      case 6:
+        set_gpio(LN_A_ERLAUBNIS_BLOCK_MAG, true);
+        break;
+      case 7:
+        set_gpio(LN_B_ERLAUBNIS_BLOCK_MAG, true);
+        break;
+      case 8:
+        set_gpio(LN_C_ERLAUBNIS_BLOCK_MAG, true);
+        break;
+
+        // Zurücknehmen Vorblock Rotausleuchtung
+      case 9:
+        set_gpio(LN_A_VORGEBLOCKT_SEN, false);
+        break;
+      case 10:
+        set_gpio(LN_B_VORGEBLOCKT_SEN, false);
+        break;
+      case 11:
+        set_gpio(LN_C_VORGEBLOCKT_SEN, false);
+        break;
+        
+        // Abgabe Erlaubnispfeil
+      case 12:
+        set_gpio(LN_A_ERLAUBNIS_MAG, false);
+        break;
+      case 13:
+        set_gpio(LN_B_ERLAUBNIS_MAG, false);
+        break;
+      case 14:
+        set_gpio(LN_C_ERLAUBNIS_MAG, false);
+        break;
+        
+      case 15:
+        // Abgabe alle drei blocken
+        block_a.abgabe();
+        block_b.abgabe();
+        block_c.abgabe();
+        break;
+
+        
+        // Erlaubnis sensoren = false
+      case 16:
+        set_gpio(LN_A_ERLAUBNIS_SEN, false);
+        break;
+      case 17:
+        set_gpio(LN_B_ERLAUBNIS_SEN, false);
+        break;
+      case 18:
+        set_gpio(LN_C_ERLAUBNIS_SEN, false);
+        break;
+
+        
+        // Route out blocked = false
+      case 19:
+        set_gpio(LN_A_RT_OUT_BLOCKED_SEN, false);
+        break;
+      case 20:
+        set_gpio(LN_B_RT_OUT_BLOCKED_SEN, false);
+        break;
+      case 21:
+        set_gpio(LN_C_RT_OUT_BLOCKED_SEN, false);
+        break;
+
+        // reset signal B
+      case 22:
+        LocoNet.requestSwitch(106, true /*output on*/, false /* true = thrown/red false = closed/green*/);
+        break;
+      case 23:
+        LocoNet.requestSwitch(106, false /*output off*/, false /* true = thrown/red false = closed/green*/);
+        break;
+
+        // reset signal C
+      case 24:
+        LocoNet.requestSwitch(110, true /*output on*/, false /* true = thrown/red false = closed/green*/);
+        break;
+      case 25:
+        LocoNet.requestSwitch(110, false /*output off*/, false /* true = thrown/red false = closed/green*/);
+        break;
+
+        // reset signal A
+      case 26:
+        LocoNet.requestSwitch(101, true /*output on*/, false /* true = thrown/red false = closed/green*/);
+        break;
+      case 27:
+        LocoNet.requestSwitch(101, false /*output off*/, false /* true = thrown/red false = closed/green*/);
+        break;
+        // reset signal A
+      case 28:
+        LocoNet.requestSwitch(100, true /*output on*/, false /* true = thrown/red false = closed/green*/);
+        break;
+      case 29:
+        LocoNet.requestSwitch(100, false /*output off*/, false /* true = thrown/red false = closed/green*/);
+        break;
+        
+      default:
+        break;
+    }
+    state_++;
+    // terminal state
+    if (state_ > 100) state_ = 100;
+  }
+  
+ private:
+  void set_gpio(GpioPin num, bool value) {
+    // This will ensure that the message does go out.
+    ln_gpio.force_write(num, value);
+  }
+  
+  int state_;
+  Timer tm_;
+} g_init;
+
 /// Arduino setup routine.
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
@@ -420,4 +569,11 @@ class Copier : public Executable {
 void loop() {
   // Calls the executor to do loop for all registered objects.
   ex.loop();
+}
+
+
+// This is needed because we disabled HardwareTimer in the STM32 core using a
+// build_opt.h. There is this missing symbol that makes it fail to link.
+extern "C" {
+void pwm_stop(PinName pin) {}
 }
