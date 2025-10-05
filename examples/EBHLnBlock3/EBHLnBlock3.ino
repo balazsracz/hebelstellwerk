@@ -197,15 +197,15 @@ const LnGpioDefn ln_defs[] = {
     // Erlaubnis 700. thrown is OUT
     // 710 = Erlaubnisabgabesperre (CV38)
     // CV22 = CV24 = 57. Busy (rotausleuchtung).
-    {LNGPIO_SWITCH, 700},      // LN_A_ERLAUBNIS_MAG
+    {LNGPIO_SWITCH, 700},      // LN_A_ERLAUBNIS_MAG, 2
     {LNGPIO_SENSOR, 52},      // LN_A_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 57},      // LN_A_VORGEBLOCKT_SEN
-    {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SWITCH, 710},      // LN_A_ERLAUBNIS_BLOCK_MAG ROT= blocked, 5
     {LNGPIO_SENSOR, 1020},      // LN_A_RT_IN_MAG route in magnetartikel
     {LNGPIO_SENSOR, 1030},      // LN_A_RT_IN_MAG2 route in magnetartikel
     {LNGPIO_SENSOR, 3010},      // LN_A_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 2010},      // LN_A_RT_OUT_MAG2 route in magnetartikel
-    {LNGPIO_SENSOR, 904},      // LN_A_RT_OUT_BLOCKED_SEN
+    {LNGPIO_SENSOR, 904},      // LN_A_RT_OUT_BLOCKED_SEN, 10
     {LNGPIO_UB_BUTTON_1, 402},  // LN_A_RBT_HMAG,
 
     // B is module 308, art nr. 3204
@@ -217,10 +217,10 @@ const LnGpioDefn ln_defs[] = {
     //
     // SigB. Zieltaste 358 / 0
     // Route B/in set: sen 2010 HIGH is set, LOW is clear.
-    {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG
+    {LNGPIO_SWITCH, 731},      // LN_B_ERLAUBNIS_MAG, 12
     {LNGPIO_SENSOR, 50},      // LN_B_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 55},      // LN_B_VORGEBLOCKT_SEN
-    {LNGPIO_SWITCH, 730},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked
+    {LNGPIO_SWITCH, 730},      // LN_B_ERLAUBNIS_BLOCK_MAG ROT= blocked, 15
     {LNGPIO_SENSOR, 2010},      // LN_B_RT_IN_MAG route in magnetartikel
     {LNGPIO_SENSOR, 1020},      // LN_B_RT_OUT_MAG route in magnetartikel
     {LNGPIO_SENSOR, 910},      // LN_B_RT_OUT_BLOCKED_SEN
@@ -234,19 +234,19 @@ const LnGpioDefn ln_defs[] = {
     // cv10 = 603 (eagt 603 gn)
     // cv38 = 720
     // CV22 = CV24 = 54. Busy (rotausleuchtung).
-    {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG
+    {LNGPIO_SWITCH, 721},      // LN_C_ERLAUBNIS_MAG, 20
     {LNGPIO_SENSOR, 51},      // LN_C_ERLAUBNIS_SEN
     {LNGPIO_SENSOR, 54},      // LN_C_VORGEBLOCKT_SEN
     {LNGPIO_SWITCH, 720},      // LN_C_ERLAUBNIS_BLOCK_MAG ROT= blocked
     {LNGPIO_SENSOR, 3010},      // LN_C_RT_IN_MAG route in magnetartikel
-    {LNGPIO_SENSOR, 1030},      // LN_C_RT_OUT_MAG route in magnetartikel
+    {LNGPIO_SENSOR, 1030},      // LN_C_RT_OUT_MAG route in magnetartikel, 25
     {LNGPIO_SENSOR, 915},      // LN_C_RT_OUT_BLOCKED_SEN
-    {LNGPIO_UB_BUTTON_1, 107},  // LN_C_RBT_HMAG,
+    {LNGPIO_UB_BUTTON_1, 107},  // LN_C_RBT_HMAG, 27
 
     {LNGPIO_SENSOR_LOW_EVENT, 1020},
     {LNGPIO_SENSOR_LOW_EVENT, 1030},
     {LNGPIO_SENSOR_LOW_EVENT, 2010},
-    {LNGPIO_SENSOR_LOW_EVENT, 3010},
+    {LNGPIO_SENSOR_LOW_EVENT, 3010}, // 31
 };
 
 static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
