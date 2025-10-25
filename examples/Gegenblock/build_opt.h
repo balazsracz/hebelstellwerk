@@ -1,0 +1,1 @@
+-DNO_USE_LNGPIO
