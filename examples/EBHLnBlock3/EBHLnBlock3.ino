@@ -25,9 +25,11 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * \file BlockTest.ino
+ * \file EBHLnBLock3.ino
  *
- * Test for FREMO-Block Schnittstelle
+ * Main sketch for the Block3 device for EBH. This sketch defines the
+ * assignment of gpios, loconet addresses and pinouts, instantiates the
+ * necessary objects and parametrizes them.
  *
  * @author Balazs Racz
  * @date 28 April 2024
