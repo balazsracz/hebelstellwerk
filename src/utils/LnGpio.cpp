@@ -191,10 +191,16 @@ void notifySensor( uint16_t Address, uint8_t State ) {
   }
 }
 
+extern void secondNotifySwitchRequest(uint16_t Address, uint8_t Output, uint8_t Direction) __attribute__((weak));
+
+
 // This call-back function is called from LocoNet.processSwitchSensorMessage
 // for all Switch Request messages
 void notifySwitchRequest( uint16_t Address, uint8_t Output, uint8_t Direction ) {
   LOG(INFO, "LN Switch Req %d - %s - %s", Address, Direction ? "Closed/Grn" : "Thrown/Red", Output ? "On" : "Off");
+  if (secondNotifySwitchRequest) {
+    secondNotifySwitchRequest(Address, Output, Direction);
+  }
   ln_address = Address;
   if (Output) {
     ln_type = LNGPIO_SWITCH;

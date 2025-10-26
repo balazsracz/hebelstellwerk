@@ -1,4 +1,3 @@
-
 /** \copyright
  * Copyright (c) 2024, Balazs Racz
  * All rights reserved.
@@ -50,6 +49,9 @@
 #include "utils/Blinker.h"
 #include "utils/LnGpio.h"
 #include "utils/PixelGpio.h"
+
+
+#include "utils/LnMaster.h"
 
 #ifndef ARDUINO
 #error baaa
