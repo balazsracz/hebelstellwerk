@@ -553,20 +553,14 @@ class Copier : public Executable {
   void begin() override {}
   void loop() override {
     if (!tm_.check()) return;
-    auto* s = GpioRegistry::instance()->get(110);
-    auto* d = GpioRegistry::instance()->get(120);
-    auto* l = GpioRegistry::instance()->get(LN_GPIO_START);
-    for (unsigned i = 0; i < 9; i++) {
-      // d->write(120 + i, s->read(110 + i));
-    }
-    // l->write(LN_TURNOUT_SENSOR, s->read(110 + 0));
-    //  l->write(LN_SW_TEST, s->read(110 + 1));
-    //  d->write(120 + 0, l->read(LN_SW_RED));
-    //  d->write(120 + 1, l->read(LN_SW_GREEN));
+    senOut_.write(senIn_.read());
   }
 
  private:
   Timer tm_;
+  GpioAccessor senOut_{LN_DETECTOR_SEN, false, GPIO_OUTPUT};
+  GpioAccessor senIn_{BLOCK_DETECTOR, false, GPIO_INPUT};
+  
 } copier;
 
 /// Arduino loop routine.
