@@ -102,12 +102,32 @@ class ErbertBlockUi : public Executable {
     }
 
     // ====== VORBLOCKEN ======
-    if (shadow_erlaubnis_ && !seen_route_out_) {
-      if (block_route_out_.read() ||
-          (block_route_out2_.has() && block_route_out2_.read())) {
-        seen_route_out_ = true;
+    bool has_route_out = block_route_out_.read() ||
+                         (block_route_out2_.has() && block_route_out2_.read());
+    if (shadow_erlaubnis_ && !seen_route_out_ && has_route_out) {
+      seen_route_out_ = true;
+      route_disappeared_ = false;
+    }
+    if (seen_route_out_ && !has_route_out) {
+      // We have seen the route, but it is not there now. We need to decide
+      // whether this a regular Auflösung (via the detector) or an FHT was.
+      if (!route_disappeared_) {
+        route_disappeared_ = true;
+        fht_tm_.start_oneshot(1000);
+      } else {
+        if (detector_.read()) {
+          // regular release.
+          route_disappeared_ = false;
+          fht_tm_.cancel();
+        } else if (fht_tm_.check()) {
+          // Now we are one second after the route disappeared but the detector
+          // has not come up. This is likely an FHT.
+          seen_route_out_ = false;
+          route_disappeared_ = false;
+        }
       }
     }
+    
     if (!(state & BlockBits::OUT_BUSY) && seen_route_out_ && detector_.read()) {
       block_->vorblocken();
       seen_route_out_ = false;
@@ -312,6 +332,7 @@ class ErbertBlockUi : public Executable {
   /// Helper for timed operations.
   Timer tm_;
   Timer debug_tm_{Timer::Drifting{1000}};
+  Timer fht_tm_;
   
   /// True if the last set "erlaubnis out" on loconet was true.  
   bool shadow_erlaubnis_ : 1;
@@ -320,6 +341,7 @@ class ErbertBlockUi : public Executable {
   bool seen_route_in_ : 1;
   bool seen_train_ : 1;
   bool need_force_erlaubnis_ : 1;
+  bool route_disappeared_ : 1;
 };
 
 #endif  // _STW_ERBERTBLOCKUI_H_

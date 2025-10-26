@@ -149,6 +149,14 @@ class Timer {
   /// @return true if this timer is running, false if it is stopped.
   bool is_running() { return nextExpiryMillis_ > 0; }
 
+  /// Cancels a timer. `check()` will return false and a periodic timer will
+  /// not activate again.
+  void cancel() {
+    nextExpiryMillis_ = 0;
+    restart_ = 0;
+    drift_ = 0;
+  }
+  
  private:
   static millis_t get_time() { return Executor::instance()->millis(); }
 
