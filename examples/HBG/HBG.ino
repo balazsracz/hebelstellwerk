@@ -545,6 +545,33 @@ class SndGpio : public Gpio, private Executable {
 SndGpio snd1(SND_1, SND_1_HW);
 SndGpio snd2(SND_5, SND_5_HW);
 
+/// Plays a sound 1 second after starup. This is needed to reset the sound
+/// chip. Self-owned, will delete this when done.
+class InitSound : public Executable {
+ public:
+  InitSound() {
+    Executor::instance()->add(this);
+  }
+
+  ~InitSound() {
+    Executor::instance()->remove(this);
+  }
+
+  void begin() override {
+    tm_.start_oneshot(1000);
+  }
+
+  void loop() override {
+    if (tm_.check()) {
+      snd1.write(SND_1, true);
+      delete this;
+    }
+  }
+
+ private:
+  Timer tm_;
+};
+
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
   pinMode(USER_BTN, INPUT_PULLUP);
@@ -573,6 +600,7 @@ void setup() {
   block.set_sound(DirectBlock::SND_RUCKBLOCKEN_IN, SND_5)
       .set_sound(DirectBlock::SND_ERLAUBNIS_ABGABE_IN, SND_1)
       .set_sound(DirectBlock::SND_VORBLOCKEN_IN, SND_1);
+  new InitSound();
 }
 
 void loop() {
