@@ -388,6 +388,9 @@ class FelderBlock : public Block {
         case State::STARTUP:
           break;
       }
+    } else if (status & (BlockBits::STARTUP)) {
+      /// Clears startup bit if we have handoff or track out bits.
+      iface_->set_status(status & ~unsigned(BlockBits::STARTUP));
     }
 
     // Abgabe / handoff
