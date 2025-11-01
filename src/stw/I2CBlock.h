@@ -110,6 +110,10 @@ class I2CBlockInterface {
     return get_status() & (uint16_t)BlockBits::NEWINPUT;
   }
 
+  virtual bool has_error() {
+    return get_status() & (uint16_t)BlockBits::ERROR;
+  }
+  
   /// Requests the handoff (Erlaubnisabgabe).
   virtual void abgabe() {
     uint16_t ost = get_status();
