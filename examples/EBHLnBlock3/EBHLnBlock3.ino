@@ -122,6 +122,10 @@ enum GpioPin : gpio_pin_t {
   LN_SEN_1030_LOW,
   LN_SEN_2010_LOW,
   LN_SEN_3010_LOW,
+
+  LN_EV_BRIGHTNESS_HIGH,
+  LN_EV_BRIGHTNESS_MED,
+  LN_EV_BRIGHTNESS_LOW,
   
   LN_GPIO_END,
 };
@@ -251,6 +255,10 @@ const LnGpioDefn ln_defs[] = {
     {LNGPIO_SENSOR_LOW_EVENT, 1030},
     {LNGPIO_SENSOR_LOW_EVENT, 2010},
     {LNGPIO_SENSOR_LOW_EVENT, 3010}, // 31
+
+    {LNGPIO_SWITCH_RED, 1999},  // LN_EV_BRIGHTNESS_HIGH,
+    {LNGPIO_SWITCH_GREEN, 1999},  // LN_EV_BRIGHTNESS_MED,
+    {LNGPIO_SWITCH_GREEN, 1998},  // LN_EV_BRIGHTNESS_LOW,
 };
 
 static_assert(LN_GPIO_END - LN_GPIO_START == ARRAYSIZE(ln_defs),
@@ -554,13 +562,35 @@ class Copier : public Executable {
   void loop() override {
     if (!tm_.check()) return;
     senOut_.write(senIn_.read());
+    if (rbT_.read()) {
+      if (brHi_.read()) {
+        strip.set_brightness(0x20);
+        brHi_.write(false);
+        LOG(INFO, "Strip brightness high");
+      }
+      if (brMed_.read()) {
+        strip.set_brightness(0x10);
+        brMed_.write(false);
+        LOG(INFO, "Strip brightness med");
+      }
+      if (brLo_.read()) {
+        strip.set_brightness(0x08);
+        brLo_.write(false);
+        LOG(INFO, "Strip brightness lo");
+      }
+    }
   }
 
  private:
   Timer tm_;
   GpioAccessor senOut_{LN_DETECTOR_SEN, false, GPIO_OUTPUT};
   GpioAccessor senIn_{BLOCK_DETECTOR, false, GPIO_INPUT};
-  
+
+  GpioAccessor rbT_{LN_A_RBT_HMAG, false, GPIO_INPUT};
+
+  GpioAccessor brHi_{LN_EV_BRIGHTNESS_HIGH, true, GPIO_INPUT};
+  GpioAccessor brMed_{LN_EV_BRIGHTNESS_MED, true, GPIO_INPUT};
+  GpioAccessor brLo_{LN_EV_BRIGHTNESS_LOW, true, GPIO_INPUT};
 } copier;
 
 /// Arduino loop routine.
