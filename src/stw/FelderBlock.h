@@ -236,7 +236,11 @@ class FelderBlock : public Block {
 #endif 
     
     // Sets the output GPIOs.
-    switch (state_) {
+    if (iface_->has_error()) {
+      anfangsfeld_.write(RED);
+      endfeld_.write(RED);
+      erlaubnisfeld_.write(RED);
+    } else switch (state_) {
       case State::IN_FREE: {
         /// @todo is the Anfangsfeld red when the Erlaubnisfeld is red?
         anfangsfeld_.write(WHITE);
