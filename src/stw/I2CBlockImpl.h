@@ -50,7 +50,11 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   ///
   /// @param addr 7-bit address of the I2C block interface.
   /// @param theWire optional, I2C bus instance.
-  I2CBlock(uint8_t addr, TwoWire *theWire = &Wire) : dev_(addr, theWire), dirty_(false), last_error_(false), skip_missing_(0) {
+  I2CBlock(uint8_t addr, TwoWire* theWire = &Wire)
+      : dev_(addr, theWire),
+        dirty_(false),
+        last_error_(false),
+        skip_missing_(0) {
     Executor::instance()->add(this);
   }
 
@@ -89,13 +93,30 @@ class I2CBlock : public I2CBlockInterface, private Executable {
 
   uint16_t get_status() override { return last_status_; }
 
+  bool has_error() override {
+    return (last_status_ & (uint16_t)BlockBits::ERROR) ||
+        last_error_;
+  }
+  
  private:
   static constexpr unsigned POLL_MSEC = 43;
 
   /// Reloads the status word from the i2c device.
   void refresh() {
-    uint16_t new_status = 0;
-    if (!dev_.read((uint8_t *)&new_status, 2)) {
+    uint16_t new_status = 0xffff;
+    bool success = dev_.read((uint8_t *)&new_status, 2);
+    bool valid = (new_status & 0xf000 != 0);
+    if (!valid) {
+      if (!skip_invalid_) {
+        LOG(LEVEL_INFO, "Invalid I2C Block %02x status read 0x%04x (ignored).", dev_.address(), new_status);
+        skip_invalid_ = 20;
+      } else {
+        --skip_invalid_;
+      }
+    } else {
+      skip_invalid_ = 0;
+    }
+    if (!success) {
       if (!skip_missing_) {
         LOG(LEVEL_INFO, "Failed I2C Block %02x status read.", dev_.address());
         skip_missing_ = 20;
@@ -105,7 +126,8 @@ class I2CBlock : public I2CBlockInterface, private Executable {
     } else {
       skip_missing_ = 0;
     }
-    if (new_status != last_status_) {
+    last_error_ = !(success && valid);
+    if (success && valid && (new_status != last_status_)) {
       LOG(LEVEL_INFO, "I2C Block %02x status %02x->%02x: %s", dev_.address(),
           last_status_, new_status, block_to_string(new_status).c_str());
       last_status_ = new_status;
@@ -124,10 +146,15 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   /// Last read status word.
   uint16_t last_status_{0};
 
+  /// True if the last write from the software made a change in the state.
   bool dirty_ : 1;
+  /// True if the last read of the block status via I2C returned an error or
+  /// invalid input.
   bool last_error_ : 1;
   /// Counter how many missing errors we should skip displaying.
-  uint8_t skip_missing_ : 6;
+  uint8_t skip_missing_;
+  /// Counter how many invalid errors we should skip displaying.
+  uint8_t skip_invalid_;
 };
 
 #endif  // Arduino
