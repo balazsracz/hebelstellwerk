@@ -161,7 +161,7 @@ bool LnGpio::send_ln_update(const LnGpioDefn* def, bool value) {
       break;
     case LNGPIO_SENSOR_HIGH_EVENT:
       // Sends only on TRUE state.
-      if (value) st = ln_->reportSensor(def->address, false);
+      if (value) st = ln_->reportSensor(def->address, true);
       break;
     default:
       // ignore
