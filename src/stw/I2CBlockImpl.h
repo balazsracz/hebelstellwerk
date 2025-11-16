@@ -71,13 +71,13 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   void loop() override {
     if (dirty_) {
       if (!dev_.write((uint8_t *)&last_status_, 2)) {
-        LOG(LEVEL_INFO, "Failed I2C Block %02x status write (st=%02x).", dev_.address(), last_status_);
+        LOG(LEVEL_INFO, "Failed I2C Block %02x status write (st=%02x: %s).", dev_.address(), last_status_, block_to_string(last_status_).c_str());
       } else {
-        LOG(LEVEL_INFO, "Success I2C Block %02x status write (st=%02x).", dev_.address(), last_status_);
+        LOG(LEVEL_INFO, "Success I2C Block %02x status write (st=%02x: %s).", dev_.address(), last_status_, block_to_string(last_status_).c_str());
       }
       dirty_ = false;
       // Prevents a race condition where we query the state again too quickly.
-      tm_.start_drifting(POLL_MSEC);
+      tm_.start_delay_drifting(POLL_MSEC * 10, POLL_MSEC);
     }
     if (tm_.check()) {
       refresh();
