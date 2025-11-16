@@ -105,7 +105,7 @@ class I2CBlock : public I2CBlockInterface, private Executable {
   void refresh() {
     uint16_t new_status = 0xffff;
     bool success = dev_.read((uint8_t *)&new_status, 2);
-    bool valid = (new_status & 0xf000 != 0);
+    bool valid = ((new_status & 0xf000) == 0);
     if (!valid) {
       if (!skip_invalid_) {
         LOG(LEVEL_INFO, "Invalid I2C Block %02x status read 0x%04x (ignored).", dev_.address(), new_status);
