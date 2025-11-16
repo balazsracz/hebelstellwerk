@@ -119,6 +119,19 @@ class Timer {
     periodMillis_ = msec;
   }
 
+  /// Starts a periodic timer with drift at a future time.  The first expiry
+  /// will be at first_msec, then periodically at period_msec. This timer will
+  /// ensure that between each two invocations at least msec delay
+  /// elapses. This is ideal for polling peripherals, where it does not make
+  /// sense to shorten period between invocations.
+  void start_delay_drifting(millis_t first_msec, millis_t period_msec) {
+    nextExpiryMillis_ = get_time() + first_msec;
+    restart_ = 1;
+    drift_ = 1;
+    periodMillis_ = period_msec;
+  }
+
+  
   /// Starts a non-repeating timer.
   void start_oneshot(millis_t msec) {
     nextExpiryMillis_ = get_time() + msec;
