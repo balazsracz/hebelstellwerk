@@ -76,7 +76,14 @@ class Gpio23017 : public Gpio, public Executable {
 
   void loop() override {
     if (tm_.check()) {
-      input_states_ = driver_.readGPIOAB();
+      int32_t data = driver_.XreadGPIOAB();
+      if (data < 0) {
+        LOG(LEVEL_ERROR, "Failed to read MCP23017 with address 0x%x",
+            i2c_address_);
+        tm_.start_delay_drifting(POLL_MSEC*10, POLL_MSEC);
+      } else {
+        input_states_ = data & 0xffff;
+      }
     }
   }
 
